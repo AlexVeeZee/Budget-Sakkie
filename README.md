@@ -2,6 +2,11 @@
 App development repo for grocery assistant
 
 Create an app and website to help users have the most cost-optimal shopping experience:
+1. Create app/website layout
+2. API/Web Scraping utility
+3. Calculation
+4. Ouput
+
 
 #1 User creates regular/custom shopping list:
 > App outputs cheapest prices for the products and the location
