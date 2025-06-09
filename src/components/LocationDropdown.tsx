@@ -52,14 +52,16 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
     }
   ];
 
-  const handleLocationSelect = (location: Location) => {
+  const handleLocationSelect = (location: Location, e: React.MouseEvent) => {
+    e.stopPropagation();
     setCurrentLocation(location);
     onClose();
     // In a real app, you would update the global location state here
     console.log('Selected location:', location);
   };
 
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = (e: React.MouseEvent) => {
+    e.stopPropagation();
     // In a real app, this would use the browser's geolocation API
     navigator.geolocation?.getCurrentPosition(
       (position) => {
@@ -79,6 +81,10 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
         alert('Unable to get your current location. Please check your browser permissions.');
       }
     );
+  };
+
+  const handleDropdownClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
 
   const filteredLocations = [...recentLocations].filter(location =>
@@ -101,6 +107,7 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
       <div 
         className="absolute top-full right-0 mt-2 w-80 rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden"
         style={{ backgroundColor: '#ffffff' }}
+        onClick={handleDropdownClick}
       >
         {/* Header */}
         <div 
@@ -110,7 +117,10 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">Choose Location</h3>
             <button
-              onClick={onClose}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
               className="p-1 hover:bg-gray-200 rounded-lg transition-colors"
             >
               <X className="h-4 w-4 text-gray-600" />
@@ -148,6 +158,7 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
               placeholder="Search for a location..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
               style={{ backgroundColor: '#ffffff' }}
             />
@@ -173,7 +184,7 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
 
           {/* Home Location */}
           <button
-            onClick={() => handleLocationSelect(homeLocation)}
+            onClick={(e) => handleLocationSelect(homeLocation, e)}
             className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 ${
               currentLocation.id === homeLocation.id ? 'bg-green-50' : ''
             }`}
@@ -210,7 +221,7 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
               {filteredLocations.map((location) => (
                 <button
                   key={location.id}
-                  onClick={() => handleLocationSelect(location)}
+                  onClick={(e) => handleLocationSelect(location, e)}
                   className={`w-full flex items-center space-x-3 p-4 hover:bg-gray-50 transition-colors ${
                     currentLocation.id === location.id ? 'bg-green-50' : ''
                   }`}

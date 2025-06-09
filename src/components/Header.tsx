@@ -12,6 +12,15 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
   const { language, toggleLanguage, t } = useLanguage();
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
 
+  const handleLocationClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowLocationDropdown(!showLocationDropdown);
+  };
+
+  const handleLocationClose = () => {
+    setShowLocationDropdown(false);
+  };
+
   return (
     <header 
       className="text-white shadow-lg sticky top-0 z-50"
@@ -44,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
             {/* Current Location Selector */}
             <div className="relative">
               <button
-                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                onClick={handleLocationClick}
                 className="flex items-center space-x-2 px-3 py-1 rounded-md hover:bg-black/10 transition-colors text-sm font-medium"
                 style={{ backgroundColor: 'transparent' }}
               >
@@ -55,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
               
               <LocationDropdown 
                 isOpen={showLocationDropdown}
-                onClose={() => setShowLocationDropdown(false)}
+                onClose={handleLocationClose}
               />
             </div>
 
