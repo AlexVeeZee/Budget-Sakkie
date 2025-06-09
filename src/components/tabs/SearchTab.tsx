@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, ScanLine, MapPin } from 'lucide-react';
+import { Search, Filter, ScanLine, MapPin, TrendingDown } from 'lucide-react';
 import { ProductCard } from '../ProductCard';
-import { products, prices } from '../../data/mockData';
+import { FeaturedDeals } from '../FeaturedDeals';
+import { CategoryShowcase } from '../CategoryShowcase';
+import { PriceTrends } from '../PriceTrends';
+import { products, prices, getFeaturedDeals } from '../../data/mockData';
 import { useLanguage } from '../../hooks/useLanguage';
 
 interface SearchTabProps {
@@ -20,6 +23,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
     { id: 'Meat', name: 'Meat' },
     { id: 'Bakery', name: 'Bakery' },
     { id: 'Pantry', name: 'Pantry' },
+    { id: 'Beverages', name: 'Beverages' },
+    { id: 'Household', name: 'Household' },
   ];
 
   const filteredProducts = useMemo(() => {
@@ -42,6 +47,10 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
   const getProductPrices = (productId: string) => {
     return prices.filter(price => price.productId === productId);
   };
+
+  // Get total savings available
+  const featuredDeals = getFeaturedDeals();
+  const totalSavings = featuredDeals.reduce((sum, deal) => sum + deal.savings, 0);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -68,19 +77,26 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
-            <p className="text-2xl font-bold text-green-600">5</p>
+        {/* Enhanced Quick Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm border border-gray-200">
+            <p className="text-2xl font-bold text-green-600">{retailers.length}</p>
             <p className="text-xs text-gray-600">Retailers</p>
           </div>
-          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm border border-gray-200">
             <p className="text-2xl font-bold text-blue-600">2.3km</p>
             <p className="text-xs text-gray-600">Nearest Store</p>
           </div>
-          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
-            <p className="text-2xl font-bold text-orange-600">15%</p>
-            <p className="text-xs text-gray-600">Avg Savings</p>
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm border border-gray-200">
+            <div className="flex items-center justify-center space-x-1">
+              <TrendingDown className="h-4 w-4 text-orange-600" />
+              <p className="text-2xl font-bold text-orange-600">R{totalSavings.toFixed(0)}</p>
+            </div>
+            <p className="text-xs text-gray-600">Total Savings</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm border border-gray-200">
+            <p className="text-2xl font-bold text-purple-600">{products.length}</p>
+            <p className="text-xs text-gray-600">Products</p>
           </div>
         </div>
 
@@ -102,42 +118,70 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
         </div>
       </div>
 
-      {/* Recent Searches */}
-      {!searchQuery && (
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('search.recent')}</h3>
-          <div className="flex flex-wrap gap-2">
-            {['Bread', 'Milk', 'Eggs', 'Rice'].map((term) => (
-              <button
-                key={term}
-                onClick={() => onSearchChange(term)}
-                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors"
-              >
-                {term}
-              </button>
+      {/* Show different content based on search state */}
+      {!searchQuery && selectedCategory === 'all' ? (
+        // Home page content when no search
+        <div className="space-y-8">
+          <FeaturedDeals />
+          <CategoryShowcase />
+          <PriceTrends />
+        </div>
+      ) : (
+        // Search results or category filtering
+        <div>
+          {/* Recent Searches */}
+          {!searchQuery && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('search.recent')}</h3>
+              <div className="flex flex-wrap gap-2">
+                {['Bread', 'Milk', 'Eggs', 'Rice'].map((term) => (
+                  <button
+                    key={term}
+                    onClick={() => onSearchChange(term)}
+                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Search Results Header */}
+          {(searchQuery || selectedCategory !== 'all') && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {searchQuery 
+                  ? `Search results for "${searchQuery}"` 
+                  : `${selectedCategory} Products`
+                }
+              </h3>
+              <p className="text-gray-600">
+                {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
+              </p>
+            </div>
+          )}
+
+          {/* Products Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                prices={getProductPrices(product.id)}
+                onCompare={() => console.log('Compare', product.name)}
+                onAddToList={() => console.log('Add to list', product.name)}
+              />
             ))}
           </div>
-        </div>
-      )}
 
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProducts.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            prices={getProductPrices(product.id)}
-            onCompare={() => console.log('Compare', product.name)}
-            onAddToList={() => console.log('Add to list', product.name)}
-          />
-        ))}
-      </div>
-
-      {filteredProducts.length === 0 && (
-        <div className="text-center py-12">
-          <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('search.no_results')}</h3>
-          <p className="text-gray-600">Try adjusting your search terms or category filter</p>
+          {filteredProducts.length === 0 && (
+            <div className="text-center py-12">
+              <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('search.no_results')}</h3>
+              <p className="text-gray-600">Try adjusting your search terms or category filter</p>
+            </div>
+          )}
         </div>
       )}
     </div>
