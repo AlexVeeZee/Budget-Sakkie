@@ -13,13 +13,20 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
 
   return (
-    <header className="bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 text-white shadow-lg sticky top-0 z-50">
+    <header 
+      className="text-white shadow-lg sticky top-0 z-50"
+      style={{ 
+        background: 'linear-gradient(to right, #059669, #f97316, #2563eb)',
+        backgroundColor: '#059669' // Fallback solid color
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
             <button
               onClick={onMenuClick}
               className="p-2 rounded-md hover:bg-black/10 transition-colors"
+              style={{ backgroundColor: 'transparent' }}
             >
               <Menu className="h-6 w-6" />
             </button>
@@ -39,6 +46,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
               <button
                 onClick={() => setShowLocationDropdown(!showLocationDropdown)}
                 className="flex items-center space-x-2 px-3 py-1 rounded-md hover:bg-black/10 transition-colors text-sm font-medium"
+                style={{ backgroundColor: 'transparent' }}
               >
                 <MapPin className="h-4 w-4" />
                 <span className="hidden sm:inline">Centurion</span>
@@ -54,6 +62,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
             <button
               onClick={onSearchClick}
               className="p-2 rounded-md hover:bg-black/10 transition-colors"
+              style={{ backgroundColor: 'transparent' }}
             >
               <Search className="h-6 w-6" />
             </button>
@@ -61,6 +70,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
             <button
               onClick={toggleLanguage}
               className="flex items-center space-x-1 px-3 py-1 rounded-md hover:bg-black/10 transition-colors text-sm font-medium"
+              style={{ backgroundColor: 'transparent' }}
             >
               <Globe className="h-4 w-4" />
               <span>{language.toUpperCase()}</span>
