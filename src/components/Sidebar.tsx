@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Settings, HelpCircle, Star, Gift, Users, MapPin } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { SettingsModal } from './modals/SettingsModal';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -9,9 +10,17 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { t } = useLanguage();
+  const [showSettings, setShowSettings] = useState(false);
 
   const menuItems = [
-    { icon: Settings, label: t('profile.settings'), action: () => {} },
+    { 
+      icon: Settings, 
+      label: t('profile.settings'), 
+      action: () => {
+        setShowSettings(true);
+        onClose();
+      }
+    },
     { icon: MapPin, label: t('profile.location'), action: () => {} },
     { icon: Star, label: t('profile.loyalty_cards'), action: () => {} },
     { icon: Gift, label: 'Rewards', action: () => {} },
@@ -69,6 +78,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
       </div>
+
+      <SettingsModal 
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </>
   );
 };
