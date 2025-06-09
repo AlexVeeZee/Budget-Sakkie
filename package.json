@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "scrape": "cd scripts/scraper && npm install && npm run scrape",
-    "test-scraper": "cd scripts/scraper && npm install && npm test"
+    "test-scraper": "cd scripts/scraper && npm install && npm test",
+    "extract-data": "python3 scripts/data_extractor.py",
+    "integrate-data": "python3 scripts/data_integration.py",
+    "run-pipeline": "python3 scripts/run_extraction.py"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
