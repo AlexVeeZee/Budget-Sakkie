@@ -54,8 +54,10 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
 
   const handleLocationSelect = (location: Location) => {
     setCurrentLocation(location);
-    onClose();
-    // In a real app, you would update the global location state here
+    // Don't close the dropdown immediately - let user see the selection
+    setTimeout(() => {
+      onClose();
+    }, 500); // Small delay to show selection feedback
     console.log('Selected location:', location);
   };
 
@@ -71,7 +73,9 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
           coordinates: [position.coords.latitude, position.coords.longitude]
         };
         setCurrentLocation(newLocation);
-        onClose();
+        setTimeout(() => {
+          onClose();
+        }, 500);
         console.log('Using current location:', position.coords);
       },
       (error) => {
@@ -85,6 +89,11 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
     location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     location.address.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Prevent event bubbling to avoid closing dropdown when clicking inside
+  const handleDropdownClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
 
   if (!isOpen) return null;
 
@@ -101,6 +110,7 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
       <div 
         className="absolute top-full right-0 mt-2 w-80 rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden"
         style={{ backgroundColor: '#ffffff' }}
+        onClick={handleDropdownClick} // Prevent closing when clicking inside
       >
         {/* Header */}
         <div 
@@ -150,6 +160,7 @@ export const LocationDropdown: React.FC<LocationDropdownProps> = ({ isOpen, onCl
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
               style={{ backgroundColor: '#ffffff' }}
+              onClick={(e) => e.stopPropagation()} // Prevent closing when clicking input
             />
           </div>
         </div>
