@@ -30,32 +30,32 @@ function App() {
   };
 
   const handleSettingsClick = () => {
-    setSidebarOpen(false);
+    // Keep sidebar open and show settings modal
     setSettingsOpen(true);
   };
 
   const handleLocationClick = () => {
-    setSidebarOpen(false);
+    // Keep sidebar open and show location modal
     setLocationOpen(true);
   };
 
   const handleLoyaltyCardsClick = () => {
-    setSidebarOpen(false);
+    // Keep sidebar open and show loyalty cards modal
     setLoyaltyCardsOpen(true);
   };
 
   const handleRewardsClick = () => {
-    setSidebarOpen(false);
+    // Keep sidebar open and show rewards modal
     setRewardsOpen(true);
   };
 
   const handleFamilySharingClick = () => {
-    setSidebarOpen(false);
+    // Keep sidebar open and show family sharing modal
     setFamilySharingOpen(true);
   };
 
   const handleHelpSupportClick = () => {
-    setSidebarOpen(false);
+    // Keep sidebar open and show help support modal
     setHelpSupportOpen(true);
   };
 
@@ -94,7 +94,7 @@ function App() {
         onHelpSupportClick={handleHelpSupportClick}
       />
       
-      <main className="pb-20 pt-4">
+      <main className={`pb-20 pt-4 transition-all duration-300 ${sidebarOpen ? 'ml-80' : ''}`}>
         {renderActiveTab()}
       </main>
       

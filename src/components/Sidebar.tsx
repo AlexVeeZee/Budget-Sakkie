@@ -62,19 +62,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Invisible overlay for closing sidebar - only covers the area not occupied by sidebar */}
+      {/* Backdrop overlay - only covers the main content area, not the sidebar */}
       <div 
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 bg-black bg-opacity-25 z-30"
         onClick={onClose}
         style={{ 
-          background: 'transparent',
-          paddingLeft: '320px' // Leave space for sidebar
+          left: '320px' // Start overlay after sidebar width
         }}
       />
       
       {/* Sidebar */}
       <div 
-        className="fixed left-0 top-0 h-full w-80 z-50 transform transition-transform duration-300 shadow-xl"
+        className="fixed left-0 top-0 h-full w-80 z-50 transform transition-transform duration-300 shadow-xl border-r border-gray-200"
         style={{ backgroundColor: '#ffffff' }}
       >
         {/* Header */}

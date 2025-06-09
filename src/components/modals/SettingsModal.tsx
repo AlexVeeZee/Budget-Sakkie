@@ -154,7 +154,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      style={{ 
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        left: '320px' // Start after sidebar width
+      }}
     >
       <div 
         className="rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-200"
