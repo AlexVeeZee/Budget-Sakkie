@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, MapPin, Lock, Bell, Globe, Shield, Save, Edit2, Eye, EyeOff } from 'lucide-react';
+import { X, User, MapPin, Lock, Bell, Globe, Shield, Save, Edit2, Eye, EyeOff, Mail, CheckCircle } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 
 interface SettingsModalProps {
@@ -21,9 +21,11 @@ interface UserProfile {
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { t, language, toggleLanguage } = useLanguage();
   const [activeTab, setActiveTab] = useState('profile');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerified, setIsVerified] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>({
     firstName: 'Sarah',
@@ -36,10 +38,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     postalCode: '0157'
   });
 
-  const [passwords, setPasswords] = useState({
-    current: '',
-    new: '',
-    confirm: ''
+  const [passwordReset, setPasswordReset] = useState({
+    email: profile.email,
+    newPassword: '',
+    confirmPassword: ''
   });
 
   const [notifications, setNotifications] = useState({
@@ -76,8 +78,51 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePasswordChange = (field: keyof typeof passwords, value: string) => {
-    setPasswords(prev => ({ ...prev, [field]: value }));
+  const handlePasswordResetChange = (field: keyof typeof passwordReset, value: string) => {
+    setPasswordReset(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSendVerificationEmail = () => {
+    // Simulate sending verification email
+    console.log('Sending verification email to:', passwordReset.email);
+    setEmailSent(true);
+    // In a real app, you would call your backend API here
+  };
+
+  const handleVerifyCode = () => {
+    // Simulate code verification
+    if (verificationCode === '123456') { // Mock verification code
+      setIsVerified(true);
+    } else {
+      alert('Invalid verification code. Try 123456 for demo.');
+    }
+  };
+
+  const handlePasswordSubmit = () => {
+    if (!isVerified) {
+      alert('Please verify your email first.');
+      return;
+    }
+
+    if (passwordReset.newPassword !== passwordReset.confirmPassword) {
+      alert('Passwords do not match.');
+      return;
+    }
+
+    if (passwordReset.newPassword.length < 8) {
+      alert('Password must be at least 8 characters long.');
+      return;
+    }
+
+    // Simulate password update
+    console.log('Updating password...');
+    alert('Password updated successfully!');
+    
+    // Reset form
+    setPasswordReset({ email: profile.email, newPassword: '', confirmPassword: '' });
+    setEmailSent(false);
+    setIsVerified(false);
+    setVerificationCode('');
   };
 
   const handleNotificationToggle = (setting: keyof typeof notifications) => {
@@ -90,7 +135,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   const handleSave = () => {
     // Here you would typically save to your backend
-    console.log('Saving settings...', { profile, passwords, notifications, privacy });
+    console.log('Saving settings...', { profile, notifications, privacy });
     onClose();
   };
 
@@ -275,68 +320,167 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             {activeTab === 'security' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Change Password</h3>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Password Reset</h3>
+                  <div 
+                    className="border border-blue-200 rounded-lg p-4 mb-6"
+                    style={{ backgroundColor: '#eff6ff' }}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <Mail className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-blue-900">Secure Password Reset</h4>
+                        <p className="text-sm text-blue-700 mt-1">
+                          For security, we'll send a verification code to your email address to confirm your identity before allowing password changes.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
-                      <div className="relative">
-                        <input
-                          type={showCurrentPassword ? 'text' : 'password'}
-                          value={passwords.current}
-                          onChange={(e) => handlePasswordChange('current', e.target.value)}
-                          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                          style={{ backgroundColor: '#ffffff' }}
-                        />
+                    {/* Step 1: Email Verification */}
+                    <div 
+                      className={`p-4 rounded-lg border ${isVerified ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-gray-900 flex items-center space-x-2">
+                          <span>Step 1: Verify Email Address</span>
+                          {isVerified && <CheckCircle className="h-5 w-5 text-green-600" />}
+                        </h4>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                          <input
+                            type="email"
+                            value={passwordReset.email}
+                            onChange={(e) => handlePasswordResetChange('email', e.target.value)}
+                            disabled={emailSent}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
+                            style={{ backgroundColor: emailSent ? '#f3f4f6' : '#ffffff' }}
+                          />
+                        </div>
+
+                        {!emailSent ? (
+                          <button
+                            onClick={handleSendVerificationEmail}
+                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                          >
+                            <Mail className="h-4 w-4" />
+                            <span>Send Verification Code</span>
+                          </button>
+                        ) : (
+                          <div className="space-y-3">
+                            <div 
+                              className="p-3 rounded-lg border border-green-200"
+                              style={{ backgroundColor: '#f0fdf4' }}
+                            >
+                              <p className="text-sm text-green-700">
+                                ✓ Verification code sent to {passwordReset.email}
+                              </p>
+                            </div>
+                            
+                            {!isVerified && (
+                              <div className="flex space-x-2">
+                                <input
+                                  type="text"
+                                  placeholder="Enter 6-digit code"
+                                  value={verificationCode}
+                                  onChange={(e) => setVerificationCode(e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                  style={{ backgroundColor: '#ffffff' }}
+                                  maxLength={6}
+                                />
+                                <button
+                                  onClick={handleVerifyCode}
+                                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+                                >
+                                  Verify
+                                </button>
+                              </div>
+                            )}
+                            
+                            <p className="text-xs text-gray-600">
+                              Demo: Use code "123456" to verify
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Step 2: New Password */}
+                    <div 
+                      className={`p-4 rounded-lg border ${
+                        isVerified ? 'border-gray-200 bg-white' : 'border-gray-200 bg-gray-50 opacity-60'
+                      }`}
+                    >
+                      <h4 className="font-medium text-gray-900 mb-3">Step 2: Set New Password</h4>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                          <div className="relative">
+                            <input
+                              type={showNewPassword ? 'text' : 'password'}
+                              value={passwordReset.newPassword}
+                              onChange={(e) => handlePasswordResetChange('newPassword', e.target.value)}
+                              disabled={!isVerified}
+                              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
+                              style={{ backgroundColor: isVerified ? '#ffffff' : '#f3f4f6' }}
+                              placeholder="Minimum 8 characters"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              disabled={!isVerified}
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                            >
+                              {showNewPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                          <div className="relative">
+                            <input
+                              type={showConfirmPassword ? 'text' : 'password'}
+                              value={passwordReset.confirmPassword}
+                              onChange={(e) => handlePasswordResetChange('confirmPassword', e.target.value)}
+                              disabled={!isVerified}
+                              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
+                              style={{ backgroundColor: isVerified ? '#ffffff' : '#f3f4f6' }}
+                              placeholder="Confirm your new password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              disabled={!isVerified}
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                            >
+                              {showConfirmPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {passwordReset.newPassword && passwordReset.confirmPassword && passwordReset.newPassword !== passwordReset.confirmPassword && (
+                          <p className="text-sm text-red-600">Passwords do not match</p>
+                        )}
+
+                        {passwordReset.newPassword && passwordReset.newPassword.length < 8 && (
+                          <p className="text-sm text-red-600">Password must be at least 8 characters long</p>
+                        )}
+
                         <button
-                          type="button"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                          onClick={handlePasswordSubmit}
+                          disabled={!isVerified || !passwordReset.newPassword || !passwordReset.confirmPassword || passwordReset.newPassword !== passwordReset.confirmPassword}
+                          className="flex items-center space-x-2 px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
                         >
-                          {showCurrentPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                          <Lock className="h-4 w-4" />
+                          <span>Update Password</span>
                         </button>
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                      <div className="relative">
-                        <input
-                          type={showNewPassword ? 'text' : 'password'}
-                          value={passwords.new}
-                          onChange={(e) => handlePasswordChange('new', e.target.value)}
-                          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                          style={{ backgroundColor: '#ffffff' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                        >
-                          {showNewPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
-                      <div className="relative">
-                        <input
-                          type={showConfirmPassword ? 'text' : 'password'}
-                          value={passwords.confirm}
-                          onChange={(e) => handlePasswordChange('confirm', e.target.value)}
-                          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                          style={{ backgroundColor: '#ffffff' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                        >
-                          {showConfirmPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
-                        </button>
-                      </div>
-                    </div>
-                    {passwords.new && passwords.confirm && passwords.new !== passwords.confirm && (
-                      <p className="text-sm text-red-600">Passwords do not match</p>
-                    )}
                   </div>
                 </div>
               </div>
