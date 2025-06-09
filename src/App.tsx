@@ -7,14 +7,66 @@ import { ListsTab } from './components/tabs/ListsTab';
 import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
+import { SettingsModal } from './components/modals/SettingsModal';
+import { LocationModal } from './components/modals/LocationModal';
+import { LoyaltyCardsModal } from './components/modals/LoyaltyCardsModal';
+import { RewardsModal } from './components/modals/RewardsModal';
+import { FamilySharingModal } from './components/modals/FamilySharingModal';
+import { HelpSupportModal } from './components/modals/HelpSupportModal';
 
 function App() {
   const [activeTab, setActiveTab] = useState('search');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [loyaltyCardsOpen, setLoyaltyCardsOpen] = useState(false);
+  const [rewardsOpen, setRewardsOpen] = useState(false);
+  const [familySharingOpen, setFamilySharingOpen] = useState(false);
+  const [helpSupportOpen, setHelpSupportOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearchClick = () => {
     setActiveTab('search');
+  };
+
+  // Close all modals helper function
+  const closeAllModals = () => {
+    setSettingsOpen(false);
+    setLocationOpen(false);
+    setLoyaltyCardsOpen(false);
+    setRewardsOpen(false);
+    setFamilySharingOpen(false);
+    setHelpSupportOpen(false);
+  };
+
+  const handleSettingsClick = () => {
+    closeAllModals();
+    setSettingsOpen(true);
+  };
+
+  const handleLocationClick = () => {
+    closeAllModals();
+    setLocationOpen(true);
+  };
+
+  const handleLoyaltyCardsClick = () => {
+    closeAllModals();
+    setLoyaltyCardsOpen(true);
+  };
+
+  const handleRewardsClick = () => {
+    closeAllModals();
+    setRewardsOpen(true);
+  };
+
+  const handleFamilySharingClick = () => {
+    closeAllModals();
+    setFamilySharingOpen(true);
+  };
+
+  const handleHelpSupportClick = () => {
+    closeAllModals();
+    setHelpSupportOpen(true);
   };
 
   const renderActiveTab = () => {
@@ -44,15 +96,52 @@ function App() {
       <Sidebar 
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        onSettingsClick={handleSettingsClick}
+        onLocationClick={handleLocationClick}
+        onLoyaltyCardsClick={handleLoyaltyCardsClick}
+        onRewardsClick={handleRewardsClick}
+        onFamilySharingClick={handleFamilySharingClick}
+        onHelpSupportClick={handleHelpSupportClick}
       />
       
-      <main className="pb-20 pt-4">
+      <main className={`pb-20 pt-4 transition-all duration-300 ${sidebarOpen ? 'ml-80' : ''}`}>
         {renderActiveTab()}
       </main>
       
       <BottomNavigation 
         activeTab={activeTab}
         onTabChange={setActiveTab}
+      />
+
+      {/* Modals */}
+      <SettingsModal 
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
+
+      <LocationModal 
+        isOpen={locationOpen}
+        onClose={() => setLocationOpen(false)}
+      />
+
+      <LoyaltyCardsModal 
+        isOpen={loyaltyCardsOpen}
+        onClose={() => setLoyaltyCardsOpen(false)}
+      />
+
+      <RewardsModal 
+        isOpen={rewardsOpen}
+        onClose={() => setRewardsOpen(false)}
+      />
+
+      <FamilySharingModal 
+        isOpen={familySharingOpen}
+        onClose={() => setFamilySharingOpen(false)}
+      />
+
+      <HelpSupportModal 
+        isOpen={helpSupportOpen}
+        onClose={() => setHelpSupportOpen(false)}
       />
     </div>
   );
