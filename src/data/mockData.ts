@@ -106,13 +106,13 @@ export const products: Product[] = [
   },
   {
     id: '3',
-    name: 'Large Eggs',
+    name: 'Eggs',
     brand: 'Nulaid',
     category: 'Dairy',
     barcode: '6001234567892',
     image: 'https://images.pexels.com/photos/162712/egg-white-food-protein-162712.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
     unit: 'dozen',
-    unitSize: '18 pack'
+    unitSize: '12 eggs'
   },
   {
     id: '4',
@@ -143,119 +143,30 @@ export const products: Product[] = [
     image: 'https://images.pexels.com/photos/61127/pexels-photo-61127.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
     unit: 'kg',
     unitSize: 'per kg'
-  },
-  {
-    id: '7',
-    name: 'Red Apples',
-    brand: 'Fresh Produce',
-    category: 'Fresh Produce',
-    barcode: '6001234567896',
-    image: 'https://images.pexels.com/photos/102104/pexels-photo-102104.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
-    unit: 'kg',
-    unitSize: 'per kg'
-  },
-  {
-    id: '8',
-    name: 'Instant Coffee',
-    brand: 'Nescafe',
-    category: 'Beverages',
-    barcode: '6001234567897',
-    image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
-    unit: 'jar',
-    unitSize: '200g'
-  },
-  {
-    id: '9',
-    name: 'Toilet Paper',
-    brand: 'Softcare',
-    category: 'Household',
-    barcode: '6001234567898',
-    image: 'https://images.pexels.com/photos/4239091/pexels-photo-4239091.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
-    unit: 'pack',
-    unitSize: '24 pack'
-  },
-  {
-    id: '10',
-    name: 'Beef Mince',
-    brand: 'Butchery',
-    category: 'Meat',
-    barcode: '6001234567899',
-    image: 'https://images.pexels.com/photos/361184/asparagus-steak-veal-steak-veal-361184.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
-    unit: 'kg',
-    unitSize: 'per kg'
   }
 ];
 
 export const prices: Price[] = [
-  // White Bread prices - Real extracted data with savings
-  { id: '1-1', productId: '1', retailer: retailers[1], price: 13.99, onSale: true, originalPrice: 15.99, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '1-2', productId: '1', retailer: retailers[0], price: 14.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '1-3', productId: '1', retailer: retailers[2], price: 15.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  // White Bread prices
+  { id: '1-1', productId: '1', retailer: retailers[0], price: 15.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  { id: '1-2', productId: '1', retailer: retailers[1], price: 14.99, onSale: true, originalPrice: 16.99, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  { id: '1-3', productId: '1', retailer: retailers[2], price: 16.49, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'low-stock' },
   { id: '1-4', productId: '1', retailer: retailers[3], price: 18.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '1-5', productId: '1', retailer: retailers[4], price: 16.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  { id: '1-5', productId: '1', retailer: retailers[4], price: 15.49, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
   
-  // Milk prices - Real extracted data
-  { id: '2-1', productId: '2', retailer: retailers[1], price: 20.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '2-2', productId: '2', retailer: retailers[0], price: 21.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '2-3', productId: '2', retailer: retailers[2], price: 22.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '2-4', productId: '2', retailer: retailers[3], price: 28.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '2-5', productId: '2', retailer: retailers[4], price: 23.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  // Milk prices
+  { id: '2-1', productId: '2', retailer: retailers[0], price: 22.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  { id: '2-2', productId: '2', retailer: retailers[1], price: 21.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  { id: '2-3', productId: '2', retailer: retailers[2], price: 23.49, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  { id: '2-4', productId: '2', retailer: retailers[3], price: 25.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  { id: '2-5', productId: '2', retailer: retailers[4], price: 22.49, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
   
-  // Eggs prices - Real extracted data with significant savings
-  { id: '3-1', productId: '3', retailer: retailers[1], price: 32.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '3-2', productId: '3', retailer: retailers[0], price: 39.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '3-3', productId: '3', retailer: retailers[2], price: 34.99, onSale: true, originalPrice: 39.99, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '3-4', productId: '3', retailer: retailers[3], price: 44.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '3-5', productId: '3', retailer: retailers[4], price: 36.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  
-  // Rice prices - Real extracted data
-  { id: '4-1', productId: '4', retailer: retailers[1], price: 39.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '4-2', productId: '4', retailer: retailers[0], price: 42.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '4-3', productId: '4', retailer: retailers[2], price: 45.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '4-4', productId: '4', retailer: retailers[3], price: 55.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '4-5', productId: '4', retailer: retailers[4], price: 48.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  
-  // Chicken prices - Real extracted data with highest savings
-  { id: '5-1', productId: '5', retailer: retailers[1], price: 69.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '5-2', productId: '5', retailer: retailers[0], price: 79.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '5-3', productId: '5', retailer: retailers[2], price: 89.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '5-4', productId: '5', retailer: retailers[3], price: 99.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '5-5', productId: '5', retailer: retailers[4], price: 74.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  
-  // Bananas prices - Real extracted data
-  { id: '6-1', productId: '6', retailer: retailers[1], price: 17.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '6-2', productId: '6', retailer: retailers[0], price: 19.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '6-3', productId: '6', retailer: retailers[2], price: 19.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '6-4', productId: '6', retailer: retailers[3], price: 24.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '6-5', productId: '6', retailer: retailers[4], price: 21.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  
-  // Apples prices - Real extracted data
-  { id: '7-1', productId: '7', retailer: retailers[1], price: 22.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '7-2', productId: '7', retailer: retailers[0], price: 24.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '7-3', productId: '7', retailer: retailers[2], price: 26.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '7-4', productId: '7', retailer: retailers[3], price: 29.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '7-5', productId: '7', retailer: retailers[4], price: 26.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  
-  // Coffee prices - Real extracted data
-  { id: '8-1', productId: '8', retailer: retailers[1], price: 59.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '8-2', productId: '8', retailer: retailers[0], price: 67.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '8-3', productId: '8', retailer: retailers[2], price: 67.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '8-4', productId: '8', retailer: retailers[3], price: 89.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '8-5', productId: '8', retailer: retailers[4], price: 79.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  
-  // Toilet Paper prices - Real extracted data
-  { id: '9-1', productId: '9', retailer: retailers[1], price: 79.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '9-2', productId: '9', retailer: retailers[0], price: 89.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '9-3', productId: '9', retailer: retailers[2], price: 89.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '9-4', productId: '9', retailer: retailers[3], price: 119.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '9-5', productId: '9', retailer: retailers[4], price: 94.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  
-  // Beef Mince prices - Real extracted data
-  { id: '10-1', productId: '10', retailer: retailers[1], price: 75.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '10-2', productId: '10', retailer: retailers[0], price: 79.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '10-3', productId: '10', retailer: retailers[2], price: 82.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '10-4', productId: '10', retailer: retailers[3], price: 95.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
-  { id: '10-5', productId: '10', retailer: retailers[4], price: 84.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  // Eggs prices
+  { id: '3-1', productId: '3', retailer: retailers[0], price: 34.99, onSale: true, originalPrice: 39.99, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  { id: '3-2', productId: '3', retailer: retailers[1], price: 32.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  { id: '3-3', productId: '3', retailer: retailers[2], price: 36.49, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  { id: '3-4', productId: '3', retailer: retailers[3], price: 42.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
+  { id: '3-5', productId: '3', retailer: retailers[4], price: 35.99, onSale: false, lastUpdated: '2024-01-15T10:00:00Z', availability: 'in-stock' },
 ];
 
 export const deals: Deal[] = [
@@ -272,22 +183,12 @@ export const deals: Deal[] = [
   {
     id: '2',
     productId: '3',
-    retailer: retailers[2],
+    retailer: retailers[0],
     discount: 12.5,
     type: 'percentage',
     description: 'Fresh Eggs - 12.5% Off',
     validUntil: '2024-01-18T23:59:59Z',
     conditions: 'While stocks last'
-  },
-  {
-    id: '3',
-    productId: '5',
-    retailer: retailers[1],
-    discount: 10.00,
-    type: 'fixed',
-    description: 'Premium Chicken - R10 Off per kg',
-    validUntil: '2024-01-20T23:59:59Z',
-    conditions: 'Fresh meat counter only'
   }
 ];
 
@@ -298,7 +199,7 @@ export const priceHistory: PriceHistory[] = [
   { date: '2024-01-04', price: 15.99, retailer: 'Shoprite' },
   { date: '2024-01-05', price: 14.99, retailer: 'Shoprite' },
   { date: '2024-01-06', price: 14.99, retailer: 'Shoprite' },
-  { date: '2024-01-07', price: 13.99, retailer: 'Shoprite' },
+  { date: '2024-01-07', price: 14.99, retailer: 'Shoprite' },
 ];
 
 export const sampleShoppingList: ShoppingList = {
@@ -334,39 +235,4 @@ export const sampleShoppingList: ShoppingList = {
   updatedAt: '2024-01-15T12:00:00Z',
   sharedWith: [],
   budget: 500
-};
-
-// Helper function to get best price for a product
-export const getBestPrice = (productId: string) => {
-  const productPrices = prices.filter(price => price.productId === productId);
-  return productPrices.reduce((best, current) => 
-    current.price < best.price ? current : best
-  );
-};
-
-// Helper function to calculate savings for a product
-export const calculateSavings = (productId: string) => {
-  const productPrices = prices.filter(price => price.productId === productId);
-  if (productPrices.length < 2) return 0;
-  
-  const sortedPrices = productPrices.sort((a, b) => a.price - b.price);
-  return sortedPrices[sortedPrices.length - 1].price - sortedPrices[0].price;
-};
-
-// Get featured deals with real savings
-export const getFeaturedDeals = () => {
-  return products.map(product => {
-    const productPrices = prices.filter(price => price.productId === product.id);
-    const bestPrice = getBestPrice(product.id);
-    const savings = calculateSavings(product.id);
-    
-    return {
-      product,
-      bestPrice,
-      savings,
-      allPrices: productPrices
-    };
-  }).filter(deal => deal.savings > 0)
-    .sort((a, b) => b.savings - a.savings)
-    .slice(0, 6); // Top 6 deals
 };
