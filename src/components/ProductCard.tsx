@@ -123,9 +123,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {prices.length > 1 && (
           <div className="mt-3 pt-3 border-t border-gray-100">
-            <p className="text-xs text-gray-500 mb-2">
-              Price range: R{bestPrice.price.toFixed(2)} - R{worstPrice.price.toFixed(2)} across {prices.length} stores
-            </p>
+            <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+              <span>Price range: R{bestPrice.price.toFixed(2)} - R{worstPrice.price.toFixed(2)}</span>
+              <span>{prices.length} stores compared</span>
+            </div>
             <div className="flex space-x-1">
               {prices.slice(0, 5).map((price, index) => (
                 <div 
