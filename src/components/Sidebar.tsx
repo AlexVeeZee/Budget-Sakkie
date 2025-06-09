@@ -25,43 +25,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { t } = useLanguage();
 
-  const handleMenuItemClick = (action: () => void) => {
-    return (e: React.MouseEvent) => {
-      e.stopPropagation();
-      action();
-    };
-  };
-
   const menuItems = [
     { 
       icon: Settings, 
       label: t('profile.settings'), 
-      action: handleMenuItemClick(onSettingsClick)
+      action: onSettingsClick
     },
     { 
       icon: MapPin, 
       label: t('profile.location'), 
-      action: handleMenuItemClick(onLocationClick)
+      action: onLocationClick
     },
     { 
       icon: Star, 
       label: t('profile.loyalty_cards'), 
-      action: handleMenuItemClick(onLoyaltyCardsClick)
+      action: onLoyaltyCardsClick
     },
     { 
       icon: Gift, 
       label: 'Rewards', 
-      action: handleMenuItemClick(onRewardsClick)
+      action: onRewardsClick
     },
     { 
       icon: Users, 
       label: 'Family Sharing', 
-      action: handleMenuItemClick(onFamilySharingClick)
+      action: onFamilySharingClick
     },
     { 
       icon: HelpCircle, 
       label: 'Help & Support', 
-      action: handleMenuItemClick(onHelpSupportClick)
+      action: onHelpSupportClick
     },
   ];
 
@@ -83,7 +76,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div 
         className="fixed left-0 top-0 h-full w-80 z-50 transform transition-transform duration-300 shadow-xl"
         style={{ backgroundColor: '#ffffff' }}
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside sidebar
       >
         {/* Header */}
         <div 
@@ -93,10 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">Budget Sakkie</h2>
             <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
+              onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               style={{ backgroundColor: 'transparent' }}
             >
