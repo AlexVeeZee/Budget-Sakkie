@@ -153,14 +153,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed top-0 bottom-0 right-0 z-50 flex"
       style={{ 
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        left: '320px' // Start after sidebar width
+        left: '320px', // Start right after sidebar
+        backgroundColor: 'rgba(0, 0, 0, 0.5)'
       }}
     >
       <div 
-        className="rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-200"
+        className="w-full max-w-4xl bg-white shadow-2xl overflow-hidden border-l border-gray-200"
         style={{ backgroundColor: '#ffffff' }}
       >
         {/* Header */}
@@ -177,7 +177,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         </div>
 
         <div 
-          className="flex h-[calc(90vh-120px)]"
+          className="flex h-[calc(100vh-120px)]"
           style={{ backgroundColor: '#ffffff' }}
         >
           {/* Sidebar */}

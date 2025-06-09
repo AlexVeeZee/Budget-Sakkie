@@ -29,33 +29,43 @@ function App() {
     setActiveTab('search');
   };
 
+  // Close all modals helper function
+  const closeAllModals = () => {
+    setSettingsOpen(false);
+    setLocationOpen(false);
+    setLoyaltyCardsOpen(false);
+    setRewardsOpen(false);
+    setFamilySharingOpen(false);
+    setHelpSupportOpen(false);
+  };
+
   const handleSettingsClick = () => {
-    // Keep sidebar open and show settings modal
+    closeAllModals();
     setSettingsOpen(true);
   };
 
   const handleLocationClick = () => {
-    // Keep sidebar open and show location modal
+    closeAllModals();
     setLocationOpen(true);
   };
 
   const handleLoyaltyCardsClick = () => {
-    // Keep sidebar open and show loyalty cards modal
+    closeAllModals();
     setLoyaltyCardsOpen(true);
   };
 
   const handleRewardsClick = () => {
-    // Keep sidebar open and show rewards modal
+    closeAllModals();
     setRewardsOpen(true);
   };
 
   const handleFamilySharingClick = () => {
-    // Keep sidebar open and show family sharing modal
+    closeAllModals();
     setFamilySharingOpen(true);
   };
 
   const handleHelpSupportClick = () => {
-    // Keep sidebar open and show help support modal
+    closeAllModals();
     setHelpSupportOpen(true);
   };
 

@@ -71,11 +71,14 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      className="fixed top-0 bottom-0 right-0 z-50 flex"
+      style={{ 
+        left: '320px', // Start right after sidebar
+        backgroundColor: 'rgba(0, 0, 0, 0.5)'
+      }}
     >
       <div 
-        className="rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden border border-gray-200"
+        className="w-full max-w-2xl bg-white shadow-2xl overflow-hidden border-l border-gray-200"
         style={{ backgroundColor: '#ffffff' }}
       >
         {/* Header */}
@@ -92,7 +95,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(100vh-140px)]">
           {/* Current Session Location */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Shopping Session</h3>
