@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { ShoppingCart, Search, Menu, Globe, MapPin, ChevronDown } from 'lucide-react';
+import React from 'react';
+import { ShoppingCart, Search, Menu, Globe, MapPin } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
-import { LocationDropdown } from './LocationDropdown';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -10,16 +9,6 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) => {
   const { language, toggleLanguage, t } = useLanguage();
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-
-  const handleLocationClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowLocationDropdown(!showLocationDropdown);
-  };
-
-  const handleLocationClose = () => {
-    setShowLocationDropdown(false);
-  };
 
   return (
     <header 
@@ -50,22 +39,10 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Current Location Selector */}
-            <div className="relative">
-              <button
-                onClick={handleLocationClick}
-                className="flex items-center space-x-2 px-3 py-1 rounded-md hover:bg-black/10 transition-colors text-sm font-medium"
-                style={{ backgroundColor: 'transparent' }}
-              >
-                <MapPin className="h-4 w-4" />
-                <span className="hidden sm:inline">Centurion</span>
-                <ChevronDown className="h-3 w-3" />
-              </button>
-              
-              <LocationDropdown 
-                isOpen={showLocationDropdown}
-                onClose={handleLocationClose}
-              />
+            {/* Current Location Display */}
+            <div className="flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium">
+              <MapPin className="h-4 w-4" />
+              <span className="hidden sm:inline">Centurion</span>
             </div>
 
             <button
