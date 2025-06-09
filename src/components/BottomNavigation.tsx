@@ -19,7 +19,10 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-40 shadow-lg">
+    <nav 
+      className="fixed bottom-0 left-0 right-0 border-t border-gray-200 px-4 py-2 z-40 shadow-lg"
+      style={{ backgroundColor: '#ffffff' }}
+    >
       <div className="flex justify-around">
         {tabs.map(({ id, icon: Icon, label }) => (
           <button
@@ -30,6 +33,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
                 ? 'text-green-600 bg-green-50'
                 : 'text-gray-600 hover:text-green-600 hover:bg-gray-50'
             }`}
+            style={activeTab === id ? { backgroundColor: '#f0fdf4' } : {}}
           >
             <Icon className="h-5 w-5" />
             <span className="text-xs font-medium">{label}</span>

@@ -97,10 +97,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+    >
+      <div 
+        className="rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-200"
+        style={{ backgroundColor: '#ffffff' }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 text-white">
+        <div 
+          className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 text-white"
+        >
           <h2 className="text-2xl font-bold">Settings</h2>
           <button 
             onClick={onClose}
@@ -110,19 +118,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           </button>
         </div>
 
-        <div className="flex h-[calc(90vh-120px)] bg-white">
+        <div 
+          className="flex h-[calc(90vh-120px)]"
+          style={{ backgroundColor: '#ffffff' }}
+        >
           {/* Sidebar */}
-          <div className="w-64 bg-gray-50 border-r border-gray-200 p-4">
+          <div 
+            className="w-64 border-r border-gray-200 p-4"
+            style={{ backgroundColor: '#f9fafb' }}
+          >
             <nav className="space-y-2">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors text-left ${
+                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors text-left border ${
                     activeTab === tab.id
-                      ? 'bg-green-100 text-green-700 border border-green-200'
-                      : 'text-gray-700 hover:bg-gray-100 bg-white border border-gray-200'
+                      ? 'text-green-700 border-green-200'
+                      : 'text-gray-700 hover:bg-gray-100 border-gray-200'
                   }`}
+                  style={{ 
+                    backgroundColor: activeTab === tab.id ? '#f0fdf4' : '#ffffff'
+                  }}
                 >
                   <tab.icon className="h-5 w-5" />
                   <span className="font-medium">{tab.label}</span>
@@ -132,7 +149,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           </div>
 
           {/* Content */}
-          <div className="flex-1 p-6 overflow-y-auto bg-white">
+          <div 
+            className="flex-1 p-6 overflow-y-auto"
+            style={{ backgroundColor: '#ffffff' }}
+          >
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <div>
@@ -144,7 +164,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         type="text"
                         value={profile.firstName}
                         onChange={(e) => handleProfileUpdate('firstName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        style={{ backgroundColor: '#ffffff' }}
                       />
                     </div>
                     <div>
@@ -153,7 +174,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         type="text"
                         value={profile.lastName}
                         onChange={(e) => handleProfileUpdate('lastName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        style={{ backgroundColor: '#ffffff' }}
                       />
                     </div>
                     <div>
@@ -162,7 +184,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         type="email"
                         value={profile.email}
                         onChange={(e) => handleProfileUpdate('email', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        style={{ backgroundColor: '#ffffff' }}
                       />
                     </div>
                     <div>
@@ -171,7 +194,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         type="tel"
                         value={profile.phone}
                         onChange={(e) => handleProfileUpdate('phone', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        style={{ backgroundColor: '#ffffff' }}
                       />
                     </div>
                   </div>
@@ -190,7 +214,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         type="text"
                         value={profile.address}
                         onChange={(e) => handleProfileUpdate('address', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        style={{ backgroundColor: '#ffffff' }}
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -200,7 +225,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           type="text"
                           value={profile.city}
                           onChange={(e) => handleProfileUpdate('city', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          style={{ backgroundColor: '#ffffff' }}
                         />
                       </div>
                       <div>
@@ -208,7 +234,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         <select
                           value={profile.province}
                           onChange={(e) => handleProfileUpdate('province', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          style={{ backgroundColor: '#ffffff' }}
                         >
                           {provinces.map((province) => (
                             <option key={province} value={province}>{province}</option>
@@ -221,11 +248,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           type="text"
                           value={profile.postalCode}
                           onChange={(e) => handleProfileUpdate('postalCode', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          style={{ backgroundColor: '#ffffff' }}
                         />
                       </div>
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div 
+                      className="border border-blue-200 rounded-lg p-4"
+                      style={{ backgroundColor: '#eff6ff' }}
+                    >
                       <div className="flex items-start space-x-3">
                         <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
                         <div>
@@ -253,7 +284,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           type={showCurrentPassword ? 'text' : 'password'}
                           value={passwords.current}
                           onChange={(e) => handlePasswordChange('current', e.target.value)}
-                          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          style={{ backgroundColor: '#ffffff' }}
                         />
                         <button
                           type="button"
@@ -271,7 +303,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           type={showNewPassword ? 'text' : 'password'}
                           value={passwords.new}
                           onChange={(e) => handlePasswordChange('new', e.target.value)}
-                          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          style={{ backgroundColor: '#ffffff' }}
                         />
                         <button
                           type="button"
@@ -289,7 +322,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           type={showConfirmPassword ? 'text' : 'password'}
                           value={passwords.confirm}
                           onChange={(e) => handlePasswordChange('confirm', e.target.value)}
-                          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                          className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          style={{ backgroundColor: '#ffffff' }}
                         />
                         <button
                           type="button"
@@ -314,7 +348,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">Notification Preferences</h3>
                   <div className="space-y-4">
                     {Object.entries(notifications).map(([key, value]) => (
-                      <div key={key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div 
+                        key={key} 
+                        className="flex items-center justify-between p-4 rounded-lg border border-gray-200"
+                        style={{ backgroundColor: '#f9fafb' }}
+                      >
                         <div>
                           <h4 className="font-medium text-gray-900">
                             {key === 'priceAlerts' && 'Price Alerts'}
@@ -358,7 +396,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">Privacy Settings</h3>
                   <div className="space-y-4">
                     {Object.entries(privacy).map(([key, value]) => (
-                      <div key={key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div 
+                        key={key} 
+                        className="flex items-center justify-between p-4 rounded-lg border border-gray-200"
+                        style={{ backgroundColor: '#f9fafb' }}
+                      >
                         <div>
                           <h4 className="font-medium text-gray-900">
                             {key === 'shareLocation' && 'Share Location'}
@@ -397,7 +439,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">Language & Region</h3>
                   <div className="space-y-4">
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div 
+                      className="p-4 rounded-lg border border-gray-200"
+                      style={{ backgroundColor: '#f9fafb' }}
+                    >
                       <h4 className="font-medium text-gray-900 mb-2">App Language</h4>
                       <div className="space-y-2">
                         <label className="flex items-center space-x-3">
@@ -422,9 +467,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         </label>
                       </div>
                     </div>
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div 
+                      className="p-4 rounded-lg border border-gray-200"
+                      style={{ backgroundColor: '#f9fafb' }}
+                    >
                       <h4 className="font-medium text-gray-900 mb-2">Currency</h4>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white">
+                      <select 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        style={{ backgroundColor: '#ffffff' }}
+                      >
                         <option value="ZAR">South African Rand (R)</option>
                       </select>
                     </div>
@@ -436,10 +487,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-white">
+        <div 
+          className="flex items-center justify-between p-6 border-t border-gray-200"
+          style={{ backgroundColor: '#ffffff' }}
+        >
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            style={{ backgroundColor: '#ffffff' }}
           >
             Cancel
           </button>
