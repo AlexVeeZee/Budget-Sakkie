@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Settings, HelpCircle, Star, Gift, Users, MapPin } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 
@@ -6,9 +6,23 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onSettingsClick: () => void;
+  onLocationClick: () => void;
+  onLoyaltyCardsClick: () => void;
+  onRewardsClick: () => void;
+  onFamilySharingClick: () => void;
+  onHelpSupportClick: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onSettingsClick }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSettingsClick,
+  onLocationClick,
+  onLoyaltyCardsClick,
+  onRewardsClick,
+  onFamilySharingClick,
+  onHelpSupportClick
+}) => {
   const { t } = useLanguage();
 
   const menuItems = [
@@ -17,11 +31,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onSettingsCli
       label: t('profile.settings'), 
       action: onSettingsClick
     },
-    { icon: MapPin, label: t('profile.location'), action: () => {} },
-    { icon: Star, label: t('profile.loyalty_cards'), action: () => {} },
-    { icon: Gift, label: 'Rewards', action: () => {} },
-    { icon: Users, label: 'Family Sharing', action: () => {} },
-    { icon: HelpCircle, label: 'Help & Support', action: () => {} },
+    { 
+      icon: MapPin, 
+      label: t('profile.location'), 
+      action: onLocationClick
+    },
+    { 
+      icon: Star, 
+      label: t('profile.loyalty_cards'), 
+      action: onLoyaltyCardsClick
+    },
+    { 
+      icon: Gift, 
+      label: 'Rewards', 
+      action: onRewardsClick
+    },
+    { 
+      icon: Users, 
+      label: 'Family Sharing', 
+      action: onFamilySharingClick
+    },
+    { 
+      icon: HelpCircle, 
+      label: 'Help & Support', 
+      action: onHelpSupportClick
+    },
   ];
 
   if (!isOpen) return null;

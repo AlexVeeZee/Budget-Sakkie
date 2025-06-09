@@ -8,11 +8,21 @@ import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
 import { SettingsModal } from './components/modals/SettingsModal';
+import { LocationModal } from './components/modals/LocationModal';
+import { LoyaltyCardsModal } from './components/modals/LoyaltyCardsModal';
+import { RewardsModal } from './components/modals/RewardsModal';
+import { FamilySharingModal } from './components/modals/FamilySharingModal';
+import { HelpSupportModal } from './components/modals/HelpSupportModal';
 
 function App() {
   const [activeTab, setActiveTab] = useState('search');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [loyaltyCardsOpen, setLoyaltyCardsOpen] = useState(false);
+  const [rewardsOpen, setRewardsOpen] = useState(false);
+  const [familySharingOpen, setFamilySharingOpen] = useState(false);
+  const [helpSupportOpen, setHelpSupportOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearchClick = () => {
@@ -20,11 +30,33 @@ function App() {
   };
 
   const handleSettingsClick = () => {
+    setSidebarOpen(false);
     setSettingsOpen(true);
   };
 
-  const handleSettingsClose = () => {
-    setSettingsOpen(false);
+  const handleLocationClick = () => {
+    setSidebarOpen(false);
+    setLocationOpen(true);
+  };
+
+  const handleLoyaltyCardsClick = () => {
+    setSidebarOpen(false);
+    setLoyaltyCardsOpen(true);
+  };
+
+  const handleRewardsClick = () => {
+    setSidebarOpen(false);
+    setRewardsOpen(true);
+  };
+
+  const handleFamilySharingClick = () => {
+    setSidebarOpen(false);
+    setFamilySharingOpen(true);
+  };
+
+  const handleHelpSupportClick = () => {
+    setSidebarOpen(false);
+    setHelpSupportOpen(true);
   };
 
   const renderActiveTab = () => {
@@ -55,6 +87,11 @@ function App() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onSettingsClick={handleSettingsClick}
+        onLocationClick={handleLocationClick}
+        onLoyaltyCardsClick={handleLoyaltyCardsClick}
+        onRewardsClick={handleRewardsClick}
+        onFamilySharingClick={handleFamilySharingClick}
+        onHelpSupportClick={handleHelpSupportClick}
       />
       
       <main className="pb-20 pt-4">
@@ -66,9 +103,35 @@ function App() {
         onTabChange={setActiveTab}
       />
 
+      {/* Modals */}
       <SettingsModal 
         isOpen={settingsOpen}
-        onClose={handleSettingsClose}
+        onClose={() => setSettingsOpen(false)}
+      />
+
+      <LocationModal 
+        isOpen={locationOpen}
+        onClose={() => setLocationOpen(false)}
+      />
+
+      <LoyaltyCardsModal 
+        isOpen={loyaltyCardsOpen}
+        onClose={() => setLoyaltyCardsOpen(false)}
+      />
+
+      <RewardsModal 
+        isOpen={rewardsOpen}
+        onClose={() => setRewardsOpen(false)}
+      />
+
+      <FamilySharingModal 
+        isOpen={familySharingOpen}
+        onClose={() => setFamilySharingOpen(false)}
+      />
+
+      <HelpSupportModal 
+        isOpen={helpSupportOpen}
+        onClose={() => setHelpSupportOpen(false)}
       />
     </div>
   );
