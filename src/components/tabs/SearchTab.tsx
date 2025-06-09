@@ -4,7 +4,7 @@ import { ProductCard } from '../ProductCard';
 import { FeaturedDeals } from '../FeaturedDeals';
 import { CategoryShowcase } from '../CategoryShowcase';
 import { PriceTrends } from '../PriceTrends';
-import { products, prices, retailers, getFeaturedDeals } from '../../data/mockData';
+import { products, prices, getFeaturedDeals } from '../../data/mockData';
 import { useLanguage } from '../../hooks/useLanguage';
 
 interface SearchTabProps {
