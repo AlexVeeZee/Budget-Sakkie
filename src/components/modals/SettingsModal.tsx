@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, MapPin, Lock, Bell, Globe, Shield, Save, Edit2, Eye, EyeOff, Mail, CheckCircle } from 'lucide-react';
+import { X, User, MapPin, Lock, Bell, Globe, Shield, Save, Edit2, Eye, EyeOff, Mail, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 
 interface SettingsModalProps {
@@ -39,7 +39,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   });
 
   const [passwordReset, setPasswordReset] = useState({
-    email: profile.email,
     newPassword: '',
     confirmPassword: ''
   });
@@ -83,8 +82,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   const handleSendVerificationEmail = () => {
-    // Simulate sending verification email
-    console.log('Sending verification email to:', passwordReset.email);
+    // Simulate sending verification email to the registered email address
+    console.log('Sending verification email to:', profile.email);
     setEmailSent(true);
     // In a real app, you would call your backend API here
   };
@@ -119,7 +118,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     alert('Password updated successfully!');
     
     // Reset form
-    setPasswordReset({ email: profile.email, newPassword: '', confirmPassword: '' });
+    setPasswordReset({ newPassword: '', confirmPassword: '' });
     setEmailSent(false);
     setIsVerified(false);
     setVerificationCode('');
@@ -321,16 +320,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">Password Reset</h3>
+                  
+                  {/* Security Notice */}
                   <div 
-                    className="border border-blue-200 rounded-lg p-4 mb-6"
-                    style={{ backgroundColor: '#eff6ff' }}
+                    className="border border-orange-200 rounded-lg p-4 mb-6"
+                    style={{ backgroundColor: '#fff7ed' }}
                   >
                     <div className="flex items-start space-x-3">
-                      <Mail className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
                       <div>
-                        <h4 className="font-medium text-blue-900">Secure Password Reset</h4>
-                        <p className="text-sm text-blue-700 mt-1">
-                          For security, we'll send a verification code to your email address to confirm your identity before allowing password changes.
+                        <h4 className="font-medium text-orange-900">Security Notice</h4>
+                        <p className="text-sm text-orange-700 mt-1">
+                          For your security, we'll send a verification code to your registered email address. 
+                          This ensures only the original account holder can change the password.
                         </p>
                       </div>
                     </div>
@@ -343,22 +345,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     >
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-medium text-gray-900 flex items-center space-x-2">
-                          <span>Step 1: Verify Email Address</span>
+                          <span>Step 1: Verify Your Identity</span>
                           {isVerified && <CheckCircle className="h-5 w-5 text-green-600" />}
                         </h4>
                       </div>
                       
                       <div className="space-y-3">
+                        {/* Read-only email display */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                          <input
-                            type="email"
-                            value={passwordReset.email}
-                            onChange={(e) => handlePasswordResetChange('email', e.target.value)}
-                            disabled={emailSent}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
-                            style={{ backgroundColor: emailSent ? '#f3f4f6' : '#ffffff' }}
-                          />
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Verification code will be sent to:
+                          </label>
+                          <div 
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-mono"
+                          >
+                            {profile.email}
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1">
+                            This email address cannot be changed during password reset for security reasons.
+                          </p>
                         </div>
 
                         {!emailSent ? (
@@ -375,34 +380,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                               className="p-3 rounded-lg border border-green-200"
                               style={{ backgroundColor: '#f0fdf4' }}
                             >
-                              <p className="text-sm text-green-700">
-                                ✓ Verification code sent to {passwordReset.email}
+                              <div className="flex items-center space-x-2">
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                <p className="text-sm text-green-700 font-medium">
+                                  Verification code sent successfully!
+                                </p>
+                              </div>
+                              <p className="text-sm text-green-600 mt-1">
+                                Check your inbox at {profile.email}
                               </p>
                             </div>
                             
                             {!isVerified && (
-                              <div className="flex space-x-2">
-                                <input
-                                  type="text"
-                                  placeholder="Enter 6-digit code"
-                                  value={verificationCode}
-                                  onChange={(e) => setVerificationCode(e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                  style={{ backgroundColor: '#ffffff' }}
-                                  maxLength={6}
-                                />
-                                <button
-                                  onClick={handleVerifyCode}
-                                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
-                                >
-                                  Verify
-                                </button>
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-700">
+                                  Enter verification code:
+                                </label>
+                                <div className="flex space-x-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Enter 6-digit code"
+                                    value={verificationCode}
+                                    onChange={(e) => setVerificationCode(e.target.value)}
+                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono text-center"
+                                    style={{ backgroundColor: '#ffffff' }}
+                                    maxLength={6}
+                                  />
+                                  <button
+                                    onClick={handleVerifyCode}
+                                    disabled={verificationCode.length !== 6}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                                  >
+                                    Verify
+                                  </button>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <p className="text-xs text-gray-600">
+                                    Demo: Use code "123456" to verify
+                                  </p>
+                                  <button
+                                    onClick={handleSendVerificationEmail}
+                                    className="text-xs text-blue-600 hover:text-blue-700 underline"
+                                  >
+                                    Resend code
+                                  </button>
+                                </div>
                               </div>
                             )}
-                            
-                            <p className="text-xs text-gray-600">
-                              Demo: Use code "123456" to verify
-                            </p>
                           </div>
                         )}
                       </div>
@@ -463,17 +487,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           </div>
                         </div>
 
-                        {passwordReset.newPassword && passwordReset.confirmPassword && passwordReset.newPassword !== passwordReset.confirmPassword && (
-                          <p className="text-sm text-red-600">Passwords do not match</p>
-                        )}
-
-                        {passwordReset.newPassword && passwordReset.newPassword.length < 8 && (
-                          <p className="text-sm text-red-600">Password must be at least 8 characters long</p>
+                        {/* Password validation feedback */}
+                        {passwordReset.newPassword && (
+                          <div className="space-y-1">
+                            <div className={`text-xs flex items-center space-x-1 ${
+                              passwordReset.newPassword.length >= 8 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              <span>{passwordReset.newPassword.length >= 8 ? '✓' : '✗'}</span>
+                              <span>At least 8 characters</span>
+                            </div>
+                            {passwordReset.confirmPassword && (
+                              <div className={`text-xs flex items-center space-x-1 ${
+                                passwordReset.newPassword === passwordReset.confirmPassword ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                <span>{passwordReset.newPassword === passwordReset.confirmPassword ? '✓' : '✗'}</span>
+                                <span>Passwords match</span>
+                              </div>
+                            )}
+                          </div>
                         )}
 
                         <button
                           onClick={handlePasswordSubmit}
-                          disabled={!isVerified || !passwordReset.newPassword || !passwordReset.confirmPassword || passwordReset.newPassword !== passwordReset.confirmPassword}
+                          disabled={
+                            !isVerified || 
+                            !passwordReset.newPassword || 
+                            !passwordReset.confirmPassword || 
+                            passwordReset.newPassword !== passwordReset.confirmPassword ||
+                            passwordReset.newPassword.length < 8
+                          }
                           className="flex items-center space-x-2 px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
                         >
                           <Lock className="h-4 w-4" />
