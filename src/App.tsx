@@ -7,14 +7,21 @@ import { ListsTab } from './components/tabs/ListsTab';
 import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
+import { SettingsModal } from './components/modals/SettingsModal';
 
 function App() {
   const [activeTab, setActiveTab] = useState('search');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearchClick = () => {
     setActiveTab('search');
+  };
+
+  const handleSettingsClick = () => {
+    setSidebarOpen(false);
+    setSettingsOpen(true);
   };
 
   const renderActiveTab = () => {
@@ -44,6 +51,7 @@ function App() {
       <Sidebar 
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        onSettingsClick={handleSettingsClick}
       />
       
       <main className="pb-20 pt-4">
@@ -53,6 +61,11 @@ function App() {
       <BottomNavigation 
         activeTab={activeTab}
         onTabChange={setActiveTab}
+      />
+
+      <SettingsModal 
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
     </div>
   );
