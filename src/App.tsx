@@ -20,8 +20,14 @@ function App() {
   };
 
   const handleSettingsClick = () => {
-    setSidebarOpen(false);
+    // Keep sidebar open and show settings modal
     setSettingsOpen(true);
+  };
+
+  const handleSettingsClose = () => {
+    setSettingsOpen(false);
+    // Optionally close sidebar when settings modal closes
+    // setSidebarOpen(false);
   };
 
   const renderActiveTab = () => {
@@ -65,7 +71,7 @@ function App() {
 
       <SettingsModal 
         isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        onClose={handleSettingsClose}
       />
     </div>
   );
