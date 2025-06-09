@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ShoppingCart, Search, Menu, Globe, MapPin, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { LocationDropdown } from './LocationDropdown';
@@ -11,29 +11,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) => {
   const { language, toggleLanguage, t } = useLanguage();
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const locationDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (locationDropdownRef.current && !locationDropdownRef.current.contains(event.target as Node)) {
-        setShowLocationDropdown(false);
-      }
-    };
-
-    if (showLocationDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showLocationDropdown]);
-
-  const handleLocationToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowLocationDropdown(!showLocationDropdown);
-  };
 
   return (
     <header 
@@ -65,9 +42,9 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
 
           <div className="flex items-center space-x-2">
             {/* Current Location Selector */}
-            <div className="relative" ref={locationDropdownRef}>
+            <div className="relative">
               <button
-                onClick={handleLocationToggle}
+                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
                 className="flex items-center space-x-2 px-3 py-1 rounded-md hover:bg-black/10 transition-colors text-sm font-medium"
                 style={{ backgroundColor: 'transparent' }}
               >
