@@ -1,6 +1,7 @@
-import React from 'react';
-import { ShoppingCart, Search, Menu, Globe } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShoppingCart, Search, Menu, Globe, MapPin, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { LocationDropdown } from './LocationDropdown';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -9,6 +10,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) => {
   const { language, toggleLanguage, t } = useLanguage();
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
 
   return (
     <header className="bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 text-white shadow-lg sticky top-0 z-50">
@@ -32,6 +34,23 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
           </div>
 
           <div className="flex items-center space-x-2">
+            {/* Current Location Selector */}
+            <div className="relative">
+              <button
+                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                className="flex items-center space-x-2 px-3 py-1 rounded-md hover:bg-black/10 transition-colors text-sm font-medium"
+              >
+                <MapPin className="h-4 w-4" />
+                <span className="hidden sm:inline">Centurion</span>
+                <ChevronDown className="h-3 w-3" />
+              </button>
+              
+              <LocationDropdown 
+                isOpen={showLocationDropdown}
+                onClose={() => setShowLocationDropdown(false)}
+              />
+            </div>
+
             <button
               onClick={onSearchClick}
               className="p-2 rounded-md hover:bg-black/10 transition-colors"

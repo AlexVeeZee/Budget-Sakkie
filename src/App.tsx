@@ -20,14 +20,11 @@ function App() {
   };
 
   const handleSettingsClick = () => {
-    // Keep sidebar open and show settings modal
     setSettingsOpen(true);
   };
 
   const handleSettingsClose = () => {
     setSettingsOpen(false);
-    // Optionally close sidebar when settings modal closes
-    // setSidebarOpen(false);
   };
 
   const renderActiveTab = () => {

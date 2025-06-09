@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, User, MapPin, Lock, Bell, Globe, Shield, Save, Edit2, Eye, EyeOff, Mail, CheckCircle, AlertTriangle } from 'lucide-react';
+import { X, User, MapPin, Lock, Bell, Globe, Shield, Save, Edit2, Eye, EyeOff, Mail, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useLocation } from '../../hooks/useLocation';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface UserProfile {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { t, language, toggleLanguage } = useLanguage();
+  const { homeLocation, recentLocations, updateHomeLocation, removeRecentLocation, clearRecentLocations } = useLocation();
   const [activeTab, setActiveTab] = useState('profile');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -32,8 +34,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     lastName: 'Van Der Merwe',
     email: 'sarah.vandermerwe@email.com',
     phone: '+27 82 123 4567',
-    address: '123 Main Street',
-    city: 'Centurion',
+    address: homeLocation.address.split(',')[0] || '123 Main Street',
+    city: homeLocation.address.split(',')[1]?.trim() || 'Centurion',
     province: 'Gauteng',
     postalCode: '0157'
   });
@@ -61,7 +63,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   const tabs = [
     { id: 'profile', label: 'Personal Info', icon: User },
-    { id: 'location', label: 'Location', icon: MapPin },
+    { id: 'location', label: 'Home Location', icon: MapPin },
     { id: 'security', label: 'Security', icon: Lock },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'privacy', label: 'Privacy', icon: Shield },
@@ -77,20 +79,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleLocationUpdate = (field: keyof UserProfile, value: string) => {
+    handleProfileUpdate(field, value);
+    
+    // Update the home location when address fields change
+    const updatedProfile = { ...profile, [field]: value };
+    const newAddress = `${updatedProfile.address}, ${updatedProfile.city}, ${updatedProfile.province}`;
+    
+    updateHomeLocation({
+      id: 'home',
+      name: 'Home',
+      address: newAddress,
+      type: 'home'
+    });
+  };
+
   const handlePasswordResetChange = (field: keyof typeof passwordReset, value: string) => {
     setPasswordReset(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSendVerificationEmail = () => {
-    // Simulate sending verification email to the registered email address
     console.log('Sending verification email to:', profile.email);
     setEmailSent(true);
-    // In a real app, you would call your backend API here
   };
 
   const handleVerifyCode = () => {
-    // Simulate code verification
-    if (verificationCode === '123456') { // Mock verification code
+    if (verificationCode === '123456') {
       setIsVerified(true);
     } else {
       alert('Invalid verification code. Try 123456 for demo.');
@@ -113,11 +127,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       return;
     }
 
-    // Simulate password update
     console.log('Updating password...');
     alert('Password updated successfully!');
     
-    // Reset form
     setPasswordReset({ newPassword: '', confirmPassword: '' });
     setEmailSent(false);
     setIsVerified(false);
@@ -133,7 +145,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   const handleSave = () => {
-    // Here you would typically save to your backend
     console.log('Saving settings...', { profile, notifications, privacy });
     onClose();
   };
@@ -250,14 +261,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             {activeTab === 'location' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Location Settings</h3>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Home Location Settings</h3>
+                  
+                  {/* Info Banner */}
+                  <div 
+                    className="border border-blue-200 rounded-lg p-4 mb-6"
+                    style={{ backgroundColor: '#eff6ff' }}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-blue-900">About Home Location</h4>
+                        <p className="text-sm text-blue-700 mt-1">
+                          This is your default location for shopping. You can temporarily change your location 
+                          for individual shopping sessions using the location selector in the header.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
                       <input
                         type="text"
                         value={profile.address}
-                        onChange={(e) => handleProfileUpdate('address', e.target.value)}
+                        onChange={(e) => handleLocationUpdate('address', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         style={{ backgroundColor: '#ffffff' }}
                       />
@@ -268,7 +297,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         <input
                           type="text"
                           value={profile.city}
-                          onChange={(e) => handleProfileUpdate('city', e.target.value)}
+                          onChange={(e) => handleLocationUpdate('city', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                           style={{ backgroundColor: '#ffffff' }}
                         />
@@ -277,7 +306,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         <label className="block text-sm font-medium text-gray-700 mb-2">Province</label>
                         <select
                           value={profile.province}
-                          onChange={(e) => handleProfileUpdate('province', e.target.value)}
+                          onChange={(e) => handleLocationUpdate('province', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                           style={{ backgroundColor: '#ffffff' }}
                         >
@@ -291,27 +320,56 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         <input
                           type="text"
                           value={profile.postalCode}
-                          onChange={(e) => handleProfileUpdate('postalCode', e.target.value)}
+                          onChange={(e) => handleLocationUpdate('postalCode', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                           style={{ backgroundColor: '#ffffff' }}
                         />
                       </div>
                     </div>
-                    <div 
-                      className="border border-blue-200 rounded-lg p-4"
-                      style={{ backgroundColor: '#eff6ff' }}
-                    >
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium text-blue-900">Location Services</h4>
-                          <p className="text-sm text-blue-700 mt-1">
-                            We use your location to find nearby stores and provide accurate pricing information.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
                   </div>
+
+                  {/* Recent Locations Management */}
+                  {recentLocations.length > 0 && (
+                    <div className="mt-8">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-gray-900">Recent Locations</h4>
+                        <button
+                          onClick={clearRecentLocations}
+                          className="text-sm text-red-600 hover:text-red-700 font-medium"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {recentLocations.map((location) => (
+                          <div 
+                            key={location.id}
+                            className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+                            style={{ backgroundColor: '#f9fafb' }}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <MapPin className="h-4 w-4 text-gray-600" />
+                              <div>
+                                <p className="font-medium text-gray-900">{location.name}</p>
+                                <p className="text-sm text-gray-600">{location.address}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => removeRecentLocation(location.id)}
+                              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <p className="text-xs text-gray-600 mt-3">
+                        These are locations you've used recently for shopping. They appear in the location dropdown for quick access.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
