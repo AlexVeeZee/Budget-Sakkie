@@ -1,8 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { Search, Filter, ScanLine, MapPin } from 'lucide-react';
 import { ProductCard } from '../ProductCard';
 import { products, prices } from '../../data/mockData';
 import { useLanguage } from '../../hooks/useLanguage';
+
+// Lazy load heavy components
+const FilterModal = lazy(() => import('../modals/FilterModal'));
 
 interface SearchTabProps {
   searchQuery: string;
@@ -12,6 +15,7 @@ interface SearchTabProps {
 export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChange }) => {
   const { t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   const categories = [
     { id: 'all', name: 'All Categories' },
@@ -59,10 +63,17 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
             className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
           />
           <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-3">
-            <button className="p-1 text-gray-400 hover:text-gray-600">
+            <button 
+              className="p-2 text-gray-400 hover:text-gray-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Scan barcode"
+            >
               <ScanLine className="h-5 w-5" />
             </button>
-            <button className="p-1 text-gray-400 hover:text-gray-600">
+            <button 
+              onClick={() => setShowFilterModal(true)}
+              className="p-2 text-gray-400 hover:text-gray-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Open filters"
+            >
               <Filter className="h-5 w-5" />
             </button>
           </div>
@@ -84,21 +95,38 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
           </div>
         </div>
 
-        {/* Category Filter */}
-        <div className="flex space-x-2 overflow-x-auto pb-2">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedCategory === category.id
-                  ? 'bg-green-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
+        {/* Mobile-optimized Category Filter - Vertical stack on small screens */}
+        <div className="space-y-2 sm:space-y-0">
+          <div className="hidden sm:flex sm:space-x-2 sm:overflow-x-auto sm:pb-2">
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors min-h-[44px] ${
+                  selectedCategory === category.id
+                    ? 'bg-green-600 text-white'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+          
+          {/* Mobile dropdown for categories */}
+          <div className="sm:hidden">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
             >
-              {category.name}
-            </button>
-          ))}
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -111,7 +139,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
               <button
                 key={term}
                 onClick={() => onSearchChange(term)}
-                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors min-h-[44px]"
               >
                 {term}
               </button>
@@ -140,6 +168,16 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
           <p className="text-gray-600">Try adjusting your search terms or category filter</p>
         </div>
       )}
+
+      {/* Lazy loaded Filter Modal */}
+      <Suspense fallback={<div>Loading...</div>}>
+        {showFilterModal && (
+          <FilterModal
+            isOpen={showFilterModal}
+            onClose={() => setShowFilterModal(false)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

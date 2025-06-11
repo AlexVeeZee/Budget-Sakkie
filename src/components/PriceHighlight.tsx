@@ -1,6 +1,7 @@
-import React from 'react';
-import { TrendingDown, MapPin } from 'lucide-react';
+import React, { memo } from 'react';
+import { TrendingDown, MapPin, HelpCircle } from 'lucide-react';
 import { Price } from '../types';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface PriceHighlightProps {
   bestPrice: Price;
@@ -8,11 +9,13 @@ interface PriceHighlightProps {
   className?: string;
 }
 
-export const PriceHighlight: React.FC<PriceHighlightProps> = ({ 
+export const PriceHighlight: React.FC<PriceHighlightProps> = memo(({ 
   bestPrice, 
   savings, 
   className = "" 
 }) => {
+  const { formatCurrency } = useCurrency();
+
   const getAvailabilityColor = (availability: string) => {
     switch (availability) {
       case 'in-stock': return 'text-green-600';
@@ -38,25 +41,33 @@ export const PriceHighlight: React.FC<PriceHighlightProps> = ({
           <img 
             src={bestPrice.retailer.logo}
             alt={bestPrice.retailer.name}
+            loading="lazy"
             className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
           />
           <div>
             <div className="flex items-center space-x-2 mb-1">
               <span className="text-sm font-medium text-gray-700">Best Price</span>
               {savings > 0 && (
-                <div className="flex items-center space-x-1 text-green-600">
+                <div className="flex items-center space-x-1 text-green-600 group relative">
                   <TrendingDown className="h-3 w-3" />
-                  <span className="text-xs font-semibold">R{savings.toFixed(2)} saved</span>
+                  <span className="text-xs font-semibold">{formatCurrency(savings)} saved</span>
+                  <HelpCircle className="h-3 w-3 text-gray-400 ml-1" />
+                  
+                  {/* Savings explanation tooltip */}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                    Compared to highest price found
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                  </div>
                 </div>
               )}
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-xl font-bold text-gray-900">
-                R{bestPrice.price.toFixed(2)}
+                {formatCurrency(bestPrice.price)}
               </span>
               {bestPrice.originalPrice && (
                 <span className="text-sm text-gray-500 line-through">
-                  R{bestPrice.originalPrice.toFixed(2)}
+                  {formatCurrency(bestPrice.originalPrice)}
                 </span>
               )}
               <span className="text-sm font-semibold text-gray-900">
@@ -81,4 +92,6 @@ export const PriceHighlight: React.FC<PriceHighlightProps> = ({
       </div>
     </div>
   );
-};
+});
+
+PriceHighlight.displayName = 'PriceHighlight';

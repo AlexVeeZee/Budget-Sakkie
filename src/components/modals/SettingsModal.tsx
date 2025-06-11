@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { X, User, MapPin, Lock, Bell, Globe, Shield, Save, Edit2, Eye, EyeOff, Mail, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useCurrency, Currency } from '../../hooks/useCurrency';
 import { useLocation } from '../../hooks/useLocation';
+
+// Lazy load heavy modal sections
+const SecuritySection = lazy(() => import('./settings/SecuritySection'));
+const NotificationsSection = lazy(() => import('./settings/NotificationsSection'));
+const PrivacySection = lazy(() => import('./settings/PrivacySection'));
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -159,44 +164,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   return (
     <div 
-      className="fixed top-0 bottom-0 right-0 z-50 flex"
-      style={{ 
-        left: '320px', // Start right after sidebar
-        backgroundColor: 'rgba(0, 0, 0, 0.5)'
-      }}
+      className="fixed inset-0 z-50 flex"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
     >
+      {/* Mobile-first modal design */}
       <div 
-        className="w-full max-w-4xl bg-white shadow-2xl overflow-hidden border-l border-gray-200"
+        className="w-full h-full sm:max-w-4xl sm:h-auto sm:max-h-[90vh] sm:mx-auto sm:my-auto bg-white shadow-2xl overflow-hidden sm:rounded-xl"
         style={{ backgroundColor: '#ffffff' }}
       >
         {/* Header */}
         <div 
-          className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 text-white"
+          className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 text-white"
         >
-          <h2 className="text-2xl font-bold">Settings</h2>
+          <h2 className="text-xl sm:text-2xl font-bold">Settings</h2>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-black/10 rounded-lg transition-colors"
+            className="p-2 hover:bg-black/10 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
         <div 
-          className="flex h-[calc(100vh-120px)]"
+          className="flex flex-col sm:flex-row h-[calc(100vh-80px)] sm:h-[calc(90vh-80px)]"
           style={{ backgroundColor: '#ffffff' }}
         >
-          {/* Sidebar */}
+          {/* Mobile-optimized Sidebar */}
           <div 
-            className="w-64 border-r border-gray-200 p-4"
+            className="w-full sm:w-64 border-b sm:border-b-0 sm:border-r border-gray-200 p-2 sm:p-4 overflow-x-auto sm:overflow-x-visible"
             style={{ backgroundColor: '#f9fafb' }}
           >
-            <nav className="space-y-2">
+            <nav className="flex sm:flex-col space-x-2 sm:space-x-0 sm:space-y-2">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors text-left border ${
+                  className={`flex items-center space-x-3 p-3 rounded-lg transition-colors text-left border whitespace-nowrap min-h-[44px] ${
                     activeTab === tab.id
                       ? 'text-green-700 border-green-200'
                       : 'text-gray-700 hover:bg-gray-100 border-gray-200'
@@ -205,7 +208,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     backgroundColor: activeTab === tab.id ? '#f0fdf4' : '#ffffff'
                   }}
                 >
-                  <tab.icon className="h-5 w-5" />
+                  <tab.icon className="h-5 w-5 flex-shrink-0" />
                   <span className="font-medium">{tab.label}</span>
                 </button>
               ))}
@@ -214,556 +217,287 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
           {/* Content */}
           <div 
-            className="flex-1 p-6 overflow-y-auto"
+            className="flex-1 p-4 sm:p-6 overflow-y-auto"
             style={{ backgroundColor: '#ffffff' }}
           >
-            {activeTab === 'profile' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Personal Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                      <input
-                        type="text"
-                        value={profile.firstName}
-                        onChange={(e) => handleProfileUpdate('firstName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        style={{ backgroundColor: '#ffffff' }}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                      <input
-                        type="text"
-                        value={profile.lastName}
-                        onChange={(e) => handleProfileUpdate('lastName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        style={{ backgroundColor: '#ffffff' }}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                      <input
-                        type="email"
-                        value={profile.email}
-                        onChange={(e) => handleProfileUpdate('email', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        style={{ backgroundColor: '#ffffff' }}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                      <input
-                        type="tel"
-                        value={profile.phone}
-                        onChange={(e) => handleProfileUpdate('phone', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        style={{ backgroundColor: '#ffffff' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'language' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Language & Currency Settings</h3>
-                  <div className="space-y-4">
-                    <div 
-                      className="p-4 rounded-lg border border-gray-200"
-                      style={{ backgroundColor: '#f9fafb' }}
-                    >
-                      <h4 className="font-medium text-gray-900 mb-2">App Language</h4>
-                      <div className="space-y-2">
-                        <label className="flex items-center space-x-3">
-                          <input
-                            type="radio"
-                            name="language"
-                            checked={language === 'en'}
-                            onChange={() => language !== 'en' && toggleLanguage()}
-                            className="h-4 w-4 text-green-600 focus:ring-green-500"
-                          />
-                          <span className="text-gray-900">English</span>
-                        </label>
-                        <label className="flex items-center space-x-3">
-                          <input
-                            type="radio"
-                            name="language"
-                            checked={language === 'af'}
-                            onChange={() => language !== 'af' && toggleLanguage()}
-                            className="h-4 w-4 text-green-600 focus:ring-green-500"
-                          />
-                          <span className="text-gray-900">Afrikaans</span>
-                        </label>
-                      </div>
-                    </div>
-                    
-                    <div 
-                      className="p-4 rounded-lg border border-gray-200"
-                      style={{ backgroundColor: '#f9fafb' }}
-                    >
-                      <h4 className="font-medium text-gray-900 mb-2">Currency</h4>
-                      <select 
-                        value={currency}
-                        onChange={(e) => handleCurrencyChange(e.target.value as Currency)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        style={{ backgroundColor: '#ffffff' }}
-                      >
-                        {availableCurrencies.map((curr) => (
-                          <option key={curr.code} value={curr.code}>
-                            {curr.name} ({curr.symbol})
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-sm text-gray-600 mt-2">
-                        This will update all price displays throughout the app.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'location' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Home Location Settings</h3>
-                  
-                  {/* Info Banner */}
-                  <div 
-                    className="border border-blue-200 rounded-lg p-4 mb-6"
-                    style={{ backgroundColor: '#eff6ff' }}
-                  >
-                    <div className="flex items-start space-x-3">
-                      <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
+            <Suspense fallback={<div className="flex items-center justify-center h-32"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div></div>}>
+              {activeTab === 'profile' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Personal Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <h4 className="font-medium text-blue-900">About Home Location</h4>
-                        <p className="text-sm text-blue-700 mt-1">
-                          This is your default location for shopping. You can temporarily change your location 
-                          for individual shopping sessions using the location selector in the header.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                      <input
-                        type="text"
-                        value={profile.address}
-                        onChange={(e) => handleLocationUpdate('address', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        style={{ backgroundColor: '#ffffff' }}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
                         <input
                           type="text"
-                          value={profile.city}
-                          onChange={(e) => handleLocationUpdate('city', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          value={profile.firstName}
+                          onChange={(e) => handleProfileUpdate('firstName', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
                           style={{ backgroundColor: '#ffffff' }}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Province</label>
-                        <select
-                          value={profile.province}
-                          onChange={(e) => handleLocationUpdate('province', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                        <input
+                          type="text"
+                          value={profile.lastName}
+                          onChange={(e) => handleProfileUpdate('lastName', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                          style={{ backgroundColor: '#ffffff' }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <input
+                          type="email"
+                          value={profile.email}
+                          onChange={(e) => handleProfileUpdate('email', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                          style={{ backgroundColor: '#ffffff' }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                        <input
+                          type="tel"
+                          value={profile.phone}
+                          onChange={(e) => handleProfileUpdate('phone', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                          style={{ backgroundColor: '#ffffff' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'language' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Language & Currency Settings</h3>
+                    <div className="space-y-4">
+                      <div 
+                        className="p-4 rounded-lg border border-gray-200"
+                        style={{ backgroundColor: '#f9fafb' }}
+                      >
+                        <h4 className="font-medium text-gray-900 mb-2">App Language</h4>
+                        <div className="space-y-2">
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="radio"
+                              name="language"
+                              checked={language === 'en'}
+                              onChange={() => language !== 'en' && toggleLanguage()}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500"
+                            />
+                            <span className="text-gray-900">English</span>
+                          </label>
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="radio"
+                              name="language"
+                              checked={language === 'af'}
+                              onChange={() => language !== 'af' && toggleLanguage()}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500"
+                            />
+                            <span className="text-gray-900">Afrikaans</span>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div 
+                        className="p-4 rounded-lg border border-gray-200"
+                        style={{ backgroundColor: '#f9fafb' }}
+                      >
+                        <h4 className="font-medium text-gray-900 mb-2">Currency</h4>
+                        <select 
+                          value={currency}
+                          onChange={(e) => handleCurrencyChange(e.target.value as Currency)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
                           style={{ backgroundColor: '#ffffff' }}
                         >
-                          {provinces.map((province) => (
-                            <option key={province} value={province}>{province}</option>
+                          {availableCurrencies.map((curr) => (
+                            <option key={curr.code} value={curr.code}>
+                              {curr.name} ({curr.symbol})
+                            </option>
                           ))}
                         </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
-                        <input
-                          type="text"
-                          value={profile.postalCode}
-                          onChange={(e) => handleLocationUpdate('postalCode', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                          style={{ backgroundColor: '#ffffff' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Recent Locations Management */}
-                  {recentLocations.length > 0 && (
-                    <div className="mt-8">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-lg font-semibold text-gray-900">Recent Locations</h4>
-                        <button
-                          onClick={clearRecentLocations}
-                          className="text-sm text-red-600 hover:text-red-700 font-medium"
-                        >
-                          Clear All
-                        </button>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        {recentLocations.map((location) => (
-                          <div 
-                            key={location.id}
-                            className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
-                            style={{ backgroundColor: '#f9fafb' }}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <MapPin className="h-4 w-4 text-gray-600" />
-                              <div>
-                                <p className="font-medium text-gray-900">{location.name}</p>
-                                <p className="text-sm text-gray-600">{location.address}</p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => removeRecentLocation(location.id)}
-                              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <p className="text-xs text-gray-600 mt-3">
-                        These are locations you've used recently for shopping. They appear in the location dropdown for quick access.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'security' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Password Reset</h3>
-                  
-                  {/* Security Notice */}
-                  <div 
-                    className="border border-orange-200 rounded-lg p-4 mb-6"
-                    style={{ backgroundColor: '#fff7ed' }}
-                  >
-                    <div className="flex items-start space-x-3">
-                      <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-orange-900">Security Notice</h4>
-                        <p className="text-sm text-orange-700 mt-1">
-                          For your security, we'll send a verification code to your registered email address. 
-                          This ensures only the original account holder can change the password.
+                        <p className="text-sm text-gray-600 mt-2">
+                          This will update all price displays throughout the app.
                         </p>
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
 
-                  <div className="space-y-4">
-                    {/* Step 1: Email Verification */}
+              {activeTab === 'location' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Home Location Settings</h3>
+                    
+                    {/* Info Banner */}
                     <div 
-                      className={`p-4 rounded-lg border ${isVerified ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}
+                      className="border border-blue-200 rounded-lg p-4 mb-6"
+                      style={{ backgroundColor: '#eff6ff' }}
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium text-gray-900 flex items-center space-x-2">
-                          <span>Step 1: Verify Your Identity</span>
-                          {isVerified && <CheckCircle className="h-5 w-5 text-green-600" />}
-                        </h4>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        {/* Read-only email display */}
+                      <div className="flex items-start space-x-3">
+                        <MapPin className="h-5 w-5 text-blue-600 mt-0.5" />
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Verification code will be sent to:
-                          </label>
-                          <div 
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-mono"
-                          >
-                            {profile.email}
-                          </div>
-                          <p className="text-xs text-gray-600 mt-1">
-                            This email address cannot be changed during password reset for security reasons.
+                          <h4 className="font-medium text-blue-900">About Home Location</h4>
+                          <p className="text-sm text-blue-700 mt-1">
+                            This is your default location for shopping. You can temporarily change your location 
+                            for individual shopping sessions using the location selector in the header.
                           </p>
                         </div>
-
-                        {!emailSent ? (
-                          <button
-                            onClick={handleSendVerificationEmail}
-                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-                          >
-                            <Mail className="h-4 w-4" />
-                            <span>Send Verification Code</span>
-                          </button>
-                        ) : (
-                          <div className="space-y-3">
-                            <div 
-                              className="p-3 rounded-lg border border-green-200"
-                              style={{ backgroundColor: '#f0fdf4' }}
-                            >
-                              <div className="flex items-center space-x-2">
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                                <p className="text-sm text-green-700 font-medium">
-                                  Verification code sent successfully!
-                                </p>
-                              </div>
-                              <p className="text-sm text-green-600 mt-1">
-                                Check your inbox at {profile.email}
-                              </p>
-                            </div>
-                            
-                            {!isVerified && (
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-gray-700">
-                                  Enter verification code:
-                                </label>
-                                <div className="flex space-x-2">
-                                  <input
-                                    type="text"
-                                    placeholder="Enter 6-digit code"
-                                    value={verificationCode}
-                                    onChange={(e) => setVerificationCode(e.target.value)}
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono text-center"
-                                    style={{ backgroundColor: '#ffffff' }}
-                                    maxLength={6}
-                                  />
-                                  <button
-                                    onClick={handleVerifyCode}
-                                    disabled={verificationCode.length !== 6}
-                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-                                  >
-                                    Verify
-                                  </button>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <p className="text-xs text-gray-600">
-                                    Demo: Use code "123456" to verify
-                                  </p>
-                                  <button
-                                    onClick={handleSendVerificationEmail}
-                                    className="text-xs text-blue-600 hover:text-blue-700 underline"
-                                  >
-                                    Resend code
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </div>
 
-                    {/* Step 2: New Password */}
-                    <div 
-                      className={`p-4 rounded-lg border ${
-                        isVerified ? 'border-gray-200 bg-white' : 'border-gray-200 bg-gray-50 opacity-60'
-                      }`}
-                    >
-                      <h4 className="font-medium text-gray-900 mb-3">Step 2: Set New Password</h4>
-                      
-                      <div className="space-y-3">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
+                        <input
+                          type="text"
+                          value={profile.address}
+                          onChange={(e) => handleLocationUpdate('address', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                          style={{ backgroundColor: '#ffffff' }}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                          <div className="relative">
-                            <input
-                              type={showNewPassword ? 'text' : 'password'}
-                              value={passwordReset.newPassword}
-                              onChange={(e) => handlePasswordResetChange('newPassword', e.target.value)}
-                              disabled={!isVerified}
-                              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
-                              style={{ backgroundColor: isVerified ? '#ffffff' : '#f3f4f6' }}
-                              placeholder="Minimum 8 characters"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowNewPassword(!showNewPassword)}
-                              disabled={!isVerified}
-                              className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                            >
-                              {showNewPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
-                            </button>
-                          </div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                          <input
+                            type="text"
+                            value={profile.city}
+                            onChange={(e) => handleLocationUpdate('city', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                            style={{ backgroundColor: '#ffffff' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Province</label>
+                          <select
+                            value={profile.province}
+                            onChange={(e) => handleLocationUpdate('province', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                            style={{ backgroundColor: '#ffffff' }}
+                          >
+                            {provinces.map((province) => (
+                              <option key={province} value={province}>{province}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
+                          <input
+                            type="text"
+                            value={profile.postalCode}
+                            onChange={(e) => handleLocationUpdate('postalCode', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                            style={{ backgroundColor: '#ffffff' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Recent Locations Management */}
+                    {recentLocations.length > 0 && (
+                      <div className="mt-8">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900">Recent Locations</h4>
+                          <button
+                            onClick={clearRecentLocations}
+                            className="text-sm text-red-600 hover:text-red-700 font-medium min-h-[44px] px-3"
+                          >
+                            Clear All
+                          </button>
                         </div>
                         
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
-                          <div className="relative">
-                            <input
-                              type={showConfirmPassword ? 'text' : 'password'}
-                              value={passwordReset.confirmPassword}
-                              onChange={(e) => handlePasswordResetChange('confirmPassword', e.target.value)}
-                              disabled={!isVerified}
-                              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100"
-                              style={{ backgroundColor: isVerified ? '#ffffff' : '#f3f4f6' }}
-                              placeholder="Confirm your new password"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              disabled={!isVerified}
-                              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        <div className="space-y-2">
+                          {recentLocations.map((location) => (
+                            <div 
+                              key={location.id}
+                              className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+                              style={{ backgroundColor: '#f9fafb' }}
                             >
-                              {showConfirmPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Password validation feedback */}
-                        {passwordReset.newPassword && (
-                          <div className="space-y-1">
-                            <div className={`text-xs flex items-center space-x-1 ${
-                              passwordReset.newPassword.length >= 8 ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              <span>{passwordReset.newPassword.length >= 8 ? '✓' : '✗'}</span>
-                              <span>At least 8 characters</span>
-                            </div>
-                            {passwordReset.confirmPassword && (
-                              <div className={`text-xs flex items-center space-x-1 ${
-                                passwordReset.newPassword === passwordReset.confirmPassword ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                <span>{passwordReset.newPassword === passwordReset.confirmPassword ? '✓' : '✗'}</span>
-                                <span>Passwords match</span>
+                              <div className="flex items-center space-x-3">
+                                <MapPin className="h-4 w-4 text-gray-600" />
+                                <div>
+                                  <p className="font-medium text-gray-900">{location.name}</p>
+                                  <p className="text-sm text-gray-600">{location.address}</p>
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        )}
-
-                        <button
-                          onClick={handlePasswordSubmit}
-                          disabled={
-                            !isVerified || 
-                            !passwordReset.newPassword || 
-                            !passwordReset.confirmPassword || 
-                            passwordReset.newPassword !== passwordReset.confirmPassword ||
-                            passwordReset.newPassword.length < 8
-                          }
-                          className="flex items-center space-x-2 px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
-                        >
-                          <Lock className="h-4 w-4" />
-                          <span>Update Password</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'notifications' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Notification Preferences</h3>
-                  <div className="space-y-4">
-                    {Object.entries(notifications).map(([key, value]) => (
-                      <div 
-                        key={key} 
-                        className="flex items-center justify-between p-4 rounded-lg border border-gray-200"
-                        style={{ backgroundColor: '#f9fafb' }}
-                      >
-                        <div>
-                          <h4 className="font-medium text-gray-900">
-                            {key === 'priceAlerts' && 'Price Alerts'}
-                            {key === 'dealNotifications' && 'Deal Notifications'}
-                            {key === 'listReminders' && 'Shopping List Reminders'}
-                            {key === 'weeklyReports' && 'Weekly Savings Reports'}
-                            {key === 'emailUpdates' && 'Email Updates'}
-                            {key === 'smsAlerts' && 'SMS Alerts'}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {key === 'priceAlerts' && 'Get notified when prices drop on your favorite items'}
-                            {key === 'dealNotifications' && 'Receive alerts about special deals and promotions'}
-                            {key === 'listReminders' && 'Reminders about incomplete shopping lists'}
-                            {key === 'weeklyReports' && 'Weekly summary of your savings and shopping activity'}
-                            {key === 'emailUpdates' && 'Product updates and news via email'}
-                            {key === 'smsAlerts' && 'Urgent alerts via SMS'}
-                          </p>
+                              <button
+                                onClick={() => removeRecentLocation(location.id)}
+                                className="p-2 text-gray-400 hover:text-red-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
                         </div>
-                        <button
-                          onClick={() => handleNotificationToggle(key as keyof typeof notifications)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            value ? 'bg-green-600' : 'bg-gray-200'
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              value ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
+                        
+                        <p className="text-xs text-gray-600 mt-3">
+                          These are locations you've used recently for shopping. They appear in the location dropdown for quick access.
+                        </p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {activeTab === 'privacy' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Privacy Settings</h3>
-                  <div className="space-y-4">
-                    {Object.entries(privacy).map(([key, value]) => (
-                      <div 
-                        key={key} 
-                        className="flex items-center justify-between p-4 rounded-lg border border-gray-200"
-                        style={{ backgroundColor: '#f9fafb' }}
-                      >
-                        <div>
-                          <h4 className="font-medium text-gray-900">
-                            {key === 'shareLocation' && 'Share Location'}
-                            {key === 'shareShoppingLists' && 'Share Shopping Lists'}
-                            {key === 'allowAnalytics' && 'Analytics & Performance'}
-                            {key === 'marketingEmails' && 'Marketing Communications'}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {key === 'shareLocation' && 'Allow us to use your location for better store recommendations'}
-                            {key === 'shareShoppingLists' && 'Allow family members to view and edit your shopping lists'}
-                            {key === 'allowAnalytics' && 'Help us improve the app by sharing anonymous usage data'}
-                            {key === 'marketingEmails' && 'Receive promotional emails and special offers'}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handlePrivacyToggle(key as keyof typeof privacy)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            value ? 'bg-green-600' : 'bg-gray-200'
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              value ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+              {activeTab === 'security' && (
+                <SecuritySection
+                  profile={profile}
+                  passwordReset={passwordReset}
+                  showNewPassword={showNewPassword}
+                  showConfirmPassword={showConfirmPassword}
+                  emailSent={emailSent}
+                  verificationCode={verificationCode}
+                  isVerified={isVerified}
+                  onPasswordResetChange={handlePasswordResetChange}
+                  onSendVerificationEmail={handleSendVerificationEmail}
+                  onVerifyCode={handleVerifyCode}
+                  onPasswordSubmit={handlePasswordSubmit}
+                  setShowNewPassword={setShowNewPassword}
+                  setShowConfirmPassword={setShowConfirmPassword}
+                  setVerificationCode={setVerificationCode}
+                />
+              )}
+
+              {activeTab === 'notifications' && (
+                <NotificationsSection
+                  notifications={notifications}
+                  onToggle={handleNotificationToggle}
+                />
+              )}
+
+              {activeTab === 'privacy' && (
+                <PrivacySection
+                  privacy={privacy}
+                  onToggle={handlePrivacyToggle}
+                />
+              )}
+            </Suspense>
           </div>
         </div>
 
         {/* Footer */}
         <div 
-          className="flex items-center justify-between p-6 border-t border-gray-200"
+          className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 sm:p-6 border-t border-gray-200 space-y-2 sm:space-y-0"
           style={{ backgroundColor: '#ffffff' }}
         >
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-4 py-3 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
             style={{ backgroundColor: '#ffffff' }}
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="flex items-center space-x-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+            className="flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors min-h-[44px]"
           >
             <Save className="h-4 w-4" />
             <span>Save Changes</span>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { Header } from './components/Header';
 import { BottomNavigation } from './components/BottomNavigation';
 import { SearchTab } from './components/tabs/SearchTab';
@@ -7,12 +7,14 @@ import { ListsTab } from './components/tabs/ListsTab';
 import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
-import { SettingsModal } from './components/modals/SettingsModal';
-import { LocationModal } from './components/modals/LocationModal';
-import { LoyaltyCardsModal } from './components/modals/LoyaltyCardsModal';
-import { RewardsModal } from './components/modals/RewardsModal';
-import { FamilySharingModal } from './components/modals/FamilySharingModal';
-import { HelpSupportModal } from './components/modals/HelpSupportModal';
+
+// Lazy load heavy modals
+const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
+const LocationModal = lazy(() => import('./components/modals/LocationModal').then(module => ({ default: module.LocationModal })));
+const LoyaltyCardsModal = lazy(() => import('./components/modals/LoyaltyCardsModal').then(module => ({ default: module.LoyaltyCardsModal })));
+const RewardsModal = lazy(() => import('./components/modals/RewardsModal').then(module => ({ default: module.RewardsModal })));
+const FamilySharingModal = lazy(() => import('./components/modals/FamilySharingModal').then(module => ({ default: module.FamilySharingModal })));
+const HelpSupportModal = lazy(() => import('./components/modals/HelpSupportModal').then(module => ({ default: module.HelpSupportModal })));
 
 function App() {
   const [activeTab, setActiveTab] = useState('search');
@@ -113,36 +115,50 @@ function App() {
         onTabChange={setActiveTab}
       />
 
-      {/* Modals */}
-      <SettingsModal 
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
+      {/* Lazy loaded modals with loading fallback */}
+      <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>}>
+        {settingsOpen && (
+          <SettingsModal 
+            isOpen={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+          />
+        )}
 
-      <LocationModal 
-        isOpen={locationOpen}
-        onClose={() => setLocationOpen(false)}
-      />
+        {locationOpen && (
+          <LocationModal 
+            isOpen={locationOpen}
+            onClose={() => setLocationOpen(false)}
+          />
+        )}
 
-      <LoyaltyCardsModal 
-        isOpen={loyaltyCardsOpen}
-        onClose={() => setLoyaltyCardsOpen(false)}
-      />
+        {loyaltyCardsOpen && (
+          <LoyaltyCardsModal 
+            isOpen={loyaltyCardsOpen}
+            onClose={() => setLoyaltyCardsOpen(false)}
+          />
+        )}
 
-      <RewardsModal 
-        isOpen={rewardsOpen}
-        onClose={() => setRewardsOpen(false)}
-      />
+        {rewardsOpen && (
+          <RewardsModal 
+            isOpen={rewardsOpen}
+            onClose={() => setRewardsOpen(false)}
+          />
+        )}
 
-      <FamilySharingModal 
-        isOpen={familySharingOpen}
-        onClose={() => setFamilySharingOpen(false)}
-      />
+        {familySharingOpen && (
+          <FamilySharingModal 
+            isOpen={familySharingOpen}
+            onClose={() => setFamilySharingOpen(false)}
+          />
+        )}
 
-      <HelpSupportModal 
-        isOpen={helpSupportOpen}
-        onClose={() => setHelpSupportOpen(false)}
-      />
+        {helpSupportOpen && (
+          <HelpSupportModal 
+            isOpen={helpSupportOpen}
+            onClose={() => setHelpSupportOpen(false)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }
