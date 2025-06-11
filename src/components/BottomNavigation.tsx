@@ -30,10 +30,18 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
             onClick={() => onTabChange(id)}
             className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
               activeTab === id
-                ? 'text-green-600 bg-green-50'
+                ? 'text-green-600'
                 : 'text-gray-600 hover:text-green-600 hover:bg-gray-50'
             }`}
-            style={activeTab === id ? { backgroundColor: '#f0fdf4' } : {}}
+            style={activeTab === id ? { 
+              backgroundColor: 'rgb(240, 253, 244)',
+              color: 'rgb(22, 163, 74)',
+              fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+              fontSize: '16px'
+            } : {
+              fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+              fontSize: '16px'
+            }}
           >
             <Icon className="h-5 w-5" />
             <span className="text-xs font-medium">{label}</span>

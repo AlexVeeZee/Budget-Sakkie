@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, ShoppingCart, Users, DollarSign, Clock, Edit2, Trash2, Search, Check, X, Star, Package } from 'lucide-react';
+import { Plus, ShoppingCart, Users, DollarSign, Clock, Edit2, Trash2, Search, Check, X, Star, Package, Calendar, Share2 } from 'lucide-react';
 import { sampleShoppingList, products } from '../../data/mockData';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useCurrency } from '../../hooks/useCurrency';
-import { Product, ShoppingListItem } from '../../types';
+import { Product, ShoppingListItem, ShoppingList } from '../../types';
 import { EditListModal } from '../modals/EditListModal';
 import { DeleteListModal } from '../modals/DeleteListModal';
+import { CreateListModal } from '../modals/CreateListModal';
+import { ListArchiveView } from '../ListArchiveView';
 
 interface EditingItem {
   id: string;
@@ -18,7 +20,56 @@ interface EditingItem {
 export const ListsTab: React.FC = () => {
   const { t } = useLanguage();
   const { formatCurrency } = useCurrency();
-  const [activeList, setActiveList] = useState(sampleShoppingList);
+  const [viewMode, setViewMode] = useState<'archive' | 'detail'>('archive');
+  const [activeList, setActiveList] = useState<ShoppingList | null>(null);
+  const [allLists, setAllLists] = useState<ShoppingList[]>([
+    sampleShoppingList,
+    {
+      id: '2',
+      name: 'Party Supplies',
+      items: [
+        {
+          id: '1',
+          productId: '1',
+          product: products[0],
+          quantity: 3,
+          priority: 'high',
+          completed: false
+        },
+        {
+          id: '2',
+          productId: '2',
+          product: products[1],
+          quantity: 2,
+          priority: 'medium',
+          completed: true
+        }
+      ],
+      createdAt: '2024-01-10T10:00:00Z',
+      updatedAt: '2024-01-12T15:30:00Z',
+      sharedWith: ['Johan Van Der Merwe'],
+      budget: 300
+    },
+    {
+      id: '3',
+      name: 'Monthly Bulk Shopping',
+      items: [
+        {
+          id: '1',
+          productId: '3',
+          product: products[2],
+          quantity: 5,
+          priority: 'medium',
+          completed: false
+        }
+      ],
+      createdAt: '2024-01-05T14:20:00Z',
+      updatedAt: '2024-01-05T14:20:00Z',
+      sharedWith: [],
+      budget: 800
+    }
+  ]);
+  
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,6 +94,71 @@ export const ListsTab: React.FC = () => {
     { name: 'Onions', category: 'Fresh Produce', estimatedPrice: 16.99 },
     { name: 'Potatoes', category: 'Fresh Produce', estimatedPrice: 12.99 }
   ];
+
+  const handleSelectList = (list: ShoppingList) => {
+    setActiveList(list);
+    setViewMode('detail');
+  };
+
+  const handleBackToArchive = () => {
+    setViewMode('archive');
+    setActiveList(null);
+    setSearchQuery('');
+    setEditingItem(null);
+  };
+
+  const handleCreateList = (newList: Omit<ShoppingList, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const list: ShoppingList = {
+      ...newList,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    setAllLists(prev => [list, ...prev]);
+    setActiveList(list);
+    setViewMode('detail');
+  };
+
+  const handleSaveList = (name: string, budget: number) => {
+    if (!activeList) return;
+    
+    const updatedList = {
+      ...activeList,
+      name,
+      budget,
+      updatedAt: new Date().toISOString()
+    };
+    
+    setActiveList(updatedList);
+    setAllLists(prev => prev.map(list => 
+      list.id === activeList.id ? updatedList : list
+    ));
+  };
+
+  const handleDeleteList = () => {
+    if (!activeList) return;
+    
+    setAllLists(prev => prev.filter(list => list.id !== activeList.id));
+    handleBackToArchive();
+  };
+
+  // If in archive view, show the archive component
+  if (viewMode === 'archive') {
+    return (
+      <ListArchiveView
+        lists={allLists}
+        onSelectList={handleSelectList}
+        onCreateNew={() => setShowCreateModal(true)}
+        onDeleteList={(listId) => {
+          setAllLists(prev => prev.filter(list => list.id !== listId));
+        }}
+      />
+    );
+  }
+
+  // Rest of the existing detail view code...
+  if (!activeList) return null;
 
   const completedItems = activeList.items.filter(item => item.completed).length;
   const totalItems = activeList.items.length;
@@ -91,9 +207,9 @@ export const ListsTab: React.FC = () => {
   const handleEditSave = () => {
     if (!editingItem) return;
 
-    setActiveList(prev => ({
-      ...prev,
-      items: prev.items.map(item => {
+    const updatedList = {
+      ...activeList,
+      items: activeList.items.map(item => {
         if (item.id === editingItem.id) {
           return {
             ...item,
@@ -107,9 +223,14 @@ export const ListsTab: React.FC = () => {
           };
         }
         return item;
-      })
-    }));
+      }),
+      updatedAt: new Date().toISOString()
+    };
 
+    setActiveList(updatedList);
+    setAllLists(prev => prev.map(list => 
+      list.id === activeList.id ? updatedList : list
+    ));
     setEditingItem(null);
   };
 
@@ -124,11 +245,16 @@ export const ListsTab: React.FC = () => {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Actually remove the item from the list
-      setActiveList(prev => ({
-        ...prev,
-        items: prev.items.filter(item => item.id !== itemId)
-      }));
+      const updatedList = {
+        ...activeList,
+        items: activeList.items.filter(item => item.id !== itemId),
+        updatedAt: new Date().toISOString()
+      };
+      
+      setActiveList(updatedList);
+      setAllLists(prev => prev.map(list => 
+        list.id === activeList.id ? updatedList : list
+      ));
       
       // Show success feedback
       setAddedItemFeedback('Item removed successfully!');
@@ -150,14 +276,19 @@ export const ListsTab: React.FC = () => {
 
     if (existingItem) {
       // Increase quantity if item exists
-      setActiveList(prev => ({
-        ...prev,
-        items: prev.items.map(item => 
+      const updatedList = {
+        ...activeList,
+        items: activeList.items.map(item => 
           item.id === existingItem.id 
             ? { ...item, quantity: item.quantity + 1 }
             : item
-        )
-      }));
+        ),
+        updatedAt: new Date().toISOString()
+      };
+      setActiveList(updatedList);
+      setAllLists(prev => prev.map(list => 
+        list.id === activeList.id ? updatedList : list
+      ));
     } else {
       // Add new item
       const newItem: ShoppingListItem = {
@@ -178,10 +309,16 @@ export const ListsTab: React.FC = () => {
         notes: ''
       };
 
-      setActiveList(prev => ({
-        ...prev,
-        items: [...prev.items, newItem]
-      }));
+      const updatedList = {
+        ...activeList,
+        items: [...activeList.items, newItem],
+        updatedAt: new Date().toISOString()
+      };
+      
+      setActiveList(updatedList);
+      setAllLists(prev => prev.map(list => 
+        list.id === activeList.id ? updatedList : list
+      ));
     }
 
     // Show feedback
@@ -190,31 +327,18 @@ export const ListsTab: React.FC = () => {
   };
 
   const handleToggleComplete = (itemId: string) => {
-    setActiveList(prev => ({
-      ...prev,
-      items: prev.items.map(item =>
-        item.id === itemId ? { ...item, completed: !item.completed } : item
-      )
-    }));
-  };
-
-  const handleSaveList = (name: string, budget: number) => {
-    setActiveList(prev => ({
-      ...prev,
-      name,
-      budget
-    }));
-  };
-
-  const handleDeleteList = () => {
-    // In a real app, this would navigate away or show a success message
-    console.log('List deleted successfully');
-    // Reset to empty list for demo
-    setActiveList({
+    const updatedList = {
       ...activeList,
-      items: [],
-      name: 'New Shopping List'
-    });
+      items: activeList.items.map(item =>
+        item.id === itemId ? { ...item, completed: !item.completed } : item
+      ),
+      updatedAt: new Date().toISOString()
+    };
+    
+    setActiveList(updatedList);
+    setAllLists(prev => prev.map(list => 
+      list.id === activeList.id ? updatedList : list
+    ));
   };
 
   const getDefaultImage = (category: string): string => {
@@ -239,9 +363,18 @@ export const ListsTab: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header */}
+      {/* Header with Back Button */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">{t('lists.my_lists')}</h2>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={handleBackToArchive}
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <span className="text-lg">←</span>
+            <span>Back to Lists</span>
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900">{activeList.name}</h2>
+        </div>
         <button
           onClick={() => setShowCreateModal(true)}
           className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center space-x-2 transition-colors"
@@ -374,8 +507,13 @@ export const ListsTab: React.FC = () => {
               <div key={item.id} className={`px-6 py-4 transition-colors ${
                 item.completed ? 'opacity-60' : ''
               }`}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(243, 244, 246)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              style={{ 
+                fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                fontSize: '16px',
+                backgroundColor: 'rgb(243, 244, 246)'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(229, 231, 235)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(243, 244, 246)'}
               >
                 {editingItem && editingItem.id === item.id ? (
                   /* Edit Mode */
@@ -619,6 +757,13 @@ export const ListsTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Create List Modal */}
+      <CreateListModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={handleCreateList}
+      />
 
       {/* Edit List Modal */}
       <EditListModal
