@@ -95,6 +95,30 @@ export const ListsTab: React.FC = () => {
     { name: 'Potatoes', category: 'Fresh Produce', estimatedPrice: 12.99 }
   ];
 
+  // Filter items based on search query - moved to top level before any conditional returns
+  const filteredItems = useMemo(() => {
+    if (!activeList || !searchQuery) return activeList?.items || [];
+    
+    const query = searchQuery.toLowerCase();
+    return activeList.items.filter(item =>
+      item.product.name.toLowerCase().includes(query) ||
+      item.product.brand.toLowerCase().includes(query) ||
+      item.product.category.toLowerCase().includes(query) ||
+      (item.notes && item.notes.toLowerCase().includes(query))
+    );
+  }, [activeList?.items, searchQuery]);
+
+  // Filter quick add items based on search - moved to top level before any conditional returns
+  const filteredQuickAdd = useMemo(() => {
+    if (!searchQuery) return quickAddItems;
+    
+    const query = searchQuery.toLowerCase();
+    return quickAddItems.filter(item =>
+      item.name.toLowerCase().includes(query) ||
+      item.category.toLowerCase().includes(query)
+    );
+  }, [quickAddItems, searchQuery]);
+
   const handleSelectList = (list: ShoppingList) => {
     setActiveList(list);
     setViewMode('detail');
@@ -169,30 +193,6 @@ export const ListsTab: React.FC = () => {
   }, 0);
 
   const optimizedSavings = estimatedTotal * 0.15; // 15% estimated savings
-
-  // Filter items based on search query
-  const filteredItems = useMemo(() => {
-    if (!searchQuery) return activeList.items;
-    
-    const query = searchQuery.toLowerCase();
-    return activeList.items.filter(item =>
-      item.product.name.toLowerCase().includes(query) ||
-      item.product.brand.toLowerCase().includes(query) ||
-      item.product.category.toLowerCase().includes(query) ||
-      (item.notes && item.notes.toLowerCase().includes(query))
-    );
-  }, [activeList.items, searchQuery]);
-
-  // Filter quick add items based on search
-  const filteredQuickAdd = useMemo(() => {
-    if (!searchQuery) return quickAddItems;
-    
-    const query = searchQuery.toLowerCase();
-    return quickAddItems.filter(item =>
-      item.name.toLowerCase().includes(query) ||
-      item.category.toLowerCase().includes(query)
-    );
-  }, [quickAddItems, searchQuery]);
 
   const handleEditStart = (item: ShoppingListItem) => {
     setEditingItem({
