@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, MapPin, Lock, Bell, Globe, Shield, Save, Edit2, Eye, EyeOff, Mail, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useCurrency, Currency } from '../../hooks/useCurrency';
 import { useLocation } from '../../hooks/useLocation';
 
 interface SettingsModalProps {
@@ -21,6 +22,7 @@ interface UserProfile {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { t, language, toggleLanguage } = useLanguage();
+  const { currency, updateCurrency, availableCurrencies } = useCurrency();
   const { homeLocation, recentLocations, updateHomeLocation, removeRecentLocation, clearRecentLocations } = useLocation();
   const [activeTab, setActiveTab] = useState('profile');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -67,7 +69,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     { id: 'security', label: 'Security', icon: Lock },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'privacy', label: 'Privacy', icon: Shield },
-    { id: 'language', label: 'Language', icon: Globe }
+    { id: 'language', label: 'Language & Currency', icon: Globe }
   ];
 
   const provinces = [
@@ -144,8 +146,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setPrivacy(prev => ({ ...prev, [setting]: !prev[setting] }));
   };
 
+  const handleCurrencyChange = (newCurrency: Currency) => {
+    updateCurrency(newCurrency);
+  };
+
   const handleSave = () => {
-    console.log('Saving settings...', { profile, notifications, privacy });
+    console.log('Saving settings...', { profile, notifications, privacy, currency });
     onClose();
   };
 
@@ -255,6 +261,66 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         style={{ backgroundColor: '#ffffff' }}
                       />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'language' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Language & Currency Settings</h3>
+                  <div className="space-y-4">
+                    <div 
+                      className="p-4 rounded-lg border border-gray-200"
+                      style={{ backgroundColor: '#f9fafb' }}
+                    >
+                      <h4 className="font-medium text-gray-900 mb-2">App Language</h4>
+                      <div className="space-y-2">
+                        <label className="flex items-center space-x-3">
+                          <input
+                            type="radio"
+                            name="language"
+                            checked={language === 'en'}
+                            onChange={() => language !== 'en' && toggleLanguage()}
+                            className="h-4 w-4 text-green-600 focus:ring-green-500"
+                          />
+                          <span className="text-gray-900">English</span>
+                        </label>
+                        <label className="flex items-center space-x-3">
+                          <input
+                            type="radio"
+                            name="language"
+                            checked={language === 'af'}
+                            onChange={() => language !== 'af' && toggleLanguage()}
+                            className="h-4 w-4 text-green-600 focus:ring-green-500"
+                          />
+                          <span className="text-gray-900">Afrikaans</span>
+                        </label>
+                      </div>
+                    </div>
+                    
+                    <div 
+                      className="p-4 rounded-lg border border-gray-200"
+                      style={{ backgroundColor: '#f9fafb' }}
+                    >
+                      <h4 className="font-medium text-gray-900 mb-2">Currency</h4>
+                      <select 
+                        value={currency}
+                        onChange={(e) => handleCurrencyChange(e.target.value as Currency)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        style={{ backgroundColor: '#ffffff' }}
+                      >
+                        {availableCurrencies.map((curr) => (
+                          <option key={curr.code} value={curr.code}>
+                            {curr.name} ({curr.symbol})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-sm text-gray-600 mt-2">
+                        This will update all price displays throughout the app.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -676,56 +742,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         </button>
                       </div>
                     ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'language' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Language & Region</h3>
-                  <div className="space-y-4">
-                    <div 
-                      className="p-4 rounded-lg border border-gray-200"
-                      style={{ backgroundColor: '#f9fafb' }}
-                    >
-                      <h4 className="font-medium text-gray-900 mb-2">App Language</h4>
-                      <div className="space-y-2">
-                        <label className="flex items-center space-x-3">
-                          <input
-                            type="radio"
-                            name="language"
-                            checked={language === 'en'}
-                            onChange={() => language !== 'en' && toggleLanguage()}
-                            className="h-4 w-4 text-green-600 focus:ring-green-500"
-                          />
-                          <span className="text-gray-900">English</span>
-                        </label>
-                        <label className="flex items-center space-x-3">
-                          <input
-                            type="radio"
-                            name="language"
-                            checked={language === 'af'}
-                            onChange={() => language !== 'af' && toggleLanguage()}
-                            className="h-4 w-4 text-green-600 focus:ring-green-500"
-                          />
-                          <span className="text-gray-900">Afrikaans</span>
-                        </label>
-                      </div>
-                    </div>
-                    <div 
-                      className="p-4 rounded-lg border border-gray-200"
-                      style={{ backgroundColor: '#f9fafb' }}
-                    >
-                      <h4 className="font-medium text-gray-900 mb-2">Currency</h4>
-                      <select 
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        style={{ backgroundColor: '#ffffff' }}
-                      >
-                        <option value="ZAR">South African Rand (R)</option>
-                      </select>
-                    </div>
                   </div>
                 </div>
               </div>

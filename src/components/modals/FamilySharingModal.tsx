@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { X, Users, Plus, Mail, Crown, Shield, Trash2, UserPlus, Settings, Share2 } from 'lucide-react';
+import { X, Users, Plus, Mail, Crown, Shield, Trash2, UserPlus, Settings, Share2, Edit2 } from 'lucide-react';
+import { EditFamilyMemberModal } from './EditFamilyMemberModal';
+import { DeleteFamilyMemberModal } from './DeleteFamilyMemberModal';
 
 interface FamilyMember {
   id: string;
@@ -37,6 +39,8 @@ export const FamilySharingModal: React.FC<FamilySharingModalProps> = ({ isOpen, 
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member');
+  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
+  const [deletingMember, setDeletingMember] = useState<FamilyMember | null>(null);
 
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([
     {
@@ -145,10 +149,27 @@ export const FamilySharingModal: React.FC<FamilySharingModalProps> = ({ isOpen, 
     alert(`Invitation sent to ${inviteEmail}!`);
   };
 
-  const handleRemoveMember = (memberId: string) => {
-    const member = familyMembers.find(m => m.id === memberId);
-    if (member && confirm(`Are you sure you want to remove ${member.name} from family sharing?`)) {
-      setFamilyMembers(prev => prev.filter(m => m.id !== memberId));
+  const handleEditMember = (member: FamilyMember) => {
+    setEditingMember(member);
+  };
+
+  const handleSaveMember = (updatedMember: FamilyMember) => {
+    setFamilyMembers(prev => 
+      prev.map(member => 
+        member.id === updatedMember.id ? updatedMember : member
+      )
+    );
+    setEditingMember(null);
+  };
+
+  const handleDeleteMember = (member: FamilyMember) => {
+    setDeletingMember(member);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deletingMember) {
+      setFamilyMembers(prev => prev.filter(m => m.id !== deletingMember.id));
+      setDeletingMember(null);
     }
   };
 
@@ -336,12 +357,15 @@ export const FamilySharingModal: React.FC<FamilySharingModalProps> = ({ isOpen, 
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
-                          <Settings className="h-4 w-4" />
+                        <button 
+                          onClick={() => handleEditMember(member)}
+                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                        >
+                          <Edit2 className="h-4 w-4" />
                         </button>
                         {member.role !== 'admin' && (
                           <button 
-                            onClick={() => handleRemoveMember(member.id)}
+                            onClick={() => handleDeleteMember(member)}
                             className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -520,6 +544,26 @@ export const FamilySharingModal: React.FC<FamilySharingModalProps> = ({ isOpen, 
           </button>
         </div>
       </div>
+
+      {/* Edit Family Member Modal */}
+      {editingMember && (
+        <EditFamilyMemberModal
+          isOpen={!!editingMember}
+          onClose={() => setEditingMember(null)}
+          member={editingMember}
+          onSave={handleSaveMember}
+        />
+      )}
+
+      {/* Delete Family Member Modal */}
+      {deletingMember && (
+        <DeleteFamilyMemberModal
+          isOpen={!!deletingMember}
+          onClose={() => setDeletingMember(null)}
+          member={deletingMember}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </div>
   );
 };
