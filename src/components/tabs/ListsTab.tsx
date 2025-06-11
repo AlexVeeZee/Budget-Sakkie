@@ -2,7 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { Plus, ShoppingCart, Users, DollarSign, Clock, Edit2, Trash2, Search, Check, X, Star, Package } from 'lucide-react';
 import { sampleShoppingList, products } from '../../data/mockData';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useCurrency } from '../../hooks/useCurrency';
 import { Product, ShoppingListItem } from '../../types';
+import { EditListModal } from '../modals/EditListModal';
+import { DeleteListModal } from '../modals/DeleteListModal';
 
 interface EditingItem {
   id: string;
@@ -14,12 +17,15 @@ interface EditingItem {
 
 export const ListsTab: React.FC = () => {
   const { t } = useLanguage();
+  const { formatCurrency } = useCurrency();
   const [activeList, setActiveList] = useState(sampleShoppingList);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [addedItemFeedback, setAddedItemFeedback] = useState<string | null>(null);
+  const [showEditListModal, setShowEditListModal] = useState(false);
+  const [showDeleteListModal, setShowDeleteListModal] = useState(false);
 
   // Quick add items - common grocery items
   const quickAddItems = [
@@ -174,6 +180,19 @@ export const ListsTab: React.FC = () => {
     }));
   };
 
+  const handleSaveList = (name: string, budget: number) => {
+    setActiveList(prev => ({
+      ...prev,
+      name,
+      budget
+    }));
+  };
+
+  const handleDeleteList = () => {
+    // In a real app, this would navigate away or show a success message
+    console.log('List deleted successfully');
+  };
+
   const getDefaultImage = (category: string): string => {
     const categoryImages = {
       'Fresh Produce': 'https://images.pexels.com/photos/61127/pexels-photo-61127.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
@@ -202,6 +221,7 @@ export const ListsTab: React.FC = () => {
         <button
           onClick={() => setShowCreateModal(true)}
           className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center space-x-2 transition-colors"
+          style={{ color: 'rgb(255, 255, 255)', backgroundColor: 'rgb(22, 163, 74)' }}
         >
           <Plus className="h-5 w-5" />
           <span>{t('lists.create_new')}</span>
@@ -212,16 +232,27 @@ export const ListsTab: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="text-xl font-bold text-gray-900">{activeList.name}</h3>
+            <h3 className="text-xl font-bold text-gray-900" style={{ color: 'rgb(17, 24, 39)' }}>
+              {activeList.name}
+            </h3>
             <p className="text-gray-600">
               {totalItems} {t('lists.total_items')} • Created {new Date(activeList.createdAt).toLocaleDateString()}
             </p>
           </div>
           <div className="flex space-x-2">
-            <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+            <button 
+              onClick={() => setShowEditListModal(true)}
+              className="p-2 text-gray-600 hover:text-gray-900 rounded-lg transition-colors"
+              style={{ backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(243, 244, 246)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
               <Edit2 className="h-4 w-4" />
             </button>
-            <button className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+            <button 
+              onClick={() => setShowDeleteListModal(true)}
+              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
@@ -235,8 +266,11 @@ export const ListsTab: React.FC = () => {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
-              className="bg-green-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              className="h-2 rounded-full transition-all duration-300"
+              style={{ 
+                width: `${progress}%`,
+                backgroundColor: 'rgb(22, 163, 74)'
+              }}
             />
           </div>
         </div>
@@ -244,13 +278,17 @@ export const ListsTab: React.FC = () => {
         {/* Cost Summary */}
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <DollarSign className="h-6 w-6 text-green-600 mx-auto mb-1" />
-            <p className="text-lg font-bold text-gray-900">R{estimatedTotal.toFixed(2)}</p>
+            <DollarSign className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgb(22, 163, 74)' }} />
+            <p className="text-lg font-bold" style={{ color: 'rgb(17, 24, 39)' }}>
+              {formatCurrency(estimatedTotal)}
+            </p>
             <p className="text-xs text-gray-600">{t('lists.estimated_total')}</p>
           </div>
           <div className="text-center p-3 bg-green-50 rounded-lg">
-            <DollarSign className="h-6 w-6 text-green-600 mx-auto mb-1" />
-            <p className="text-lg font-bold text-green-600">-R{optimizedSavings.toFixed(2)}</p>
+            <DollarSign className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgb(22, 163, 74)' }} />
+            <p className="text-lg font-bold" style={{ color: 'rgb(22, 163, 74)' }}>
+              -{formatCurrency(optimizedSavings)}
+            </p>
             <p className="text-xs text-gray-600">{t('lists.optimized_savings')}</p>
           </div>
           <div className="text-center p-3 bg-blue-50 rounded-lg">
@@ -273,6 +311,10 @@ export const ListsTab: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search items in your list or quick add items..."
             className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
+            style={{ 
+              fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+              fontSize: '16px'
+            }}
           />
         </div>
       </div>
@@ -305,9 +347,12 @@ export const ListsTab: React.FC = () => {
             </div>
           ) : (
             filteredItems.map((item) => (
-              <div key={item.id} className={`px-6 py-4 hover:bg-gray-50 transition-colors ${
+              <div key={item.id} className={`px-6 py-4 transition-colors ${
                 item.completed ? 'opacity-60' : ''
-              }`}>
+              }`}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(243, 244, 246)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
                 {editingItem && editingItem.id === item.id ? (
                   /* Edit Mode */
                   <div className="space-y-4">
@@ -319,6 +364,10 @@ export const ListsTab: React.FC = () => {
                           value={editingItem.name}
                           onChange={(e) => setEditingItem(prev => prev ? { ...prev, name: e.target.value } : null)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          style={{ 
+                            fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                            fontSize: '16px'
+                          }}
                         />
                       </div>
                       <div>
@@ -329,6 +378,10 @@ export const ListsTab: React.FC = () => {
                           value={editingItem.quantity}
                           onChange={(e) => setEditingItem(prev => prev ? { ...prev, quantity: parseInt(e.target.value) || 1 } : null)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          style={{ 
+                            fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                            fontSize: '16px'
+                          }}
                         />
                       </div>
                       <div>
@@ -337,6 +390,10 @@ export const ListsTab: React.FC = () => {
                           value={editingItem.priority}
                           onChange={(e) => setEditingItem(prev => prev ? { ...prev, priority: e.target.value as 'high' | 'medium' | 'low' } : null)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          style={{ 
+                            fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                            fontSize: '16px'
+                          }}
                         >
                           <option value="low">Low</option>
                           <option value="medium">Medium</option>
@@ -352,12 +409,19 @@ export const ListsTab: React.FC = () => {
                         onChange={(e) => setEditingItem(prev => prev ? { ...prev, notes: e.target.value } : null)}
                         placeholder="Add any notes or specifications..."
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        style={{ 
+                          fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                          fontSize: '16px'
+                        }}
                       />
                     </div>
                     <div className="flex space-x-3">
                       <button
                         onClick={handleEditSave}
-                        className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+                        className="flex items-center space-x-2 px-4 py-2 text-white font-medium rounded-lg transition-colors"
+                        style={{ backgroundColor: 'rgb(22, 163, 74)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(21, 128, 61)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(22, 163, 74)'}
                       >
                         <Check className="h-4 w-4" />
                         <span>Save</span>
@@ -378,9 +442,10 @@ export const ListsTab: React.FC = () => {
                       onClick={() => handleToggleComplete(item.id)}
                       className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                         item.completed 
-                          ? 'bg-green-600 border-green-600 text-white' 
+                          ? 'border-green-600 text-white' 
                           : 'border-gray-300 hover:border-green-600'
                       }`}
+                      style={item.completed ? { backgroundColor: 'rgb(22, 163, 74)', borderColor: 'rgb(22, 163, 74)' } : {}}
                     >
                       {item.completed && <span className="text-xs">✓</span>}
                     </button>
@@ -392,7 +457,8 @@ export const ListsTab: React.FC = () => {
                     />
                     
                     <div className="flex-1">
-                      <h5 className={`font-semibold ${item.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                      <h5 className={`font-semibold ${item.completed ? 'line-through text-gray-500' : ''}`}
+                          style={!item.completed ? { color: 'rgb(17, 24, 39)' } : {}}>
                         {searchQuery && (
                           <span dangerouslySetInnerHTML={{
                             __html: item.product.name.replace(
@@ -411,7 +477,9 @@ export const ListsTab: React.FC = () => {
                     </div>
                     
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">R{(item.quantity * 20).toFixed(2)}</p>
+                      <p className="font-semibold" style={{ color: 'rgb(17, 24, 39)' }}>
+                        {formatCurrency(item.quantity * 20)}
+                      </p>
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(item.priority)}`}>
                         {item.priority}
                       </span>
@@ -466,7 +534,7 @@ export const ListsTab: React.FC = () => {
                     <Plus className="h-4 w-4 text-gray-600 group-hover:text-green-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">
+                    <p className="font-medium text-gray-900 truncate" style={{ color: 'rgb(17, 24, 39)' }}>
                       {searchQuery ? (
                         <span dangerouslySetInnerHTML={{
                           __html: item.name.replace(
@@ -479,7 +547,9 @@ export const ListsTab: React.FC = () => {
                   </div>
                 </div>
                 <p className="text-xs text-gray-600">{item.category}</p>
-                <p className="text-xs text-green-600 font-medium">~R{item.estimatedPrice.toFixed(2)}</p>
+                <p className="text-xs font-medium" style={{ color: 'rgb(22, 163, 74)' }}>
+                  ~{formatCurrency(item.estimatedPrice)}
+                </p>
               </button>
             ))}
           </div>
@@ -511,6 +581,24 @@ export const ListsTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Edit List Modal */}
+      <EditListModal
+        isOpen={showEditListModal}
+        onClose={() => setShowEditListModal(false)}
+        listName={activeList.name}
+        budget={activeList.budget}
+        onSave={handleSaveList}
+      />
+
+      {/* Delete List Modal */}
+      <DeleteListModal
+        isOpen={showDeleteListModal}
+        onClose={() => setShowDeleteListModal(false)}
+        listName={activeList.name}
+        itemCount={activeList.items.length}
+        onConfirm={handleDeleteList}
+      />
     </div>
   );
 };
