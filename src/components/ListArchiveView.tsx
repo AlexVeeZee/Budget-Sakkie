@@ -186,6 +186,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                     
                     <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
                       <button
+                        onClick={() => onSelectList(list)}
                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Edit list"
                       >

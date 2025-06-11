@@ -140,8 +140,12 @@ export const ListsTab: React.FC = () => {
     };
     
     setAllLists(prev => [list, ...prev]);
-    setActiveList(list);
-    setViewMode('detail');
+    
+    // If we're in archive view, navigate to the new list
+    if (viewMode === 'archive') {
+      setActiveList(list);
+      setViewMode('detail');
+    }
   };
 
   const handleSaveList = (name: string, budget: number) => {
@@ -167,17 +171,28 @@ export const ListsTab: React.FC = () => {
     handleBackToArchive();
   };
 
+  const handleDeleteListFromArchive = (listId: string) => {
+    setAllLists(prev => prev.filter(list => list.id !== listId));
+  };
+
   // If in archive view, show the archive component
   if (viewMode === 'archive') {
     return (
-      <ListArchiveView
-        lists={allLists}
-        onSelectList={handleSelectList}
-        onCreateNew={() => setShowCreateModal(true)}
-        onDeleteList={(listId) => {
-          setAllLists(prev => prev.filter(list => list.id !== listId));
-        }}
-      />
+      <>
+        <ListArchiveView
+          lists={allLists}
+          onSelectList={handleSelectList}
+          onCreateNew={() => setShowCreateModal(true)}
+          onDeleteList={handleDeleteListFromArchive}
+        />
+        
+        {/* Create List Modal - Available in Archive View */}
+        <CreateListModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onCreate={handleCreateList}
+        />
+      </>
     );
   }
 
@@ -758,7 +773,7 @@ export const ListsTab: React.FC = () => {
         </div>
       )}
 
-      {/* Create List Modal */}
+      {/* Create List Modal - Available in Detail View */}
       <CreateListModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
