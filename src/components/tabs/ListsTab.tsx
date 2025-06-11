@@ -26,6 +26,7 @@ export const ListsTab: React.FC = () => {
   const [addedItemFeedback, setAddedItemFeedback] = useState<string | null>(null);
   const [showEditListModal, setShowEditListModal] = useState(false);
   const [showDeleteListModal, setShowDeleteListModal] = useState(false);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   // Quick add items - common grocery items
   const quickAddItems = [
@@ -116,12 +117,29 @@ export const ListsTab: React.FC = () => {
     setEditingItem(null);
   };
 
-  const handleDeleteConfirm = (itemId: string) => {
-    setActiveList(prev => ({
-      ...prev,
-      items: prev.items.filter(item => item.id !== itemId)
-    }));
-    setShowDeleteConfirm(null);
+  const handleDeleteConfirm = async (itemId: string) => {
+    setDeletingItemId(itemId);
+    
+    try {
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Actually remove the item from the list
+      setActiveList(prev => ({
+        ...prev,
+        items: prev.items.filter(item => item.id !== itemId)
+      }));
+      
+      // Show success feedback
+      setAddedItemFeedback('Item removed successfully!');
+      setTimeout(() => setAddedItemFeedback(null), 2000);
+      
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    } finally {
+      setDeletingItemId(null);
+      setShowDeleteConfirm(null);
+    }
   };
 
   const handleQuickAdd = (quickItem: typeof quickAddItems[0]) => {
@@ -191,6 +209,12 @@ export const ListsTab: React.FC = () => {
   const handleDeleteList = () => {
     // In a real app, this would navigate away or show a success message
     console.log('List deleted successfully');
+    // Reset to empty list for demo
+    setActiveList({
+      ...activeList,
+      items: [],
+      name: 'New Shopping List'
+    });
   };
 
   const getDefaultImage = (category: string): string => {
@@ -324,7 +348,7 @@ export const ListsTab: React.FC = () => {
         <div className="mb-4 p-3 bg-green-100 border border-green-200 rounded-lg flex items-center space-x-2">
           <Check className="h-5 w-5 text-green-600" />
           <span className="text-green-800 font-medium">
-            {addedItemFeedback} added to your list!
+            {addedItemFeedback.includes('removed') ? addedItemFeedback : `${addedItemFeedback} added to your list!`}
           </span>
         </div>
       )}
@@ -497,8 +521,13 @@ export const ListsTab: React.FC = () => {
                         onClick={() => setShowDeleteConfirm(item.id)}
                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete item"
+                        disabled={deletingItemId === item.id}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {deletingItemId === item.id ? (
+                          <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -567,13 +596,22 @@ export const ListsTab: React.FC = () => {
             <div className="flex space-x-3">
               <button
                 onClick={() => handleDeleteConfirm(showDeleteConfirm)}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                disabled={deletingItemId === showDeleteConfirm}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
               >
-                Delete
+                {deletingItemId === showDeleteConfirm ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete</span>
+                )}
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
+                disabled={deletingItemId === showDeleteConfirm}
+                className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
               >
                 Cancel
               </button>
