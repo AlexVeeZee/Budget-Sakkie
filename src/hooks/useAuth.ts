@@ -19,8 +19,8 @@ export const useAuth = () => {
     error: null
   });
 
-  // Load user profile
-  const loadUserProfile = useCallback(async (userId: string) => {
+  // Load user profile with retry logic
+  const loadUserProfile = useCallback(async (userId: string, retryCount = 0) => {
     try {
       const { data: profile, error } = await supabase
         .from('user_profiles')
@@ -28,14 +28,25 @@ export const useAuth = () => {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // If profile doesn't exist and this is a new user, wait and retry
+        if (error.code === 'PGRST116' && retryCount < 3) {
+          console.log(`Profile not found, retrying in ${(retryCount + 1) * 1000}ms...`);
+          setTimeout(() => {
+            loadUserProfile(userId, retryCount + 1);
+          }, (retryCount + 1) * 1000);
+          return;
+        }
+        throw error;
+      }
       
-      setAuthState(prev => ({ ...prev, profile }));
+      setAuthState(prev => ({ ...prev, profile, loading: false }));
     } catch (error) {
       console.error('Error loading user profile:', error);
       setAuthState(prev => ({ 
         ...prev, 
-        error: error instanceof Error ? error.message : 'Failed to load profile'
+        error: error instanceof Error ? error.message : 'Failed to load profile',
+        loading: false
       }));
     }
   }, []);
@@ -45,6 +56,7 @@ export const useAuth = () => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
+        console.error('Session error:', error);
         setAuthState(prev => ({ 
           ...prev, 
           error: error.message, 
@@ -57,27 +69,34 @@ export const useAuth = () => {
         ...prev,
         session,
         user: session?.user ?? null,
-        loading: false
+        loading: session?.user ? true : false // Keep loading if we have a user but need to load profile
       }));
 
       if (session?.user) {
         loadUserProfile(session.user.id);
+      } else {
+        setAuthState(prev => ({ ...prev, loading: false }));
       }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        
         setAuthState(prev => ({
           ...prev,
           session,
           user: session?.user ?? null,
           profile: session?.user ? prev.profile : null,
-          error: null
+          error: null,
+          loading: session?.user ? true : false
         }));
 
         if (session?.user) {
           await loadUserProfile(session.user.id);
+        } else {
+          setAuthState(prev => ({ ...prev, loading: false }));
         }
       }
     );
@@ -102,8 +121,15 @@ export const useAuth = () => {
 
       if (error) throw error;
 
+      // If user is immediately confirmed (email confirmation disabled)
+      if (data.user && !data.user.email_confirmed_at) {
+        console.log('User created, waiting for profile creation...');
+        // Profile will be created by the trigger, we'll load it in the auth state change handler
+      }
+
       return { data, error: null };
     } catch (error) {
+      console.error('Sign up error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Sign up failed';
       setAuthState(prev => ({ ...prev, error: errorMessage, loading: false }));
       return { data: null, error: errorMessage };
@@ -124,6 +150,7 @@ export const useAuth = () => {
 
       return { data, error: null };
     } catch (error) {
+      console.error('Sign in error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Sign in failed';
       setAuthState(prev => ({ ...prev, error: errorMessage, loading: false }));
       return { data: null, error: errorMessage };
@@ -148,6 +175,7 @@ export const useAuth = () => {
 
       return { error: null };
     } catch (error) {
+      console.error('Sign out error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Sign out failed';
       setAuthState(prev => ({ ...prev, error: errorMessage, loading: false }));
       return { error: errorMessage };
@@ -180,6 +208,7 @@ export const useAuth = () => {
 
       return { data, error: null };
     } catch (error) {
+      console.error('Profile update error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Profile update failed';
       setAuthState(prev => ({ ...prev, error: errorMessage, loading: false }));
       return { data: null, error: errorMessage };
@@ -196,6 +225,7 @@ export const useAuth = () => {
       if (error) throw error;
       return { error: null };
     } catch (error) {
+      console.error('Password reset error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
       return { error: errorMessage };
     }
