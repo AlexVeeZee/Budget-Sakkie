@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, Star, SortAsc, SortDesc, CheckSquare, X, ArrowUp, Package, Zap, Crown, Shield } from 'lucide-react';
+import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, Star, SortAsc, SortDesc, CheckSquare, X, ArrowUp, Crown, Shield } from 'lucide-react';
 import { ShoppingList } from '../types';
 import { useCurrency } from '../hooks/useCurrency';
 
@@ -85,14 +85,6 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     minMembers: 0,
     maxMembers: 10
   });
-
-  // Quick add templates for common list types
-  const quickTemplates = [
-    { name: 'Weekly Groceries', icon: ShoppingCart, items: ['Bread', 'Milk', 'Eggs', 'Fruits', 'Vegetables'] },
-    { name: 'Party Supplies', icon: Star, items: ['Snacks', 'Drinks', 'Decorations', 'Paper plates'] },
-    { name: 'Household Essentials', icon: Package, items: ['Toilet paper', 'Cleaning supplies', 'Soap', 'Detergent'] },
-    { name: 'Quick Shopping', icon: Zap, items: [] }
-  ];
 
   // Scroll detection for floating button
   useEffect(() => {
@@ -256,11 +248,6 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     }
   };
 
-  const handleQuickCreate = (template: typeof quickTemplates[0]) => {
-    // This would integrate with the create modal to pre-populate with template
-    onCreateNew();
-  };
-
   const scrollToTop = () => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
@@ -324,22 +311,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
           </div>
         </div>
         
-        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
-          {/* Quick Create Templates */}
-          <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
-            {quickTemplates.map((template, index) => (
-              <button
-                key={index}
-                onClick={() => handleQuickCreate(template)}
-                className="flex items-center space-x-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors whitespace-nowrap text-sm"
-                title={`Quick create: ${template.name}`}
-              >
-                <template.icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{template.name}</span>
-              </button>
-            ))}
-          </div>
-          
+        <div className="mt-4 sm:mt-0">
           <button
             onClick={onCreateNew}
             className="flex items-center space-x-2 py-2 px-4 rounded-lg font-medium transition-colors"
