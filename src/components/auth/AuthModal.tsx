@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, Eye, EyeOff, Loader2, CheckCircle, RefreshCw } from 'lucide-react';
+import { X, Mail, Lock, User, Eye, EyeOff, Loader2, CheckCircle, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface AuthModalProps {
@@ -153,6 +153,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     error.toLowerCase().includes('email_not_confirmed')
   );
 
+  const isInvalidCredentialsError = error && (
+    error.toLowerCase().includes('invalid login credentials') ||
+    error.toLowerCase().includes('invalid_credentials')
+  );
+
   if (!isOpen) return null;
 
   return (
@@ -202,6 +207,37 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {mode === 'reset' && 'Enter your email to receive a password reset link'}
             </p>
 
+            {/* Invalid Credentials Error */}
+            {isInvalidCredentialsError && mode === 'signin' && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-red-800 mb-1">
+                      Sign In Failed
+                    </h4>
+                    <p className="text-sm text-red-700 mb-3">
+                      The email or password you entered is incorrect. Please check your credentials and try again.
+                    </p>
+                    <div className="flex flex-col space-y-2">
+                      <button
+                        onClick={() => handleModeChange('reset')}
+                        className="inline-flex items-center text-sm text-red-700 hover:text-red-800 font-medium"
+                      >
+                        Forgot your password?
+                      </button>
+                      <button
+                        onClick={() => handleModeChange('signup')}
+                        className="inline-flex items-center text-sm text-red-700 hover:text-red-800 font-medium"
+                      >
+                        Don't have an account? Sign up
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Email Confirmation Error */}
             {isEmailNotConfirmedError && (
               <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -239,7 +275,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             )}
 
             {/* Other Error Messages */}
-            {error && !isEmailNotConfirmedError && (
+            {error && !isEmailNotConfirmedError && !isInvalidCredentialsError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-red-700 text-sm">{error}</p>
               </div>
