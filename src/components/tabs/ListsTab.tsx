@@ -378,7 +378,7 @@ export const ListsTab: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header with Back Button */}
+      {/* Header with Back Button - NO CREATE BUTTON HERE */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
           <button
@@ -390,14 +390,7 @@ export const ListsTab: React.FC = () => {
           </button>
           <h2 className="text-2xl font-bold text-gray-900">{activeList.name}</h2>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center space-x-2 transition-colors"
-          style={{ color: 'rgb(255, 255, 255)', backgroundColor: 'rgb(22, 163, 74)' }}
-        >
-          <Plus className="h-5 w-5" />
-          <span>{t('lists.create_new')}</span>
-        </button>
+        {/* Removed the Create New List button from here */}
       </div>
 
       {/* Shopping List Overview */}
@@ -773,12 +766,7 @@ export const ListsTab: React.FC = () => {
         </div>
       )}
 
-      {/* Create List Modal - Available in Detail View */}
-      <CreateListModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCreate={handleCreateList}
-      />
+      {/* Create List Modal - Only available in Archive View, removed from detail view */}
 
       {/* Edit List Modal */}
       <EditListModal
