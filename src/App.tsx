@@ -31,7 +31,7 @@ function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, initialized } = useAuth();
 
   const handleSearchClick = () => {
     setActiveTab('search');
@@ -95,7 +95,7 @@ function App() {
   };
 
   // Show loading spinner while checking auth
-  if (loading) {
+  if (!initialized || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -106,102 +106,114 @@ function App() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <ProtectedRoute
-        fallback={
-          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-            <div className="text-center max-w-md mx-auto p-6">
+  // Show auth modal if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto p-6">
+            <div className="mb-8">
+              <div className="w-20 h-20 bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🛒</span>
+              </div>
               <h1 className="text-3xl font-bold text-gray-900 mb-4">Welcome to Budget Sakkie</h1>
               <p className="text-gray-600 mb-6">
                 Smart grocery shopping for South African families. Compare prices, save money, and shop smarter.
               </p>
-              <button
-                onClick={() => setAuthModalOpen(true)}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-              >
-                Get Started
-              </button>
             </div>
+            <button
+              onClick={() => setAuthModalOpen(true)}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors mb-4"
+            >
+              Get Started
+            </button>
+            <p className="text-sm text-gray-500">
+              Join thousands of families saving money on groceries
+            </p>
           </div>
-        }
-      >
-        <Header 
-          onMenuClick={() => setSidebarOpen(true)}
-          onSearchClick={handleSearchClick}
+        </div>
+
+        {/* Auth Modal */}
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
         />
-        
-        <Sidebar 
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          onSettingsClick={handleSettingsClick}
-          onLocationClick={handleLocationClick}
-          onLoyaltyCardsClick={handleLoyaltyCardsClick}
-          onRewardsClick={handleRewardsClick}
-          onFamilySharingClick={handleFamilySharingClick}
-          onHelpSupportClick={handleHelpSupportClick}
-        />
-        
-        <main className={`pb-20 pt-4 transition-all duration-300 ${sidebarOpen ? 'ml-80' : ''}`}>
-          {renderActiveTab()}
-        </main>
-        
-        <BottomNavigation 
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
+      </>
+    );
+  }
 
-        {/* Lazy loaded modals with loading fallback */}
-        <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>}>
-          {settingsOpen && (
-            <SettingsModal 
-              isOpen={settingsOpen}
-              onClose={() => setSettingsOpen(false)}
-            />
-          )}
-
-          {locationOpen && (
-            <LocationModal 
-              isOpen={locationOpen}
-              onClose={() => setLocationOpen(false)}
-            />
-          )}
-
-          {loyaltyCardsOpen && (
-            <LoyaltyCardsModal 
-              isOpen={loyaltyCardsOpen}
-              onClose={() => setLoyaltyCardsOpen(false)}
-            />
-          )}
-
-          {rewardsOpen && (
-            <RewardsModal 
-              isOpen={rewardsOpen}
-              onClose={() => setRewardsOpen(false)}
-            />
-          )}
-
-          {familySharingOpen && (
-            <FamilySharingModal 
-              isOpen={familySharingOpen}
-              onClose={() => setFamilySharingOpen(false)}
-            />
-          )}
-
-          {helpSupportOpen && (
-            <HelpSupportModal 
-              isOpen={helpSupportOpen}
-              onClose={() => setHelpSupportOpen(false)}
-            />
-          )}
-        </Suspense>
-      </ProtectedRoute>
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
+  // Render authenticated app
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header 
+        onMenuClick={() => setSidebarOpen(true)}
+        onSearchClick={handleSearchClick}
       />
+      
+      <Sidebar 
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onSettingsClick={handleSettingsClick}
+        onLocationClick={handleLocationClick}
+        onLoyaltyCardsClick={handleLoyaltyCardsClick}
+        onRewardsClick={handleRewardsClick}
+        onFamilySharingClick={handleFamilySharingClick}
+        onHelpSupportClick={handleHelpSupportClick}
+      />
+      
+      <main className={`pb-20 pt-4 transition-all duration-300 ${sidebarOpen ? 'ml-80' : ''}`}>
+        {renderActiveTab()}
+      </main>
+      
+      <BottomNavigation 
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+
+      {/* Lazy loaded modals with loading fallback */}
+      <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>}>
+        {settingsOpen && (
+          <SettingsModal 
+            isOpen={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+          />
+        )}
+
+        {locationOpen && (
+          <LocationModal 
+            isOpen={locationOpen}
+            onClose={() => setLocationOpen(false)}
+          />
+        )}
+
+        {loyaltyCardsOpen && (
+          <LoyaltyCardsModal 
+            isOpen={loyaltyCardsOpen}
+            onClose={() => setLoyaltyCardsOpen(false)}
+          />
+        )}
+
+        {rewardsOpen && (
+          <RewardsModal 
+            isOpen={rewardsOpen}
+            onClose={() => setRewardsOpen(false)}
+          />
+        )}
+
+        {familySharingOpen && (
+          <FamilySharingModal 
+            isOpen={familySharingOpen}
+            onClose={() => setFamilySharingOpen(false)}
+          />
+        )}
+
+        {helpSupportOpen && (
+          <HelpSupportModal 
+            isOpen={helpSupportOpen}
+            onClose={() => setHelpSupportOpen(false)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

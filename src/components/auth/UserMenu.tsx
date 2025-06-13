@@ -9,8 +9,12 @@ export const UserMenu: React.FC = () => {
   const { family, isInFamily } = useFamily();
 
   const handleSignOut = async () => {
-    await signOut();
-    setIsOpen(false);
+    try {
+      await signOut();
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
 
   if (!user || !profile) return null;

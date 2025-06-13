@@ -13,7 +13,8 @@ export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false
+    detectSessionInUrl: false,
+    flowType: 'pkce'
   }
 });
 
@@ -52,4 +53,17 @@ export const checkSupabaseConfig = () => {
     );
   }
   return true;
+};
+
+// Helper function to clear all auth-related storage
+export const clearAuthStorage = () => {
+  // Clear Supabase auth storage
+  localStorage.removeItem('supabase.auth.token');
+  
+  // Clear any app-specific storage
+  localStorage.removeItem('budgetSakkie_locations');
+  localStorage.removeItem('budgetSakkie_currency');
+  
+  // Clear session storage
+  sessionStorage.clear();
 };

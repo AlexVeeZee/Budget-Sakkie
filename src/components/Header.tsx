@@ -24,13 +24,15 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
-            <button
-              onClick={onMenuClick}
-              className="p-2 rounded-md hover:bg-black/10 transition-colors"
-              style={{ backgroundColor: 'transparent' }}
-            >
-              <Menu className="h-6 w-6" />
-            </button>
+            {isAuthenticated && (
+              <button
+                onClick={onMenuClick}
+                className="p-2 rounded-md hover:bg-black/10 transition-colors"
+                style={{ backgroundColor: 'transparent' }}
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+            )}
             
             <div className="flex items-center space-x-2">
               <ShoppingCart className="h-8 w-8" />
@@ -43,18 +45,22 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
 
           <div className="flex items-center space-x-2">
             {/* Current Location Display */}
-            <div className="flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium">
-              <MapPin className="h-4 w-4" />
-              <span className="hidden sm:inline">Centurion</span>
-            </div>
+            {isAuthenticated && (
+              <div className="flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium">
+                <MapPin className="h-4 w-4" />
+                <span className="hidden sm:inline">Centurion</span>
+              </div>
+            )}
 
-            <button
-              onClick={onSearchClick}
-              className="p-2 rounded-md hover:bg-black/10 transition-colors"
-              style={{ backgroundColor: 'transparent' }}
-            >
-              <Search className="h-6 w-6" />
-            </button>
+            {isAuthenticated && (
+              <button
+                onClick={onSearchClick}
+                className="p-2 rounded-md hover:bg-black/10 transition-colors"
+                style={{ backgroundColor: 'transparent' }}
+              >
+                <Search className="h-6 w-6" />
+              </button>
+            )}
             
             <button
               onClick={toggleLanguage}

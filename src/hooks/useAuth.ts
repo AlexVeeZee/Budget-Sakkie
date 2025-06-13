@@ -8,6 +8,7 @@ interface AuthState {
   session: Session | null;
   loading: boolean;
   error: string | null;
+  initialized: boolean;
 }
 
 export const useAuth = () => {
@@ -16,7 +17,8 @@ export const useAuth = () => {
     profile: null,
     session: null,
     loading: true,
-    error: null
+    error: null,
+    initialized: false
   });
 
   // Load user profile with retry logic
@@ -40,68 +42,136 @@ export const useAuth = () => {
         throw error;
       }
       
-      setAuthState(prev => ({ ...prev, profile, loading: false }));
+      setAuthState(prev => ({ 
+        ...prev, 
+        profile, 
+        loading: false,
+        initialized: true
+      }));
     } catch (error) {
       console.error('Error loading user profile:', error);
       setAuthState(prev => ({ 
         ...prev, 
         error: error instanceof Error ? error.message : 'Failed to load profile',
-        loading: false
+        loading: false,
+        initialized: true
       }));
     }
   }, []);
 
   // Initialize auth state
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('Session error:', error);
-        setAuthState(prev => ({ 
-          ...prev, 
-          error: error.message, 
-          loading: false 
-        }));
-        return;
-      }
+    let mounted = true;
 
-      setAuthState(prev => ({
-        ...prev,
-        session,
-        user: session?.user ?? null,
-        loading: session?.user ? true : false // Keep loading if we have a user but need to load profile
-      }));
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session error:', error);
+          if (mounted) {
+            setAuthState(prev => ({ 
+              ...prev, 
+              error: error.message, 
+              loading: false,
+              initialized: true
+            }));
+          }
+          return;
+        }
 
-      if (session?.user) {
-        loadUserProfile(session.user.id);
-      } else {
-        setAuthState(prev => ({ ...prev, loading: false }));
+        if (mounted) {
+          setAuthState(prev => ({
+            ...prev,
+            session,
+            user: session?.user ?? null,
+            loading: session?.user ? true : false, // Keep loading if we have a user but need to load profile
+            initialized: !session?.user // If no user, we're done initializing
+          }));
+        }
+
+        if (session?.user && mounted) {
+          await loadUserProfile(session.user.id);
+        } else if (mounted) {
+          setAuthState(prev => ({ 
+            ...prev, 
+            loading: false,
+            initialized: true
+          }));
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        if (mounted) {
+          setAuthState(prev => ({
+            ...prev,
+            error: error instanceof Error ? error.message : 'Authentication initialization failed',
+            loading: false,
+            initialized: true
+          }));
+        }
       }
-    });
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
         
+        if (!mounted) return;
+
+        // Handle sign out
+        if (event === 'SIGNED_OUT') {
+          setAuthState({
+            user: null,
+            profile: null,
+            session: null,
+            loading: false,
+            error: null,
+            initialized: true
+          });
+          
+          // Clear any cached data
+          localStorage.removeItem('supabase.auth.token');
+          return;
+        }
+
+        // Handle sign in or token refresh
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setAuthState(prev => ({
+            ...prev,
+            session,
+            user: session?.user ?? null,
+            error: null,
+            loading: session?.user ? true : false,
+            initialized: !session?.user
+          }));
+
+          if (session?.user) {
+            await loadUserProfile(session.user.id);
+          }
+          return;
+        }
+
+        // Handle other events
         setAuthState(prev => ({
           ...prev,
           session,
           user: session?.user ?? null,
           profile: session?.user ? prev.profile : null,
           error: null,
-          loading: session?.user ? true : false
+          loading: session?.user && !prev.profile ? true : false,
+          initialized: true
         }));
-
-        if (session?.user) {
-          await loadUserProfile(session.user.id);
-        } else {
-          setAuthState(prev => ({ ...prev, loading: false }));
-        }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [loadUserProfile]);
 
   // Sign up with email and password
@@ -120,12 +190,6 @@ export const useAuth = () => {
       });
 
       if (error) throw error;
-
-      // If user is immediately confirmed (email confirmation disabled)
-      if (data.user && !data.user.email_confirmed_at) {
-        console.log('User created, waiting for profile creation...');
-        // Profile will be created by the trigger, we'll load it in the auth state change handler
-      }
 
       return { data, error: null };
     } catch (error) {
@@ -165,14 +229,20 @@ export const useAuth = () => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
+      // Clear local state immediately
       setAuthState({
         user: null,
         profile: null,
         session: null,
         loading: false,
-        error: null
+        error: null,
+        initialized: true
       });
 
+      // Clear any additional cached data
+      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('budgetSakkie_locations');
+      
       return { error: null };
     } catch (error) {
       console.error('Sign out error:', error);
@@ -238,6 +308,6 @@ export const useAuth = () => {
     signOut,
     updateProfile,
     resetPassword,
-    isAuthenticated: !!authState.user
+    isAuthenticated: !!authState.user && !!authState.session
   };
 };
