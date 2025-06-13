@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, Star, SortAsc, SortDesc, CheckSquare, X, ArrowUp, Package, Zap } from 'lucide-react';
+import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, Star, SortAsc, SortDesc, CheckSquare, X, ArrowUp, Package, Zap, Crown, Shield } from 'lucide-react';
 import { ShoppingList } from '../types';
 import { useCurrency } from '../hooks/useCurrency';
 
@@ -8,9 +8,10 @@ interface ListArchiveViewProps {
   onSelectList: (list: ShoppingList) => void;
   onCreateNew: () => void;
   onDeleteList: (listId: string) => void;
+  onUpdateList?: (updatedList: ShoppingList) => void;
 }
 
-type SortOption = 'recent' | 'name' | 'budget' | 'items' | 'completion';
+type SortOption = 'recent' | 'name' | 'budget' | 'items' | 'completion' | 'members';
 type SortDirection = 'asc' | 'desc';
 
 interface FilterOptions {
@@ -19,13 +20,49 @@ interface FilterOptions {
   minBudget: number;
   maxBudget: number;
   categories: string[];
+  minMembers: number;
+  maxMembers: number;
 }
+
+interface FamilyMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'member';
+  avatar: string;
+}
+
+// Sample family members data - in a real app this would come from a context or API
+const availableFamilyMembers: FamilyMember[] = [
+  {
+    id: '1',
+    name: 'Johan Van Der Merwe',
+    email: 'johan.vandermerwe@email.com',
+    role: 'admin',
+    avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop'
+  },
+  {
+    id: '2',
+    name: 'Emma Van Der Merwe',
+    email: 'emma.vandermerwe@email.com',
+    role: 'member',
+    avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop'
+  },
+  {
+    id: '3',
+    name: 'Pieter Van Der Merwe',
+    email: 'pieter.vandermerwe@email.com',
+    role: 'member',
+    avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop'
+  }
+];
 
 export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
   lists,
   onSelectList,
   onCreateNew,
-  onDeleteList
+  onDeleteList,
+  onUpdateList
 }) => {
   const { formatCurrency } = useCurrency();
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,7 +81,9 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     showShared: true,
     minBudget: 0,
     maxBudget: 10000,
-    categories: []
+    categories: [],
+    minMembers: 0,
+    maxMembers: 10
   });
 
   // Quick add templates for common list types
@@ -71,7 +110,17 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     }
   }, []);
 
-  // Enhanced filtering and sorting logic
+  // Helper function to get family member details
+  const getFamilyMemberDetails = (memberName: string): FamilyMember | null => {
+    return availableFamilyMembers.find(member => member.name === memberName) || null;
+  };
+
+  // Helper function to get family member count including owner
+  const getFamilyMemberCount = (list: ShoppingList): number => {
+    return list.sharedWith.length + 1; // +1 for the list owner
+  };
+
+  // Enhanced filtering and sorting logic with family member support
   const filteredAndSortedLists = useMemo(() => {
     let filtered = lists.filter(list => {
       // Text search
@@ -80,6 +129,9 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
         list.items.some(item => 
           item.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           item.product.category.toLowerCase().includes(searchQuery.toLowerCase())
+        ) ||
+        list.sharedWith.some(member => 
+          member.toLowerCase().includes(searchQuery.toLowerCase())
         );
 
       // Completion filter
@@ -95,6 +147,10 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
       // Budget filter
       const budget = list.budget || 0;
       if (budget < filters.minBudget || budget > filters.maxBudget) return false;
+
+      // Family member count filter
+      const memberCount = getFamilyMemberCount(list);
+      if (memberCount < filters.minMembers || memberCount > filters.maxMembers) return false;
 
       // Category filter (based on items in the list)
       if (filters.categories.length > 0) {
@@ -119,6 +175,9 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
           break;
         case 'items':
           comparison = a.items.length - b.items.length;
+          break;
+        case 'members':
+          comparison = getFamilyMemberCount(a) - getFamilyMemberCount(b);
           break;
         case 'completion':
           const aCompletion = a.items.length > 0 ? 
@@ -222,16 +281,47 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     return list.items.slice(0, 3);
   };
 
+  // Real-time family member statistics
+  const familyMemberStats = useMemo(() => {
+    const totalMembers = new Set<string>();
+    const sharedLists = lists.filter(list => list.sharedWith.length > 0);
+    
+    lists.forEach(list => {
+      list.sharedWith.forEach(member => totalMembers.add(member));
+    });
+
+    return {
+      totalUniqueMembers: totalMembers.size,
+      totalSharedLists: sharedLists.length,
+      averageMembersPerList: lists.length > 0 ? 
+        lists.reduce((sum, list) => sum + getFamilyMemberCount(list), 0) / lists.length : 0
+    };
+  }, [lists]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" ref={scrollContainerRef}>
-      {/* Enhanced Header with Quick Actions */}
+      {/* Enhanced Header with Family Stats */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">My Shopping Lists</h1>
-          <p className="text-gray-600">
-            {lists.length} total lists • {filteredAndSortedLists.length} showing
-            {selectedLists.size > 0 && ` • ${selectedLists.size} selected`}
-          </p>
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+            <span>{lists.length} total lists</span>
+            <span>•</span>
+            <span>{filteredAndSortedLists.length} showing</span>
+            <span>•</span>
+            <span className="flex items-center space-x-1">
+              <Users className="h-4 w-4" />
+              <span>{familyMemberStats.totalUniqueMembers} family members</span>
+            </span>
+            <span>•</span>
+            <span>{familyMemberStats.totalSharedLists} shared lists</span>
+            {selectedLists.size > 0 && (
+              <>
+                <span>•</span>
+                <span className="text-blue-600 font-medium">{selectedLists.size} selected</span>
+              </>
+            )}
+          </div>
         </div>
         
         <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
@@ -280,7 +370,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search lists, items, or categories..."
+              placeholder="Search lists, items, categories, or family members..."
               className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
               style={{ 
                 fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
@@ -298,6 +388,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                 { key: 'name', label: 'Name' },
                 { key: 'budget', label: 'Budget' },
                 { key: 'items', label: 'Items' },
+                { key: 'members', label: 'Members' },
                 { key: 'completion', label: 'Progress' }
               ].map((option) => (
                 <button
@@ -330,10 +421,10 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
           </button>
         </div>
 
-        {/* Advanced Filters */}
+        {/* Advanced Filters with Family Member Options */}
         {showFilters && (
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Show/Hide Options */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Display Options</label>
@@ -379,6 +470,26 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                 </div>
               </div>
 
+              {/* Family Member Count Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Family Members</label>
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    step="1"
+                    value={filters.maxMembers}
+                    onChange={(e) => setFilters(prev => ({ ...prev, maxMembers: parseInt(e.target.value) }))}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>{filters.minMembers} member{filters.minMembers !== 1 ? 's' : ''}</span>
+                    <span>{filters.maxMembers} member{filters.maxMembers !== 1 ? 's' : ''}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Categories */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Categories</label>
@@ -411,7 +522,9 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                     showShared: true,
                     minBudget: 0,
                     maxBudget: 10000,
-                    categories: []
+                    categories: [],
+                    minMembers: 0,
+                    maxMembers: 10
                   })}
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm"
                 >
@@ -461,7 +574,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
         </div>
       )}
 
-      {/* Lists Grid */}
+      {/* Lists Grid with Enhanced Family Member Display */}
       {filteredAndSortedLists.length === 0 ? (
         <div className="text-center py-16">
           <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -491,6 +604,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
             const estimatedTotal = getEstimatedTotal(list);
             const previewItems = getListPreviewItems(list);
             const isSelected = selectedLists.has(list.id);
+            const memberCount = getFamilyMemberCount(list);
             
             return (
               <div
@@ -572,7 +686,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Stats */}
+                  {/* Enhanced Stats with Family Members */}
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
@@ -592,7 +706,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                       <div className="flex items-center justify-center mb-1">
                         <Users className="h-4 w-4 text-purple-600" />
                       </div>
-                      <p className="text-lg font-bold text-gray-900">{list.sharedWith.length + 1}</p>
+                      <p className="text-lg font-bold text-gray-900">{memberCount}</p>
                       <p className="text-xs text-gray-600">Members</p>
                     </div>
                   </div>
@@ -641,23 +755,71 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                   )}
                 </div>
 
-                {/* Shared Members */}
+                {/* Enhanced Family Members Section */}
                 {list.sharedWith.length > 0 && (
                   <div className="px-6 pb-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Shared with</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {list.sharedWith.slice(0, 2).map((member, index) => (
-                        <span 
-                          key={index}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full"
-                        >
-                          {member}
-                        </span>
-                      ))}
-                      {list.sharedWith.length > 2 && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                          +{list.sharedWith.length - 2} more
-                        </span>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center space-x-2">
+                      <Users className="h-4 w-4" />
+                      <span>Shared with {list.sharedWith.length} member{list.sharedWith.length !== 1 ? 's' : ''}</span>
+                    </h4>
+                    <div className="space-y-2">
+                      {list.sharedWith.slice(0, 3).map((memberName, index) => {
+                        const memberDetails = getFamilyMemberDetails(memberName);
+                        return (
+                          <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+                            {memberDetails ? (
+                              <>
+                                <img 
+                                  src={memberDetails.avatar}
+                                  alt={memberDetails.name}
+                                  className="w-6 h-6 rounded-full object-cover"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm font-medium text-gray-900 truncate">
+                                      {searchQuery ? (
+                                        <span dangerouslySetInnerHTML={{
+                                          __html: memberDetails.name.replace(
+                                            new RegExp(`(${searchQuery})`, 'gi'),
+                                            '<mark class="bg-yellow-200">$1</mark>'
+                                          )
+                                        }} />
+                                      ) : memberDetails.name}
+                                    </span>
+                                    {memberDetails.role === 'admin' ? (
+                                      <Crown className="h-3 w-3 text-yellow-600" />
+                                    ) : (
+                                      <Shield className="h-3 w-3 text-blue-600" />
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-medium text-gray-600">
+                                    {memberName.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                                <span className="text-sm font-medium text-gray-900 truncate">
+                                  {searchQuery ? (
+                                    <span dangerouslySetInnerHTML={{
+                                      __html: memberName.replace(
+                                        new RegExp(`(${searchQuery})`, 'gi'),
+                                        '<mark class="bg-yellow-200">$1</mark>'
+                                      )
+                                    }} />
+                                  ) : memberName}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {list.sharedWith.length > 3 && (
+                        <div className="text-xs text-gray-500 text-center py-1">
+                          +{list.sharedWith.length - 3} more member{list.sharedWith.length - 3 !== 1 ? 's' : ''}
+                        </div>
                       )}
                     </div>
                   </div>

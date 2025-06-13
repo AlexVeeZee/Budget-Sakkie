@@ -148,13 +148,15 @@ export const ListsTab: React.FC = () => {
     }
   };
 
-  const handleSaveList = (name: string, budget: number) => {
+  // Enhanced save function that updates family member data
+  const handleSaveList = (name: string, budget: number, sharedWith: string[]) => {
     if (!activeList) return;
     
     const updatedList = {
       ...activeList,
       name,
       budget,
+      sharedWith, // This now includes the updated family member list
       updatedAt: new Date().toISOString()
     };
     
@@ -175,7 +177,19 @@ export const ListsTab: React.FC = () => {
     setAllLists(prev => prev.filter(list => list.id !== listId));
   };
 
-  // If in archive view, show the archive component
+  // Real-time update function for when lists are modified
+  const handleUpdateList = (updatedList: ShoppingList) => {
+    setAllLists(prev => prev.map(list => 
+      list.id === updatedList.id ? updatedList : list
+    ));
+    
+    // If this is the currently active list, update it too
+    if (activeList && activeList.id === updatedList.id) {
+      setActiveList(updatedList);
+    }
+  };
+
+  // If in archive view, show the archive component with enhanced family member support
   if (viewMode === 'archive') {
     return (
       <>
@@ -184,6 +198,7 @@ export const ListsTab: React.FC = () => {
           onSelectList={handleSelectList}
           onCreateNew={() => setShowCreateModal(true)}
           onDeleteList={handleDeleteListFromArchive}
+          onUpdateList={handleUpdateList}
         />
         
         {/* Create List Modal - Available in Archive View */}
@@ -393,16 +408,27 @@ export const ListsTab: React.FC = () => {
         {/* Removed the Create New List button from here */}
       </div>
 
-      {/* Shopping List Overview */}
+      {/* Shopping List Overview with Enhanced Family Member Display */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="text-xl font-bold text-gray-900" style={{ color: 'rgb(17, 24, 39)' }}>
               {activeList.name}
             </h3>
-            <p className="text-gray-600">
-              {totalItems} {t('lists.total_items')} • Created {new Date(activeList.createdAt).toLocaleDateString()}
-            </p>
+            <div className="flex items-center space-x-4 text-gray-600 mt-1">
+              <span>{totalItems} {t('lists.total_items')}</span>
+              <span>•</span>
+              <span>Created {new Date(activeList.createdAt).toLocaleDateString()}</span>
+              {activeList.sharedWith.length > 0 && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center space-x-1">
+                    <Users className="h-4 w-4" />
+                    <span>Shared with {activeList.sharedWith.length} member{activeList.sharedWith.length !== 1 ? 's' : ''}</span>
+                  </span>
+                </>
+              )}
+            </div>
           </div>
           <div className="flex space-x-2">
             <button 
@@ -766,14 +792,13 @@ export const ListsTab: React.FC = () => {
         </div>
       )}
 
-      {/* Create List Modal - Only available in Archive View, removed from detail view */}
-
-      {/* Edit List Modal */}
+      {/* Enhanced Edit List Modal with Family Member Support */}
       <EditListModal
         isOpen={showEditListModal}
         onClose={() => setShowEditListModal(false)}
         listName={activeList.name}
         budget={activeList.budget}
+        sharedWith={activeList.sharedWith}
         onSave={handleSaveList}
       />
 
