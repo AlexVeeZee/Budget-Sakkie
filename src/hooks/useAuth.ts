@@ -39,18 +39,25 @@ export const useAuth = () => {
           
           // Get user data from auth
           const { data: { user }, error: userError } = await supabase.auth.getUser();
-          if (userError) throw userError;
+          if (userError) {
+            console.error('Error getting user data:', userError);
+            throw userError;
+          }
           
           if (user) {
             const displayName = user.user_metadata?.display_name || 
                               user.email?.split('@')[0] || 
                               'User';
             
+            console.log('Creating profile with display name:', displayName);
+            
             const { data: newProfile, error: createError } = await supabase
               .from('user_profiles')
               .insert({
                 id: userId,
                 display_name: displayName,
+                profile_image_url: null,
+                family_id: null,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               })
@@ -60,15 +67,47 @@ export const useAuth = () => {
             if (createError) {
               console.error('Error creating profile:', createError);
               
+              // If it's a duplicate key error, try to fetch the existing profile
+              if (createError.code === '23505') {
+                console.log('Profile already exists, fetching it...');
+                const { data: existingProfile, error: fetchError } = await supabase
+                  .from('user_profiles')
+                  .select('*')
+                  .eq('id', userId)
+                  .single();
+                
+                if (!fetchError && existingProfile) {
+                  console.log('Found existing profile:', existingProfile);
+                  setAuthState(prev => ({ 
+                    ...prev, 
+                    profile: existingProfile, 
+                    loading: false,
+                    initialized: true,
+                    error: null
+                  }));
+                  return;
+                }
+              }
+              
               // If creation failed and this is not the last retry, wait and retry
-              if (retryCount < 3) {
+              if (retryCount < 2) {
                 console.log(`Profile creation failed, retrying in ${(retryCount + 1) * 1000}ms...`);
                 setTimeout(() => {
                   loadUserProfile(userId, retryCount + 1);
                 }, (retryCount + 1) * 1000);
                 return;
               }
-              throw createError;
+              
+              // If all retries failed, continue without profile but mark as initialized
+              console.error('Failed to create profile after retries, continuing without profile');
+              setAuthState(prev => ({ 
+                ...prev, 
+                profile: null, 
+                loading: false,
+                initialized: true,
+                error: 'Failed to load user profile'
+              }));
+              return;
             }
             
             console.log('Profile created successfully:', newProfile);
@@ -84,7 +123,7 @@ export const useAuth = () => {
         }
         
         // For other errors, retry if we haven't exceeded retry count
-        if (retryCount < 3) {
+        if (retryCount < 2) {
           console.log(`Profile loading failed, retrying in ${(retryCount + 1) * 1000}ms...`);
           setTimeout(() => {
             loadUserProfile(userId, retryCount + 1);
