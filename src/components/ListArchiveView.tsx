@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, Star } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, Star, SortAsc, SortDesc, CheckSquare, X, ArrowUp, Package, Zap } from 'lucide-react';
 import { ShoppingList } from '../types';
 import { useCurrency } from '../hooks/useCurrency';
 
@@ -10,6 +10,17 @@ interface ListArchiveViewProps {
   onDeleteList: (listId: string) => void;
 }
 
+type SortOption = 'recent' | 'name' | 'budget' | 'items' | 'completion';
+type SortDirection = 'asc' | 'desc';
+
+interface FilterOptions {
+  showCompleted: boolean;
+  showShared: boolean;
+  minBudget: number;
+  maxBudget: number;
+  categories: string[];
+}
+
 export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
   lists,
   onSelectList,
@@ -18,36 +29,183 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
 }) => {
   const { formatCurrency } = useCurrency();
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'budget'>('recent');
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [selectedLists, setSelectedLists] = useState<Set<string>>(new Set());
+  const [showBatchActions, setShowBatchActions] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  const [filters, setFilters] = useState<FilterOptions>({
+    showCompleted: true,
+    showShared: true,
+    minBudget: 0,
+    maxBudget: 10000,
+    categories: []
+  });
 
-  // Filter and sort lists
-  const filteredAndSortedLists = lists
-    .filter(list => 
-      list.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      list.items.some(item => 
-        item.product.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    )
-    .sort((a, b) => {
+  // Quick add templates for common list types
+  const quickTemplates = [
+    { name: 'Weekly Groceries', icon: ShoppingCart, items: ['Bread', 'Milk', 'Eggs', 'Fruits', 'Vegetables'] },
+    { name: 'Party Supplies', icon: Star, items: ['Snacks', 'Drinks', 'Decorations', 'Paper plates'] },
+    { name: 'Household Essentials', icon: Package, items: ['Toilet paper', 'Cleaning supplies', 'Soap', 'Detergent'] },
+    { name: 'Quick Shopping', icon: Zap, items: [] }
+  ];
+
+  // Scroll detection for floating button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (scrollContainerRef.current) {
+        const scrollTop = scrollContainerRef.current.scrollTop;
+        setShowScrollTop(scrollTop > 300);
+      }
+    };
+
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
+
+  // Enhanced filtering and sorting logic
+  const filteredAndSortedLists = useMemo(() => {
+    let filtered = lists.filter(list => {
+      // Text search
+      const matchesSearch = searchQuery === '' || 
+        list.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        list.items.some(item => 
+          item.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.product.category.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+      // Completion filter
+      const completionRate = list.items.length > 0 ? 
+        (list.items.filter(item => item.completed).length / list.items.length) : 0;
+      const isCompleted = completionRate >= 0.8; // 80% or more completed
+      
+      if (!filters.showCompleted && isCompleted) return false;
+
+      // Shared filter
+      if (!filters.showShared && list.sharedWith.length > 0) return false;
+
+      // Budget filter
+      const budget = list.budget || 0;
+      if (budget < filters.minBudget || budget > filters.maxBudget) return false;
+
+      // Category filter (based on items in the list)
+      if (filters.categories.length > 0) {
+        const listCategories = [...new Set(list.items.map(item => item.product.category))];
+        const hasMatchingCategory = filters.categories.some(cat => listCategories.includes(cat));
+        if (!hasMatchingCategory) return false;
+      }
+
+      return matchesSearch;
+    });
+
+    // Sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
       switch (sortBy) {
         case 'name':
-          return a.name.localeCompare(b.name);
+          comparison = a.name.localeCompare(b.name);
+          break;
         case 'budget':
-          return (b.budget || 0) - (a.budget || 0);
+          comparison = (a.budget || 0) - (b.budget || 0);
+          break;
+        case 'items':
+          comparison = a.items.length - b.items.length;
+          break;
+        case 'completion':
+          const aCompletion = a.items.length > 0 ? 
+            (a.items.filter(item => item.completed).length / a.items.length) : 0;
+          const bCompletion = b.items.length > 0 ? 
+            (b.items.filter(item => item.completed).length / b.items.length) : 0;
+          comparison = aCompletion - bCompletion;
+          break;
         case 'recent':
         default:
-          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+          comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+          break;
       }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
     });
+
+    return filtered;
+  }, [lists, searchQuery, sortBy, sortDirection, filters]);
+
+  // Get unique categories from all lists
+  const availableCategories = useMemo(() => {
+    const categories = new Set<string>();
+    lists.forEach(list => {
+      list.items.forEach(item => {
+        categories.add(item.product.category);
+      });
+    });
+    return Array.from(categories).sort();
+  }, [lists]);
+
+  const handleSortChange = (newSortBy: SortOption) => {
+    if (sortBy === newSortBy) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(newSortBy);
+      setSortDirection('desc');
+    }
+  };
 
   const handleDeleteConfirm = (listId: string) => {
     onDeleteList(listId);
     setShowDeleteConfirm(null);
+    setSelectedLists(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(listId);
+      return newSet;
+    });
   };
 
-  const getListPreviewItems = (list: ShoppingList) => {
-    return list.items.slice(0, 3);
+  const handleSelectList = (listId: string) => {
+    setSelectedLists(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(listId)) {
+        newSet.delete(listId);
+      } else {
+        newSet.add(listId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedLists.size === filteredAndSortedLists.length) {
+      setSelectedLists(new Set());
+    } else {
+      setSelectedLists(new Set(filteredAndSortedLists.map(list => list.id)));
+    }
+  };
+
+  const handleBatchDelete = () => {
+    if (confirm(`Are you sure you want to delete ${selectedLists.size} selected lists?`)) {
+      selectedLists.forEach(listId => onDeleteList(listId));
+      setSelectedLists(new Set());
+      setShowBatchActions(false);
+    }
+  };
+
+  const handleQuickCreate = (template: typeof quickTemplates[0]) => {
+    // This would integrate with the create modal to pre-populate with template
+    onCreateNew();
+  };
+
+  const scrollToTop = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const getCompletionPercentage = (list: ShoppingList) => {
@@ -60,82 +218,263 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     return list.items.reduce((total, item) => total + (item.quantity * 20), 0);
   };
 
+  const getListPreviewItems = (list: ShoppingList) => {
+    return list.items.slice(0, 3);
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" ref={scrollContainerRef}>
+      {/* Enhanced Header with Quick Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">My Shopping Lists</h1>
-          <p className="text-gray-600">Manage all your grocery lists in one place</p>
-        </div>
-        <button
-          onClick={onCreateNew}
-          className="mt-4 sm:mt-0 flex items-center space-x-2 py-2 px-3 rounded-lg font-medium transition-colors"
-          style={{ 
-            backgroundColor: 'rgb(240, 253, 244)',
-            color: 'rgb(22, 163, 74)',
-            fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
-            fontSize: '16px'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(220, 252, 231)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(240, 253, 244)'}
-        >
-          <Plus className="h-5 w-5" />
-          <span>Create New List</span>
-        </button>
-      </div>
-
-      {/* Search and Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1 relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search lists or items..."
-            className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
-            style={{ 
-              fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
-              fontSize: '16px'
-            }}
-          />
+          <p className="text-gray-600">
+            {lists.length} total lists • {filteredAndSortedLists.length} showing
+            {selectedLists.size > 0 && ` • ${selectedLists.size} selected`}
+          </p>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <Filter className="h-5 w-5 text-gray-400" />
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'recent' | 'name' | 'budget')}
-            className="px-4 py-3 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
+          {/* Quick Create Templates */}
+          <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+            {quickTemplates.map((template, index) => (
+              <button
+                key={index}
+                onClick={() => handleQuickCreate(template)}
+                className="flex items-center space-x-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors whitespace-nowrap text-sm"
+                title={`Quick create: ${template.name}`}
+              >
+                <template.icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{template.name}</span>
+              </button>
+            ))}
+          </div>
+          
+          <button
+            onClick={onCreateNew}
+            className="flex items-center space-x-2 py-2 px-4 rounded-lg font-medium transition-colors"
             style={{ 
+              backgroundColor: 'rgb(240, 253, 244)',
+              color: 'rgb(22, 163, 74)',
               fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
               fontSize: '16px'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(220, 252, 231)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(240, 253, 244)'}
           >
-            <option value="recent">Most Recent</option>
-            <option value="name">Name A-Z</option>
-            <option value="budget">Highest Budget</option>
-          </select>
+            <Plus className="h-5 w-5" />
+            <span>Create New List</span>
+          </button>
         </div>
       </div>
+
+      {/* Enhanced Search, Filter, and Sort Bar */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search lists, items, or categories..."
+              className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
+              style={{ 
+                fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                fontSize: '16px'
+              }}
+            />
+          </div>
+          
+          {/* Sort Options */}
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Sort by:</span>
+            <div className="flex space-x-1">
+              {[
+                { key: 'recent', label: 'Recent' },
+                { key: 'name', label: 'Name' },
+                { key: 'budget', label: 'Budget' },
+                { key: 'items', label: 'Items' },
+                { key: 'completion', label: 'Progress' }
+              ].map((option) => (
+                <button
+                  key={option.key}
+                  onClick={() => handleSortChange(option.key as SortOption)}
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    sortBy === option.key
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <span>{option.label}</span>
+                  {sortBy === option.key && (
+                    sortDirection === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Filter Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+              showFilters ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <Filter className="h-4 w-4" />
+            <span>Filters</span>
+          </button>
+        </div>
+
+        {/* Advanced Filters */}
+        {showFilters && (
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Show/Hide Options */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Display Options</label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.showCompleted}
+                      onChange={(e) => setFilters(prev => ({ ...prev, showCompleted: e.target.checked }))}
+                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Show completed lists</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.showShared}
+                      onChange={(e) => setFilters(prev => ({ ...prev, showShared: e.target.checked }))}
+                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Show shared lists</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Budget Range */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Budget Range</label>
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="10000"
+                    step="100"
+                    value={filters.maxBudget}
+                    onChange={(e) => setFilters(prev => ({ ...prev, maxBudget: parseInt(e.target.value) }))}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>{formatCurrency(filters.minBudget)}</span>
+                    <span>{formatCurrency(filters.maxBudget)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Categories */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Categories</label>
+                <div className="max-h-24 overflow-y-auto space-y-1">
+                  {availableCategories.map((category) => (
+                    <label key={category} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={filters.categories.includes(category)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFilters(prev => ({ ...prev, categories: [...prev.categories, category] }));
+                          } else {
+                            setFilters(prev => ({ ...prev, categories: prev.categories.filter(c => c !== category) }));
+                          }
+                        }}
+                        className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-xs text-gray-700">{category}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reset Filters */}
+              <div className="flex items-end">
+                <button
+                  onClick={() => setFilters({
+                    showCompleted: true,
+                    showShared: true,
+                    minBudget: 0,
+                    maxBudget: 10000,
+                    categories: []
+                  })}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Batch Actions Bar */}
+      {selectedLists.size > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleSelectAll}
+                className="flex items-center space-x-2 text-blue-700 hover:text-blue-800"
+              >
+                <CheckSquare className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  {selectedLists.size === filteredAndSortedLists.length ? 'Deselect All' : 'Select All'}
+                </span>
+              </button>
+              <span className="text-sm text-blue-700">
+                {selectedLists.size} list{selectedLists.size !== 1 ? 's' : ''} selected
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleBatchDelete}
+                className="flex items-center space-x-2 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors text-sm"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete Selected</span>
+              </button>
+              <button
+                onClick={() => setSelectedLists(new Set())}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lists Grid */}
       {filteredAndSortedLists.length === 0 ? (
         <div className="text-center py-16">
           <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            {searchQuery ? 'No lists match your search' : 'No shopping lists yet'}
+            {searchQuery || showFilters ? 'No lists match your criteria' : 'No shopping lists yet'}
           </h3>
           <p className="text-gray-600 mb-6">
-            {searchQuery 
-              ? 'Try adjusting your search terms' 
+            {searchQuery || showFilters
+              ? 'Try adjusting your search terms or filters' 
               : 'Create your first shopping list to get started with smart grocery shopping'
             }
           </p>
-          {!searchQuery && (
+          {!searchQuery && !showFilters && (
             <button
               onClick={onCreateNew}
               className="inline-flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
@@ -151,27 +490,41 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
             const completionPercentage = getCompletionPercentage(list);
             const estimatedTotal = getEstimatedTotal(list);
             const previewItems = getListPreviewItems(list);
+            const isSelected = selectedLists.has(list.id);
             
             return (
               <div
                 key={list.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer"
+                className={`bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer ${
+                  isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
+                }`}
                 onClick={() => onSelectList(list)}
               >
                 {/* Card Header */}
                 <div className="p-6 border-b border-gray-100">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-1" style={{ color: 'rgb(17, 24, 39)' }}>
-                        {searchQuery ? (
-                          <span dangerouslySetInnerHTML={{
-                            __html: list.name.replace(
-                              new RegExp(`(${searchQuery})`, 'gi'),
-                              '<mark class="bg-yellow-200">$1</mark>'
-                            )
-                          }} />
-                        ) : list.name}
-                      </h3>
+                      <div className="flex items-center space-x-3 mb-2">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleSelectList(list.id);
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <h3 className="text-xl font-bold text-gray-900 flex-1" style={{ color: 'rgb(17, 24, 39)' }}>
+                          {searchQuery ? (
+                            <span dangerouslySetInnerHTML={{
+                              __html: list.name.replace(
+                                new RegExp(`(${searchQuery})`, 'gi'),
+                                '<mark class="bg-yellow-200">$1</mark>'
+                              )
+                            }} />
+                          ) : list.name}
+                        </h3>
+                      </div>
                       <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <div className="flex items-center space-x-1">
                           <Calendar className="h-4 w-4" />
@@ -313,6 +666,17 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
             );
           })}
         </div>
+      )}
+
+      {/* Floating Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-24 right-6 w-12 h-12 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 z-40"
+          style={{ backgroundColor: 'rgb(22, 163, 74)' }}
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
       )}
 
       {/* Delete Confirmation Modal */}

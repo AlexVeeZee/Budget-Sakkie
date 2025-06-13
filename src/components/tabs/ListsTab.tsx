@@ -464,24 +464,71 @@ export const ListsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+      {/* MOVED: Quick Add Section to TOP for better UX */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+          <Package className="h-5 w-5" />
+          <span>Quick Add Items</span>
+        </h4>
+        
+        {/* Search Bar for Quick Add */}
+        <div className="mb-4">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search items to add or type to filter quick add items..."
+              className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
+              style={{ 
+                fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                fontSize: '16px'
+              }}
+            />
           </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search items in your list or quick add items..."
-            className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
-            style={{ 
-              fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
-              fontSize: '16px'
-            }}
-          />
         </div>
+        
+        {filteredQuickAdd.length === 0 ? (
+          <div className="text-center py-8">
+            <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">No quick add items match your search</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {filteredQuickAdd.map((item, index) => (
+              <button
+                key={index}
+                onClick={() => handleQuickAdd(item)}
+                className="p-3 border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all text-left group"
+              >
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                    <Plus className="h-4 w-4 text-gray-600 group-hover:text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate" style={{ color: 'rgb(17, 24, 39)' }}>
+                      {searchQuery ? (
+                        <span dangerouslySetInnerHTML={{
+                          __html: item.name.replace(
+                            new RegExp(`(${searchQuery})`, 'gi'),
+                            '<mark class="bg-yellow-200">$1</mark>'
+                          )
+                        }} />
+                      ) : item.name}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600">{item.category}</p>
+                <p className="text-xs font-medium" style={{ color: 'rgb(22, 163, 74)' }}>
+                  ~{formatCurrency(item.estimatedPrice)}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Added Item Feedback */}
@@ -507,7 +554,7 @@ export const ListsTab: React.FC = () => {
                 {searchQuery ? 'No items match your search' : 'Your list is empty'}
               </h3>
               <p className="text-gray-600">
-                {searchQuery ? 'Try adjusting your search terms' : 'Add items using the quick add section below'}
+                {searchQuery ? 'Try adjusting your search terms' : 'Add items using the quick add section above'}
               </p>
             </div>
           ) : (
@@ -682,53 +729,6 @@ export const ListsTab: React.FC = () => {
             ))
           )}
         </div>
-      </div>
-
-      {/* Quick Add Section */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-          <Package className="h-5 w-5" />
-          <span>Quick Add Items</span>
-        </h4>
-        
-        {filteredQuickAdd.length === 0 ? (
-          <div className="text-center py-8">
-            <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No quick add items match your search</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {filteredQuickAdd.map((item, index) => (
-              <button
-                key={index}
-                onClick={() => handleQuickAdd(item)}
-                className="p-3 border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all text-left group"
-              >
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-green-100 transition-colors">
-                    <Plus className="h-4 w-4 text-gray-600 group-hover:text-green-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate" style={{ color: 'rgb(17, 24, 39)' }}>
-                      {searchQuery ? (
-                        <span dangerouslySetInnerHTML={{
-                          __html: item.name.replace(
-                            new RegExp(`(${searchQuery})`, 'gi'),
-                            '<mark class="bg-yellow-200">$1</mark>'
-                          )
-                        }} />
-                      ) : item.name}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-600">{item.category}</p>
-                <p className="text-xs font-medium" style={{ color: 'rgb(22, 163, 74)' }}>
-                  ~{formatCurrency(item.estimatedPrice)}
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Delete Confirmation Modal */}
