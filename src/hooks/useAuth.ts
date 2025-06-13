@@ -21,9 +21,11 @@ export const useAuth = () => {
     initialized: false
   });
 
-  // Load user profile with retry logic
+  // Load user profile with retry logic and auto-creation
   const loadUserProfile = useCallback(async (userId: string, retryCount = 0) => {
     try {
+      console.log(`Loading profile for user ${userId}, attempt ${retryCount + 1}`);
+      
       const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -31,25 +33,81 @@ export const useAuth = () => {
         .single();
 
       if (error) {
-        // If profile doesn't exist and this is a new user, wait and retry
-        if (error.code === 'PGRST116' && retryCount < 3) {
-          console.log(`Profile not found, retrying in ${(retryCount + 1) * 1000}ms...`);
+        // If profile doesn't exist, create it
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found, creating new profile...');
+          
+          // Get user data from auth
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          if (userError) throw userError;
+          
+          if (user) {
+            const displayName = user.user_metadata?.display_name || 
+                              user.email?.split('@')[0] || 
+                              'User';
+            
+            const { data: newProfile, error: createError } = await supabase
+              .from('user_profiles')
+              .insert({
+                id: userId,
+                display_name: displayName,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .select()
+              .single();
+            
+            if (createError) {
+              console.error('Error creating profile:', createError);
+              
+              // If creation failed and this is not the last retry, wait and retry
+              if (retryCount < 3) {
+                console.log(`Profile creation failed, retrying in ${(retryCount + 1) * 1000}ms...`);
+                setTimeout(() => {
+                  loadUserProfile(userId, retryCount + 1);
+                }, (retryCount + 1) * 1000);
+                return;
+              }
+              throw createError;
+            }
+            
+            console.log('Profile created successfully:', newProfile);
+            setAuthState(prev => ({ 
+              ...prev, 
+              profile: newProfile, 
+              loading: false,
+              initialized: true,
+              error: null
+            }));
+            return;
+          }
+        }
+        
+        // For other errors, retry if we haven't exceeded retry count
+        if (retryCount < 3) {
+          console.log(`Profile loading failed, retrying in ${(retryCount + 1) * 1000}ms...`);
           setTimeout(() => {
             loadUserProfile(userId, retryCount + 1);
           }, (retryCount + 1) * 1000);
           return;
         }
+        
         throw error;
       }
       
+      console.log('Profile loaded successfully:', profile);
       setAuthState(prev => ({ 
         ...prev, 
         profile, 
         loading: false,
-        initialized: true
+        initialized: true,
+        error: null
       }));
     } catch (error) {
       console.error('Error loading user profile:', error);
+      
+      // Even if profile loading fails, we should still initialize the app
+      // The user can use the app without a complete profile
       setAuthState(prev => ({ 
         ...prev, 
         error: error instanceof Error ? error.message : 'Failed to load profile',
@@ -65,6 +123,8 @@ export const useAuth = () => {
 
     const initializeAuth = async () => {
       try {
+        console.log('Initializing auth...');
+        
         // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession();
         
@@ -80,6 +140,8 @@ export const useAuth = () => {
           }
           return;
         }
+
+        console.log('Session loaded:', session ? 'Found' : 'None');
 
         if (mounted) {
           setAuthState(prev => ({
@@ -191,6 +253,7 @@ export const useAuth = () => {
 
       if (error) throw error;
 
+      // Don't set loading to false here - let the auth state change handler manage it
       return { data, error: null };
     } catch (error) {
       console.error('Sign up error:', error);
@@ -212,6 +275,7 @@ export const useAuth = () => {
 
       if (error) throw error;
 
+      // Don't set loading to false here - let the auth state change handler manage it
       return { data, error: null };
     } catch (error) {
       console.error('Sign in error:', error);
