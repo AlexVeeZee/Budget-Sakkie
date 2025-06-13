@@ -301,6 +301,28 @@ export const useAuth = () => {
     }
   }, []);
 
+  // Resend confirmation email
+  const resendConfirmationEmail = useCallback(async (email: string) => {
+    try {
+      setAuthState(prev => ({ ...prev, loading: true, error: null }));
+
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email
+      });
+
+      if (error) throw error;
+
+      setAuthState(prev => ({ ...prev, loading: false }));
+      return { error: null };
+    } catch (error) {
+      console.error('Resend confirmation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to resend confirmation email';
+      setAuthState(prev => ({ ...prev, error: errorMessage, loading: false }));
+      return { error: errorMessage };
+    }
+  }, []);
+
   return {
     ...authState,
     signUp,
@@ -308,6 +330,7 @@ export const useAuth = () => {
     signOut,
     updateProfile,
     resetPassword,
+    resendConfirmationEmail,
     isAuthenticated: !!authState.user && !!authState.session
   };
 };

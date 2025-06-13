@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
+import { X, Mail, Lock, User, Eye, EyeOff, Loader2, CheckCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface AuthModalProps {
@@ -16,6 +16,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [resendingConfirmation, setResendingConfirmation] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -24,7 +26,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { signIn, signUp, resetPassword, loading, error } = useAuth();
+  const { signIn, signUp, resetPassword, resendConfirmationEmail, loading, error } = useAuth();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -103,6 +105,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
+  const handleResendConfirmation = async () => {
+    if (!formData.email) return;
+
+    setResendingConfirmation(true);
+    setConfirmationSent(false);
+
+    try {
+      const { error } = await resendConfirmationEmail(formData.email);
+      if (!error) {
+        setConfirmationSent(true);
+        setTimeout(() => setConfirmationSent(false), 5000);
+      }
+    } catch (err) {
+      console.error('Resend confirmation error:', err);
+    } finally {
+      setResendingConfirmation(false);
+    }
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -119,12 +140,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     });
     setErrors({});
     setShowSuccess(false);
+    setConfirmationSent(false);
   };
 
   const handleModeChange = (newMode: 'signin' | 'signup' | 'reset') => {
     setMode(newMode);
     resetForm();
   };
+
+  const isEmailNotConfirmedError = error && (
+    error.toLowerCase().includes('email not confirmed') ||
+    error.toLowerCase().includes('email_not_confirmed')
+  );
 
   if (!isOpen) return null;
 
@@ -175,8 +202,44 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {mode === 'reset' && 'Enter your email to receive a password reset link'}
             </p>
 
-            {/* Error Message */}
-            {error && (
+            {/* Email Confirmation Error */}
+            {isEmailNotConfirmedError && (
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <Mail className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-amber-800 mb-1">
+                      Email Confirmation Required
+                    </h4>
+                    <p className="text-sm text-amber-700 mb-3">
+                      Please check your inbox and click the confirmation link to verify your email address before signing in.
+                    </p>
+                    {confirmationSent && (
+                      <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+                        ✓ Confirmation email sent! Check your inbox.
+                      </div>
+                    )}
+                    <button
+                      onClick={handleResendConfirmation}
+                      disabled={resendingConfirmation || !formData.email}
+                      className="inline-flex items-center space-x-2 text-sm text-amber-700 hover:text-amber-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {resendingConfirmation ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      <span>
+                        {resendingConfirmation ? 'Sending...' : 'Resend confirmation email'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Other Error Messages */}
+            {error && !isEmailNotConfirmedError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-red-700 text-sm">{error}</p>
               </div>
