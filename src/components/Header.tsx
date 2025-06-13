@@ -1,6 +1,8 @@
 import React from 'react';
 import { ShoppingCart, Search, Menu, Globe, MapPin } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { useAuth } from '../hooks/useAuth';
+import { UserMenu } from './auth/UserMenu';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -9,6 +11,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) => {
   const { language, toggleLanguage, t } = useLanguage();
+  const { isAuthenticated } = useAuth();
 
   return (
     <header 
@@ -61,6 +64,15 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
               <Globe className="h-4 w-4" />
               <span>{language.toUpperCase()}</span>
             </button>
+
+            {/* User Menu or Sign In Button */}
+            {isAuthenticated ? (
+              <UserMenu />
+            ) : (
+              <button className="bg-white/20 hover:bg-white/30 text-white font-medium px-4 py-2 rounded-lg transition-colors">
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       </div>
