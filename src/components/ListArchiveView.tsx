@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, Star, SortAsc, SortDesc, CheckSquare, X, ArrowUp, Crown, Shield, ChevronDown, Share2, FolderOpen, Copy, Archive, MoreHorizontal } from 'lucide-react';
+import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, Star, SortAsc, SortDesc, CheckSquare, X, ArrowUp, Crown, Shield, ChevronDown } from 'lucide-react';
 import { ShoppingList } from '../types';
 import { useCurrency } from '../hooks/useCurrency';
 
@@ -74,8 +74,6 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
-  const [isPerformingBatchAction, setIsPerformingBatchAction] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
@@ -125,10 +123,6 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setShowSortDropdown(false);
-        if (selectedLists.size > 0) {
-          setSelectedLists(new Set());
-          setShowBatchActions(false);
-        }
       }
     };
 
@@ -136,7 +130,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     return () => {
       document.removeEventListener('keydown', handleEscapeKey);
     };
-  }, [selectedLists.size]);
+  }, []);
 
   // Helper function to get family member details
   const getFamilyMemberDetails = (memberName: string): FamilyMember | null => {
@@ -271,7 +265,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     });
   };
 
-  // Individual checkbox click handler - FIXED
+  // Individual checkbox click handler
   const handleCheckboxClick = (event: React.MouseEvent, listId: string) => {
     // Prevent the card click event from triggering
     event.preventDefault();
@@ -292,7 +286,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     });
   };
 
-  // Header checkbox click handler (select/deselect all) - FIXED
+  // Header checkbox click handler (select/deselect all)
   const handleSelectAll = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -309,96 +303,17 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     }
   };
 
-  // Card click handler (excludes checkbox area) - FIXED
-  const handleCardClick = (event: React.MouseEvent, list: ShoppingList) => {
-    // Only navigate if the click wasn't on a checkbox or action button
-    const target = event.target as HTMLElement;
-    
-    // Check if click was on checkbox, input, button, or their children
-    if (
-      target.type === 'checkbox' ||
-      target.tagName === 'INPUT' ||
-      target.tagName === 'BUTTON' ||
-      target.closest('input[type="checkbox"]') ||
-      target.closest('button')
-    ) {
-      return; // Don't navigate
-    }
-    
+  // Card click handler (excludes checkbox area)
+  const handleCardClick = (list: ShoppingList) => {
     onSelectList(list);
   };
 
-  // Enhanced batch action handlers
-  const handleBatchDelete = async () => {
-    setShowBatchDeleteConfirm(true);
-  };
-
-  const confirmBatchDelete = async () => {
-    setIsPerformingBatchAction(true);
-    
-    try {
-      // Simulate API calls with delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+  const handleBatchDelete = () => {
+    if (confirm(`Are you sure you want to delete ${selectedLists.size} selected lists?`)) {
       selectedLists.forEach(listId => onDeleteList(listId));
       setSelectedLists(new Set());
       setShowBatchActions(false);
-      setShowBatchDeleteConfirm(false);
-    } catch (error) {
-      console.error('Error deleting lists:', error);
-    } finally {
-      setIsPerformingBatchAction(false);
     }
-  };
-
-  const handleBatchShare = async () => {
-    setIsPerformingBatchAction(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      alert(`Shared ${selectedLists.size} lists with family members!`);
-      setSelectedLists(new Set());
-      setShowBatchActions(false);
-    } catch (error) {
-      console.error('Error sharing lists:', error);
-    } finally {
-      setIsPerformingBatchAction(false);
-    }
-  };
-
-  const handleBatchArchive = async () => {
-    setIsPerformingBatchAction(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      alert(`Archived ${selectedLists.size} lists!`);
-      setSelectedLists(new Set());
-      setShowBatchActions(false);
-    } catch (error) {
-      console.error('Error archiving lists:', error);
-    } finally {
-      setIsPerformingBatchAction(false);
-    }
-  };
-
-  const handleBatchDuplicate = async () => {
-    setIsPerformingBatchAction(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      alert(`Duplicated ${selectedLists.size} lists!`);
-      setSelectedLists(new Set());
-      setShowBatchActions(false);
-    } catch (error) {
-      console.error('Error duplicating lists:', error);
-    } finally {
-      setIsPerformingBatchAction(false);
-    }
-  };
-
-  const clearSelection = () => {
-    setSelectedLists(new Set());
-    setShowBatchActions(false);
   };
 
   const scrollToTop = () => {
@@ -697,124 +612,45 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
         )}
       </div>
 
-      {/* Enhanced Multi-Selection Action Toolbar */}
-      {showBatchActions && (
-        <div className="sticky top-4 z-40 mb-6">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg border border-blue-200 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                {/* Selection Counter with Animation */}
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                    <CheckSquare className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="text-white">
-                    <p className="font-bold text-lg">
-                      {selectedLists.size} list{selectedLists.size !== 1 ? 's' : ''} selected
-                    </p>
-                    <p className="text-blue-100 text-sm">
-                      Choose an action to perform on selected items
-                    </p>
-                  </div>
-                </div>
-
-                {/* Quick Select All/None */}
-                <div className="hidden sm:flex items-center space-x-2">
-                  <button
-                    onClick={handleSelectAll}
-                    className="px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-sm rounded-lg transition-colors"
-                  >
-                    {selectedLists.size === filteredAndSortedLists.length ? 'Deselect All' : 'Select All'}
-                  </button>
-                </div>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="flex items-center space-x-2">
-                {/* Primary Actions */}
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={handleBatchShare}
-                    disabled={isPerformingBatchAction}
-                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium rounded-lg transition-colors"
-                    title="Share selected lists"
-                  >
-                    {isPerformingBatchAction ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Share2 className="h-4 w-4" />
-                    )}
-                    <span className="hidden sm:inline">Share</span>
-                  </button>
-
-                  <button
-                    onClick={handleBatchDuplicate}
-                    disabled={isPerformingBatchAction}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors"
-                    title="Duplicate selected lists"
-                  >
-                    {isPerformingBatchAction ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                    <span className="hidden sm:inline">Duplicate</span>
-                  </button>
-
-                  <button
-                    onClick={handleBatchArchive}
-                    disabled={isPerformingBatchAction}
-                    className="flex items-center space-x-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-medium rounded-lg transition-colors"
-                    title="Archive selected lists"
-                  >
-                    {isPerformingBatchAction ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Archive className="h-4 w-4" />
-                    )}
-                    <span className="hidden sm:inline">Archive</span>
-                  </button>
-
-                  <button
-                    onClick={handleBatchDelete}
-                    disabled={isPerformingBatchAction}
-                    className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium rounded-lg transition-colors"
-                    title="Delete selected lists"
-                  >
-                    {isPerformingBatchAction ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                    <span className="hidden sm:inline">Delete</span>
-                  </button>
-                </div>
-
-                {/* Close Selection */}
-                <button
-                  onClick={clearSelection}
-                  className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
-                  title="Clear selection"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+      {/* Batch Actions Bar */}
+      {selectedLists.size > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleSelectAll}
+                className="flex items-center space-x-2 text-blue-700 hover:text-blue-800"
+              >
+                <CheckSquare className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  {selectedLists.size === filteredAndSortedLists.length ? 'Deselect All' : 'Select All'}
+                </span>
+              </button>
+              <span className="text-sm text-blue-700">
+                {selectedLists.size} list{selectedLists.size !== 1 ? 's' : ''} selected
+              </span>
             </div>
-
-            {/* Progress Bar for Batch Actions */}
-            {isPerformingBatchAction && (
-              <div className="mt-3">
-                <div className="w-full bg-white bg-opacity-20 rounded-full h-2">
-                  <div className="bg-white h-2 rounded-full animate-pulse" style={{ width: '60%' }} />
-                </div>
-                <p className="text-white text-sm mt-1">Processing {selectedLists.size} lists...</p>
-              </div>
-            )}
+            
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleBatchDelete}
+                className="flex items-center space-x-2 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors text-sm"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete Selected</span>
+              </button>
+              <button
+                onClick={() => setSelectedLists(new Set())}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Lists Grid with Enhanced Selection Visual Feedback */}
+      {/* Lists Grid with Enhanced Family Member Display */}
       {filteredAndSortedLists.length === 0 ? (
         <div className="text-center py-16">
           <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -849,28 +685,13 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
             return (
               <div
                 key={list.id}
-                className={`bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer transform ${
-                  isSelected 
-                    ? 'border-blue-500 ring-4 ring-blue-200 scale-105 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50' 
-                    : 'border-gray-200 hover:scale-102'
+                className={`bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer ${
+                  isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
                 }`}
-                onClick={(e) => handleCardClick(e, list)}
-                style={{
-                  transform: isSelected ? 'scale(1.02)' : 'scale(1)',
-                  boxShadow: isSelected 
-                    ? '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 4px rgba(59, 130, 246, 0.3)' 
-                    : undefined
-                }}
+                onClick={() => handleCardClick(list)}
               >
-                {/* Selection Indicator Overlay */}
-                {isSelected && (
-                  <div className="absolute top-2 right-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center z-10 shadow-lg">
-                    <CheckSquare className="h-4 w-4 text-white" />
-                  </div>
-                )}
-
                 {/* Card Header */}
-                <div className={`p-6 border-b ${isSelected ? 'border-blue-200 bg-gradient-to-r from-blue-100 to-purple-100' : 'border-gray-100'}`}>
+                <div className="p-6 border-b border-gray-100">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
@@ -879,15 +700,9 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                           checked={isSelected}
                           onChange={(e) => handleCheckboxClick(e, list.id)}
                           onClick={(e) => handleCheckboxClick(e, list.id)}
-                          className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all duration-200"
-                          style={{
-                            transform: isSelected ? 'scale(1.1)' : 'scale(1)',
-                            boxShadow: isSelected ? '0 0 0 3px rgba(59, 130, 246, 0.3)' : undefined
-                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
-                        <h3 className={`text-xl font-bold flex-1 transition-colors duration-200 ${
-                          isSelected ? 'text-blue-900' : 'text-gray-900'
-                        }`}>
+                        <h3 className="text-xl font-bold text-gray-900 flex-1" style={{ color: 'rgb(17, 24, 39)' }}>
                           {searchQuery ? (
                             <span dangerouslySetInnerHTML={{
                               __html: list.name.replace(
@@ -898,9 +713,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                           ) : list.name}
                         </h3>
                       </div>
-                      <div className={`flex items-center space-x-4 text-sm transition-colors duration-200 ${
-                        isSelected ? 'text-blue-700' : 'text-gray-600'
-                      }`}>
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <div className="flex items-center space-x-1">
                           <Calendar className="h-4 w-4" />
                           <span>{new Date(list.createdAt).toLocaleDateString()}</span>
@@ -915,22 +728,14 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                     <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => onSelectList(list)}
-                        className={`p-2 rounded-lg transition-colors ${
-                          isSelected 
-                            ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-100' 
-                            : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
-                        }`}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Edit list"
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(list.id)}
-                        className={`p-2 rounded-lg transition-colors ${
-                          isSelected 
-                            ? 'text-red-600 hover:text-red-700 hover:bg-red-100' 
-                            : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
-                        }`}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete list"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -938,83 +743,56 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Enhanced Progress Bar */}
+                  {/* Progress Bar */}
                   <div className="mb-4">
-                    <div className={`flex items-center justify-between text-sm mb-2 transition-colors duration-200 ${
-                      isSelected ? 'text-blue-700' : 'text-gray-600'
-                    }`}>
+                    <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
                       <span>Progress</span>
                       <span>{completionPercentage}% complete</span>
                     </div>
-                    <div className={`w-full rounded-full h-2 transition-colors duration-200 ${
-                      isSelected ? 'bg-blue-200' : 'bg-gray-200'
-                    }`}>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          isSelected ? 'bg-blue-600' : 'bg-green-600'
-                        }`}
-                        style={{ width: `${completionPercentage}%` }}
+                        className="h-2 rounded-full transition-all duration-300"
+                        style={{ 
+                          width: `${completionPercentage}%`,
+                          backgroundColor: 'rgb(22, 163, 74)'
+                        }}
                       />
                     </div>
                   </div>
 
-                  {/* Enhanced Stats with Selection Colors */}
+                  {/* Enhanced Stats with Family Members */}
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
-                        <DollarSign className={`h-4 w-4 transition-colors duration-200 ${
-                          isSelected ? 'text-blue-600' : 'text-green-600'
-                        }`} />
+                        <span className="w-5 h-5 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                          R
+                        </span>
                       </div>
-                      <p className={`text-lg font-bold transition-colors duration-200 ${
-                        isSelected ? 'text-blue-900' : 'text-gray-900'
-                      }`}>
-                        {formatCurrency(list.budget || estimatedTotal)}
-                      </p>
-                      <p className={`text-xs transition-colors duration-200 ${
-                        isSelected ? 'text-blue-600' : 'text-gray-600'
-                      }`}>Budget</p>
+                      <p className="text-lg font-bold text-gray-900">{formatCurrency(list.budget || estimatedTotal)}</p>
+                      <p className="text-xs text-gray-600">Budget</p>
                     </div>
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
-                        <ShoppingCart className={`h-4 w-4 transition-colors duration-200 ${
-                          isSelected ? 'text-blue-600' : 'text-blue-600'
-                        }`} />
+                        <ShoppingCart className="h-4 w-4 text-blue-600" />
                       </div>
-                      <p className={`text-lg font-bold transition-colors duration-200 ${
-                        isSelected ? 'text-blue-900' : 'text-gray-900'
-                      }`}>{list.items.length}</p>
-                      <p className={`text-xs transition-colors duration-200 ${
-                        isSelected ? 'text-blue-600' : 'text-gray-600'
-                      }`}>Items</p>
+                      <p className="text-lg font-bold text-gray-900">{list.items.length}</p>
+                      <p className="text-xs text-gray-600">Items</p>
                     </div>
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
-                        <Users className={`h-4 w-4 transition-colors duration-200 ${
-                          isSelected ? 'text-blue-600' : 'text-purple-600'
-                        }`} />
+                        <Users className="h-4 w-4 text-purple-600" />
                       </div>
-                      <p className={`text-lg font-bold transition-colors duration-200 ${
-                        isSelected ? 'text-blue-900' : 'text-gray-900'
-                      }`}>{memberCount}</p>
-                      <p className={`text-xs transition-colors duration-200 ${
-                        isSelected ? 'text-blue-600' : 'text-gray-600'
-                      }`}>Members</p>
+                      <p className="text-lg font-bold text-gray-900">{memberCount}</p>
+                      <p className="text-xs text-gray-600">Members</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Item Preview */}
-                <div className={`p-6 transition-colors duration-200 ${
-                  isSelected ? 'bg-gradient-to-br from-blue-25 to-purple-25' : ''
-                }`}>
-                  <h4 className={`text-sm font-medium mb-3 transition-colors duration-200 ${
-                    isSelected ? 'text-blue-800' : 'text-gray-700'
-                  }`}>Preview Items</h4>
+                <div className="p-6">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Preview Items</h4>
                   {previewItems.length === 0 ? (
-                    <p className={`text-sm italic transition-colors duration-200 ${
-                      isSelected ? 'text-blue-600' : 'text-gray-500'
-                    }`}>No items added yet</p>
+                    <p className="text-sm text-gray-500 italic">No items added yet</p>
                   ) : (
                     <div className="space-y-2">
                       {previewItems.map((item) => (
@@ -1025,9 +803,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                             className="w-8 h-8 object-cover rounded"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium truncate transition-colors duration-200 ${
-                              isSelected ? 'text-blue-900' : 'text-gray-900'
-                            }`}>
+                            <p className="text-sm font-medium text-gray-900 truncate">
                               {searchQuery ? (
                                 <span dangerouslySetInnerHTML={{
                                   __html: item.product.name.replace(
@@ -1037,23 +813,17 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                                 }} />
                               ) : item.product.name}
                             </p>
-                            <p className={`text-xs transition-colors duration-200 ${
-                              isSelected ? 'text-blue-600' : 'text-gray-500'
-                            }`}>Qty: {item.quantity}</p>
+                            <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                           </div>
                           {item.completed && (
-                            <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors duration-200 ${
-                              isSelected ? 'bg-blue-600' : 'bg-green-600'
-                            }`}>
+                            <div className="w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
                               <span className="text-white text-xs">✓</span>
                             </div>
                           )}
                         </div>
                       ))}
                       {list.items.length > 3 && (
-                        <p className={`text-xs mt-2 transition-colors duration-200 ${
-                          isSelected ? 'text-blue-600' : 'text-gray-500'
-                        }`}>
+                        <p className="text-xs text-gray-500 mt-2">
                           +{list.items.length - 3} more items
                         </p>
                       )}
@@ -1063,12 +833,8 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
 
                 {/* Enhanced Family Members Section */}
                 {list.sharedWith.length > 0 && (
-                  <div className={`px-6 pb-6 transition-colors duration-200 ${
-                    isSelected ? 'bg-gradient-to-br from-blue-25 to-purple-25' : ''
-                  }`}>
-                    <h4 className={`text-sm font-medium mb-3 flex items-center space-x-2 transition-colors duration-200 ${
-                      isSelected ? 'text-blue-800' : 'text-gray-700'
-                    }`}>
+                  <div className="px-6 pb-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center space-x-2">
                       <Users className="h-4 w-4" />
                       <span>Shared with {list.sharedWith.length} member{list.sharedWith.length !== 1 ? 's' : ''}</span>
                     </h4>
@@ -1076,9 +842,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                       {list.sharedWith.slice(0, 3).map((memberName, index) => {
                         const memberDetails = getFamilyMemberDetails(memberName);
                         return (
-                          <div key={index} className={`flex items-center space-x-3 p-2 rounded-lg transition-colors duration-200 ${
-                            isSelected ? 'bg-blue-100' : 'bg-gray-50'
-                          }`}>
+                          <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
                             {memberDetails ? (
                               <>
                                 <img 
@@ -1088,9 +852,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                                 />
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center space-x-2">
-                                    <span className={`text-sm font-medium truncate transition-colors duration-200 ${
-                                      isSelected ? 'text-blue-900' : 'text-gray-900'
-                                    }`}>
+                                    <span className="text-sm font-medium text-gray-900 truncate">
                                       {searchQuery ? (
                                         <span dangerouslySetInnerHTML={{
                                           __html: memberDetails.name.replace(
@@ -1101,31 +863,21 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                                       ) : memberDetails.name}
                                     </span>
                                     {memberDetails.role === 'admin' ? (
-                                      <Crown className={`h-3 w-3 transition-colors duration-200 ${
-                                        isSelected ? 'text-blue-600' : 'text-yellow-600'
-                                      }`} />
+                                      <Crown className="h-3 w-3 text-yellow-600" />
                                     ) : (
-                                      <Shield className={`h-3 w-3 transition-colors duration-200 ${
-                                        isSelected ? 'text-blue-600' : 'text-blue-600'
-                                      }`} />
+                                      <Shield className="h-3 w-3 text-blue-600" />
                                     )}
                                   </div>
                                 </div>
                               </>
                             ) : (
                               <>
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-200 ${
-                                  isSelected ? 'bg-blue-300' : 'bg-gray-300'
-                                }`}>
-                                  <span className={`text-xs font-medium transition-colors duration-200 ${
-                                    isSelected ? 'text-blue-800' : 'text-gray-600'
-                                  }`}>
+                                <div className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-medium text-gray-600">
                                     {memberName.charAt(0).toUpperCase()}
                                   </span>
                                 </div>
-                                <span className={`text-sm font-medium truncate transition-colors duration-200 ${
-                                  isSelected ? 'text-blue-900' : 'text-gray-900'
-                                }`}>
+                                <span className="text-sm font-medium text-gray-900 truncate">
                                   {searchQuery ? (
                                     <span dangerouslySetInnerHTML={{
                                       __html: memberName.replace(
@@ -1141,9 +893,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                         );
                       })}
                       {list.sharedWith.length > 3 && (
-                        <div className={`text-xs text-center py-1 transition-colors duration-200 ${
-                          isSelected ? 'text-blue-600' : 'text-gray-500'
-                        }`}>
+                        <div className="text-xs text-gray-500 text-center py-1">
                           +{list.sharedWith.length - 3} more member{list.sharedWith.length - 3 !== 1 ? 's' : ''}
                         </div>
                       )}
@@ -1193,61 +943,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
         </div>
       )}
 
-      {/* Enhanced Batch Delete Confirmation Modal */}
-      {showBatchDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="h-5 w-5 text-red-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900">Delete Multiple Lists</h3>
-            </div>
-            
-            <div className="mb-6">
-              <p className="text-gray-700 mb-4">
-                Are you sure you want to delete <strong>{selectedLists.size} shopping list{selectedLists.size !== 1 ? 's' : ''}</strong>?
-              </p>
-              
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h4 className="font-semibold text-red-800 mb-2">⚠️ This action cannot be undone</h4>
-                <p className="text-red-700 text-sm">
-                  All selected lists, their items, sharing permissions, and history will be permanently removed.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex space-x-3">
-              <button
-                onClick={confirmBatchDelete}
-                disabled={isPerformingBatchAction}
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
-              >
-                {isPerformingBatchAction ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Deleting...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4" />
-                    <span>Delete {selectedLists.size} List{selectedLists.size !== 1 ? 's' : ''}</span>
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => setShowBatchDeleteConfirm(false)}
-                disabled={isPerformingBatchAction}
-                className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CSS for animations */}
+      {/* CSS for dropdown animation */}
       <style jsx>{`
         @keyframes fadeIn {
           from {
@@ -1258,21 +954,6 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
             opacity: 1;
             transform: translateY(0) scale(1);
           }
-        }
-        
-        @keyframes slideInFromTop {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .hover\\:scale-102:hover {
-          transform: scale(1.02);
         }
       `}</style>
     </div>

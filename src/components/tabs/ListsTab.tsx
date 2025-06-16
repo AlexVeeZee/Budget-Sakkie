@@ -469,16 +469,20 @@ export const ListsTab: React.FC = () => {
         {/* Cost Summary */}
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <DollarSign className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgb(22, 163, 74)' }} />
+            <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold mx-auto mb-1">
+              R
+            </span>
             <p className="text-lg font-bold" style={{ color: 'rgb(17, 24, 39)' }}>
               {formatCurrency(estimatedTotal)}
             </p>
             <p className="text-xs text-gray-600">{t('lists.estimated_total')}</p>
           </div>
           <div className="text-center p-3 bg-green-50 rounded-lg">
-            <DollarSign className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgb(22, 163, 74)' }} />
+            <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold mx-auto mb-1">
+              R
+            </span>
             <p className="text-lg font-bold" style={{ color: 'rgb(22, 163, 74)' }}>
-              -{formatCurrency(optimizedSavings)}
+              {formatCurrency(optimizedSavings)}
             </p>
             <p className="text-xs text-gray-600">{t('lists.optimized_savings')}</p>
           </div>
