@@ -812,24 +812,55 @@ export const DealsTab: React.FC = () => {
     alert(`Added "${deal.product?.name || deal.description}" to your shopping list!`);
   }, []);
 
-  const handleShareDeal = useCallback((deal: ExtendedDeal) => {
-    if (navigator.share) {
-      navigator.share({
-        title: `Great Deal: ${deal.product?.name || deal.description}`,
-        text: `Check out this deal: ${deal.description}`,
-        url: window.location.href
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Deal link copied to clipboard!');
-    }
+  const handleShareDeal = useCallback(async (deal: ExtendedDeal) => {
+    const shareData = {
+      title: `Great Deal: ${deal.product?.name || deal.description}`,
+      text: `Check out this deal: ${deal.description} at ${deal.retailer.name}`,
+      url: window.location.href
+    };
 
-    // Update share count
-    setExtendedDeals(prev => prev.map(d => 
-      d.id === deal.id 
-        ? { ...d, shareCount: (d.shareCount || 0) + 1 }
-        : d
-    ));
+    try {
+      // Check if Web Share API is supported and can share this data
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else if (navigator.share) {
+        // Fallback: try sharing with just URL if canShare is not supported
+        await navigator.share({
+          title: shareData.title,
+          url: shareData.url
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(`${shareData.title}\n${shareData.text}\n${shareData.url}`);
+        alert('Deal details copied to clipboard!');
+      }
+
+      // Update share count on successful share
+      setExtendedDeals(prev => prev.map(d => 
+        d.id === deal.id 
+          ? { ...d, shareCount: (d.shareCount || 0) + 1 }
+          : d
+      ));
+
+    } catch (error) {
+      console.error('Error sharing deal:', error);
+      
+      // Fallback to clipboard if sharing fails
+      try {
+        await navigator.clipboard.writeText(`${shareData.title}\n${shareData.text}\n${shareData.url}`);
+        alert('Deal details copied to clipboard!');
+        
+        // Update share count even for clipboard fallback
+        setExtendedDeals(prev => prev.map(d => 
+          d.id === deal.id 
+            ? { ...d, shareCount: (d.shareCount || 0) + 1 }
+            : d
+        ));
+      } catch (clipboardError) {
+        console.error('Clipboard fallback failed:', clipboardError);
+        alert('Unable to share deal. Please try again.');
+      }
+    }
   }, []);
 
   const handleLoadMore = useCallback(() => {
