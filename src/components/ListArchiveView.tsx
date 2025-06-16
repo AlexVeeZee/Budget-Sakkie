@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, Star, SortAsc, SortDesc, CheckSquare, X, ArrowUp, Crown, Shield } from 'lucide-react';
+import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, Star, SortAsc, SortDesc, CheckSquare, X, ArrowUp, Crown, Shield, ChevronDown } from 'lucide-react';
 import { ShoppingList } from '../types';
 import { useCurrency } from '../hooks/useCurrency';
 
@@ -73,8 +73,10 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
   const [showBatchActions, setShowBatchActions] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
   
   const [filters, setFilters] = useState<FilterOptions>({
     showCompleted: true,
@@ -100,6 +102,34 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
       container.addEventListener('scroll', handleScroll);
       return () => container.removeEventListener('scroll', handleScroll);
     }
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setShowSortDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Close dropdown on escape key
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowSortDropdown(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
   }, []);
 
   // Helper function to get family member details
@@ -201,6 +231,15 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     return Array.from(categories).sort();
   }, [lists]);
 
+  const sortOptions = [
+    { key: 'recent', label: 'Recent' },
+    { key: 'name', label: 'Name' },
+    { key: 'budget', label: 'Budget' },
+    { key: 'items', label: 'Items' },
+    { key: 'members', label: 'Members' },
+    { key: 'completion', label: 'Progress' }
+  ];
+
   const handleSortChange = (newSortBy: SortOption) => {
     if (sortBy === newSortBy) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -208,6 +247,12 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
       setSortBy(newSortBy);
       setSortDirection('desc');
     }
+    setShowSortDropdown(false);
+  };
+
+  const getCurrentSortLabel = () => {
+    const option = sortOptions.find(opt => opt.key === sortBy);
+    return option ? option.label : 'Recent';
   };
 
   const handleDeleteConfirm = (listId: string) => {
@@ -351,33 +396,69 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
             />
           </div>
           
-          {/* Sort Options */}
+          {/* Sort Dropdown */}
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Sort by:</span>
-            <div className="flex space-x-1">
-              {[
-                { key: 'recent', label: 'Recent' },
-                { key: 'name', label: 'Name' },
-                { key: 'budget', label: 'Budget' },
-                { key: 'items', label: 'Items' },
-                { key: 'members', label: 'Members' },
-                { key: 'completion', label: 'Progress' }
-              ].map((option) => (
-                <button
-                  key={option.key}
-                  onClick={() => handleSortChange(option.key as SortOption)}
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    sortBy === option.key
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+            <div className="relative" ref={sortDropdownRef}>
+              <button
+                onClick={() => setShowSortDropdown(!showSortDropdown)}
+                className="flex items-center justify-between space-x-2 px-4 py-3 bg-white border border-gray-300 rounded-xl shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors min-w-[140px]"
+                style={{ 
+                  fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                  fontSize: '16px',
+                  color: 'rgb(0, 0, 0)',
+                  backgroundColor: 'transparent'
+                }}
+                aria-label="Sort options"
+                aria-expanded={showSortDropdown}
+                aria-haspopup="listbox"
+              >
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium">{getCurrentSortLabel()}</span>
+                  {sortDirection === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />}
+                </div>
+                <ChevronDown 
+                  className={`h-4 w-4 transition-transform duration-200 ${showSortDropdown ? 'rotate-180' : ''}`} 
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {showSortDropdown && (
+                <div 
+                  className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden"
+                  style={{
+                    animation: 'fadeIn 0.15s ease-out',
+                    transformOrigin: 'top'
+                  }}
+                  role="listbox"
+                  aria-label="Sort options"
                 >
-                  <span>{option.label}</span>
-                  {sortBy === option.key && (
-                    sortDirection === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />
-                  )}
-                </button>
-              ))}
+                  {sortOptions.map((option) => (
+                    <button
+                      key={option.key}
+                      onClick={() => handleSortChange(option.key as SortOption)}
+                      className={`w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
+                        sortBy === option.key ? 'bg-green-50 text-green-800' : 'text-gray-700'
+                      }`}
+                      style={{ 
+                        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                        fontSize: '16px',
+                        color: sortBy === option.key ? 'rgb(22, 101, 52)' : 'rgb(0, 0, 0)',
+                        backgroundColor: sortBy === option.key ? 'rgb(240, 253, 244)' : 'transparent'
+                      }}
+                      role="option"
+                      aria-selected={sortBy === option.key}
+                    >
+                      <span className="font-medium">{option.label}</span>
+                      {sortBy === option.key && (
+                        <div className="flex items-center space-x-1">
+                          {sortDirection === 'asc' ? <SortAsc className="h-3 w-3" /> : <SortDesc className="h-3 w-3" />}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           
@@ -838,6 +919,20 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* CSS for dropdown animation */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
     </div>
   );
 };
