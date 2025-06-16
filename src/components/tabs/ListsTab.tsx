@@ -8,7 +8,7 @@ import { EditListModal } from '../modals/EditListModal';
 import { DeleteListModal } from '../modals/DeleteListModal';
 import { CreateListModal } from '../modals/CreateListModal';
 import { ListArchiveView } from '../ListArchiveView';
-import { BudgetTracker } from '../BudgetTracker';
+import { BudgetSummaryCard } from '../BudgetSummaryCard';
 
 interface EditingItem {
   id: string;
@@ -420,7 +420,7 @@ export const ListsTab: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header with Back Button - NO CREATE BUTTON HERE */}
+      {/* Header with Back Button */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
           <button
@@ -432,19 +432,20 @@ export const ListsTab: React.FC = () => {
           </button>
           <h2 className="text-2xl font-bold text-gray-900">{activeList.name}</h2>
         </div>
-        {/* Removed the Create New List button from here */}
       </div>
 
-      {/* Budget Tracker */}
-      <BudgetTracker
+      {/* Optimized Budget Summary Card */}
+      <BudgetSummaryCard
         currentSpending={currentSpending}
         budget={activeList.budget || 500}
+        estimatedTotal={estimatedTotal}
+        optimizedSavings={optimizedSavings}
+        familyMemberCount={activeList.sharedWith.length + 1}
         onBudgetUpdate={handleBudgetUpdate}
         spendingHistory={spendingHistory}
-        className="mb-6"
       />
 
-      {/* Shopping List Overview with Enhanced Family Member Display */}
+      {/* Shopping List Overview - Simplified */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -499,33 +500,6 @@ export const ListsTab: React.FC = () => {
                 backgroundColor: 'rgb(22, 163, 74)'
               }}
             />
-          </div>
-        </div>
-
-        {/* Cost Summary */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold mx-auto mb-1">
-              R
-            </span>
-            <p className="text-lg font-bold" style={{ color: 'rgb(17, 24, 39)' }}>
-              {formatCurrency(estimatedTotal)}
-            </p>
-            <p className="text-xs text-gray-600">{t('lists.estimated_total')}</p>
-          </div>
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <span className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold mx-auto mb-1">
-              R
-            </span>
-            <p className="text-lg font-bold" style={{ color: 'rgb(22, 163, 74)' }}>
-              {formatCurrency(optimizedSavings)}
-            </p>
-            <p className="text-xs text-gray-600">{t('lists.optimized_savings')}</p>
-          </div>
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <Users className="h-6 w-6 text-blue-600 mx-auto mb-1" />
-            <p className="text-lg font-bold text-blue-600">{activeList.sharedWith.length + 1}</p>
-            <p className="text-xs text-gray-600">Family Members</p>
           </div>
         </div>
       </div>
