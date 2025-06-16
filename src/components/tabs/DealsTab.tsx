@@ -28,6 +28,7 @@ import { deals, products, retailers } from '../../data/mockData';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useCurrency } from '../../hooks/useCurrency';
 import { Deal, Product, Retailer } from '../../types';
+import { ProductDetailModal } from '../modals/ProductDetailModal';
 
 interface ExtendedDeal extends Deal {
   product?: Product;
@@ -75,6 +76,8 @@ export const DealsTab: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('compact');
   const [expandedFilters, setExpandedFilters] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState<ExtendedDeal | null>(null);
+  const [showProductModal, setShowProductModal] = useState(false);
 
   const [filters, setFilters] = useState<FilterState>({
     category: 'all',
@@ -334,8 +337,12 @@ export const DealsTab: React.FC = () => {
     });
   }, []);
 
-  const handleDealView = useCallback((dealId: string) => {
-    setViewedDeals(prev => new Set([...prev, dealId]));
+  const handleDealView = useCallback((deal: ExtendedDeal) => {
+    if (!deal.product) return;
+    
+    setViewedDeals(prev => new Set([...prev, deal.id]));
+    setSelectedDeal(deal);
+    setShowProductModal(true);
   }, []);
 
   const handleRefresh = useCallback(async () => {
@@ -672,10 +679,10 @@ export const DealsTab: React.FC = () => {
             return (
               <article
                 key={deal.id}
-                className={`relative overflow-hidden rounded-lg shadow-sm transition-all duration-300 hover:shadow-md ${
+                className={`relative overflow-hidden rounded-lg shadow-sm transition-all duration-300 hover:shadow-md cursor-pointer ${
                   expired ? 'opacity-60 grayscale' : ''
                 }`}
-                onClick={() => handleDealView(deal.id)}
+                onClick={() => console.log('Featured deal clicked:', deal.id)}
               >
                 <div className="relative h-32 bg-gradient-to-br from-orange-500 to-red-600">
                   <img 
@@ -788,10 +795,10 @@ export const DealsTab: React.FC = () => {
                 return (
                   <article
                     key={deal.id}
-                    className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 ${
+                    className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 cursor-pointer ${
                       expired ? 'opacity-60' : ''
                     } ${isViewed ? 'ring-1 ring-blue-100' : ''}`}
-                    onClick={() => handleDealView(deal.id)}
+                    onClick={() => handleDealView(deal)}
                   >
                     <div className="flex items-center p-3">
                       {/* Compact Product Image */}
@@ -929,10 +936,10 @@ export const DealsTab: React.FC = () => {
                 return (
                   <article
                     key={deal.id}
-                    className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 ${
+                    className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 cursor-pointer ${
                       expired ? 'opacity-60' : ''
                     } ${isViewed ? 'ring-1 ring-blue-100' : ''}`}
-                    onClick={() => handleDealView(deal.id)}
+                    onClick={() => handleDealView(deal)}
                   >
                     <div className="flex items-center p-4">
                       {/* Product Image */}
@@ -1119,6 +1126,23 @@ export const DealsTab: React.FC = () => {
           Notify Me
         </button>
       </section>
+
+      {/* Product Detail Modal */}
+      {selectedDeal && selectedDeal.product && (
+        <ProductDetailModal
+          isOpen={showProductModal}
+          onClose={() => {
+            setShowProductModal(false);
+            setSelectedDeal(null);
+          }}
+          product={selectedDeal.product}
+          deal={selectedDeal}
+          isBookmarked={bookmarkedDeals.has(selectedDeal.id)}
+          onBookmarkToggle={() => handleBookmarkToggle(selectedDeal.id)}
+          onAddToList={() => handleAddToList(selectedDeal)}
+          onShare={() => handleShareDeal(selectedDeal)}
+        />
+      )}
     </div>
   );
 };
