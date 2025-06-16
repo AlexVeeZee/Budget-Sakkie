@@ -265,7 +265,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     });
   };
 
-  // Individual checkbox click handler
+  // Individual checkbox click handler - FIXED
   const handleCheckboxClick = (event: React.MouseEvent, listId: string) => {
     // Prevent the card click event from triggering
     event.preventDefault();
@@ -286,7 +286,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     });
   };
 
-  // Header checkbox click handler (select/deselect all)
+  // Header checkbox click handler (select/deselect all) - FIXED
   const handleSelectAll = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -303,8 +303,22 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     }
   };
 
-  // Card click handler (excludes checkbox area)
-  const handleCardClick = (list: ShoppingList) => {
+  // Card click handler (excludes checkbox area) - FIXED
+  const handleCardClick = (event: React.MouseEvent, list: ShoppingList) => {
+    // Only navigate if the click wasn't on a checkbox or action button
+    const target = event.target as HTMLElement;
+    
+    // Check if click was on checkbox, input, button, or their children
+    if (
+      target.type === 'checkbox' ||
+      target.tagName === 'INPUT' ||
+      target.tagName === 'BUTTON' ||
+      target.closest('input[type="checkbox"]') ||
+      target.closest('button')
+    ) {
+      return; // Don't navigate
+    }
+    
     onSelectList(list);
   };
 
@@ -688,7 +702,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                 className={`bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer ${
                   isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
                 }`}
-                onClick={() => handleCardClick(list)}
+                onClick={(e) => handleCardClick(e, list)}
               >
                 {/* Card Header */}
                 <div className="p-6 border-b border-gray-100">
