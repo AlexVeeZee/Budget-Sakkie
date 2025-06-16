@@ -265,7 +265,12 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     });
   };
 
-  const handleSelectList = (listId: string) => {
+  // Individual checkbox click handler
+  const handleCheckboxClick = (event: React.MouseEvent, listId: string) => {
+    // Prevent the card click event from triggering
+    event.preventDefault();
+    event.stopPropagation();
+    
     setSelectedLists(prev => {
       const newSet = new Set(prev);
       if (newSet.has(listId)) {
@@ -273,16 +278,34 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
       } else {
         newSet.add(listId);
       }
+      
+      // Update batch actions visibility
+      setShowBatchActions(newSet.size > 0);
+      
       return newSet;
     });
   };
 
-  const handleSelectAll = () => {
+  // Header checkbox click handler (select/deselect all)
+  const handleSelectAll = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
     if (selectedLists.size === filteredAndSortedLists.length) {
+      // Deselect all
       setSelectedLists(new Set());
+      setShowBatchActions(false);
     } else {
-      setSelectedLists(new Set(filteredAndSortedLists.map(list => list.id)));
+      // Select all visible lists
+      const allVisibleIds = new Set(filteredAndSortedLists.map(list => list.id));
+      setSelectedLists(allVisibleIds);
+      setShowBatchActions(true);
     }
+  };
+
+  // Card click handler (excludes checkbox area)
+  const handleCardClick = (list: ShoppingList) => {
+    onSelectList(list);
   };
 
   const handleBatchDelete = () => {
@@ -665,7 +688,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                 className={`bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer ${
                   isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
                 }`}
-                onClick={() => onSelectList(list)}
+                onClick={() => handleCardClick(list)}
               >
                 {/* Card Header */}
                 <div className="p-6 border-b border-gray-100">
@@ -675,10 +698,8 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            handleSelectList(list.id);
-                          }}
+                          onChange={(e) => handleCheckboxClick(e, list.id)}
+                          onClick={(e) => handleCheckboxClick(e, list.id)}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
                         <h3 className="text-xl font-bold text-gray-900 flex-1" style={{ color: 'rgb(17, 24, 39)' }}>
