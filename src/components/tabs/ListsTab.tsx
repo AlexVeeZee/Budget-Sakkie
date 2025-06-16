@@ -8,6 +8,7 @@ import { EditListModal } from '../modals/EditListModal';
 import { DeleteListModal } from '../modals/DeleteListModal';
 import { CreateListModal } from '../modals/CreateListModal';
 import { ListArchiveView } from '../ListArchiveView';
+import { BudgetTracker } from '../BudgetTracker';
 
 interface EditingItem {
   id: string;
@@ -187,6 +188,32 @@ export const ListsTab: React.FC = () => {
     if (activeList && activeList.id === updatedList.id) {
       setActiveList(updatedList);
     }
+  };
+
+  // Budget tracking data
+  const currentSpending = activeList ? activeList.items.reduce((total, item) => {
+    return total + (item.quantity * 20); // Simplified calculation
+  }, 0) : 0;
+
+  const spendingHistory = [
+    { date: '2024-01-01', amount: 450, category: 'Groceries' },
+    { date: '2024-01-08', amount: 380, category: 'Groceries' },
+    { date: '2024-01-15', amount: 520, category: 'Groceries' },
+  ];
+
+  const handleBudgetUpdate = (newBudget: number) => {
+    if (!activeList) return;
+    
+    const updatedList = {
+      ...activeList,
+      budget: newBudget,
+      updatedAt: new Date().toISOString()
+    };
+    
+    setActiveList(updatedList);
+    setAllLists(prev => prev.map(list => 
+      list.id === activeList.id ? updatedList : list
+    ));
   };
 
   // If in archive view, show the archive component with enhanced family member support
@@ -407,6 +434,15 @@ export const ListsTab: React.FC = () => {
         </div>
         {/* Removed the Create New List button from here */}
       </div>
+
+      {/* Budget Tracker */}
+      <BudgetTracker
+        currentSpending={currentSpending}
+        budget={activeList.budget || 500}
+        onBudgetUpdate={handleBudgetUpdate}
+        spendingHistory={spendingHistory}
+        className="mb-6"
+      />
 
       {/* Shopping List Overview with Enhanced Family Member Display */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
