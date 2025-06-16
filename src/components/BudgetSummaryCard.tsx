@@ -105,11 +105,13 @@ export const BudgetSummaryCard: React.FC<BudgetSummaryCardProps> = ({
             <p className="text-xs text-gray-600">Savings</p>
           </div>
 
-          {/* Family Members */}
+          {/* Family Members - Fixed to show actual count */}
           <div className="text-center p-3 bg-blue-50 rounded-lg">
             <Users className="h-6 w-6 text-blue-600 mx-auto mb-1" />
             <p className="text-lg font-bold text-blue-600">{familyMemberCount}</p>
-            <p className="text-xs text-gray-600">Members</p>
+            <p className="text-xs text-gray-600">
+              {familyMemberCount === 1 ? 'Owner' : `${familyMemberCount - 1} Shared`}
+            </p>
           </div>
         </div>
 

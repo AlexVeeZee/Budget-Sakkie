@@ -137,9 +137,9 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     return availableFamilyMembers.find(member => member.name === memberName) || null;
   };
 
-  // Helper function to get family member count including owner
-  const getFamilyMemberCount = (list: ShoppingList): number => {
-    return list.sharedWith.length + 1; // +1 for the list owner
+  // Helper function to get total member count (shared members only, not including owner)
+  const getSharedMemberCount = (list: ShoppingList): number => {
+    return list.sharedWith.length; // Only count shared members, not the owner
   };
 
   // Enhanced filtering and sorting logic with family member support
@@ -170,9 +170,9 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
       const budget = list.budget || 0;
       if (budget < filters.minBudget || budget > filters.maxBudget) return false;
 
-      // Family member count filter
-      const memberCount = getFamilyMemberCount(list);
-      if (memberCount < filters.minMembers || memberCount > filters.maxMembers) return false;
+      // Family member count filter (only shared members)
+      const sharedMemberCount = getSharedMemberCount(list);
+      if (sharedMemberCount < filters.minMembers || sharedMemberCount > filters.maxMembers) return false;
 
       // Category filter (based on items in the list)
       if (filters.categories.length > 0) {
@@ -199,7 +199,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
           comparison = a.items.length - b.items.length;
           break;
         case 'members':
-          comparison = getFamilyMemberCount(a) - getFamilyMemberCount(b);
+          comparison = getSharedMemberCount(a) - getSharedMemberCount(b);
           break;
         case 'completion':
           const aCompletion = a.items.length > 0 ? 
@@ -236,7 +236,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     { key: 'name', label: 'Name' },
     { key: 'budget', label: 'Budget' },
     { key: 'items', label: 'Items' },
-    { key: 'members', label: 'Members' },
+    { key: 'members', label: 'Shared Members' },
     { key: 'completion', label: 'Progress' }
   ];
 
@@ -348,8 +348,8 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
     return {
       totalUniqueMembers: totalMembers.size,
       totalSharedLists: sharedLists.length,
-      averageMembersPerList: lists.length > 0 ? 
-        lists.reduce((sum, list) => sum + getFamilyMemberCount(list), 0) / lists.length : 0
+      averageSharedMembersPerList: lists.length > 0 ? 
+        lists.reduce((sum, list) => sum + getSharedMemberCount(list), 0) / lists.length : 0
     };
   }, [lists]);
 
@@ -546,13 +546,13 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                 </div>
               </div>
 
-              {/* Family Member Count Filter */}
+              {/* Shared Member Count Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Family Members</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Shared Members</label>
                 <div className="space-y-2">
                   <input
                     type="range"
-                    min="1"
+                    min="0"
                     max="10"
                     step="1"
                     value={filters.maxMembers}
@@ -560,8 +560,8 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                     className="w-full"
                   />
                   <div className="flex justify-between text-xs text-gray-600">
-                    <span>{filters.minMembers} member{filters.minMembers !== 1 ? 's' : ''}</span>
-                    <span>{filters.maxMembers} member{filters.maxMembers !== 1 ? 's' : ''}</span>
+                    <span>{filters.minMembers} shared</span>
+                    <span>{filters.maxMembers} shared</span>
                   </div>
                 </div>
               </div>
@@ -680,7 +680,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
             const estimatedTotal = getEstimatedTotal(list);
             const previewItems = getListPreviewItems(list);
             const isSelected = selectedLists.has(list.id);
-            const memberCount = getFamilyMemberCount(list);
+            const sharedMemberCount = getSharedMemberCount(list);
             
             return (
               <div
@@ -760,7 +760,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Enhanced Stats with Family Members */}
+                  {/* Enhanced Stats with corrected member count */}
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
@@ -782,8 +782,8 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                       <div className="flex items-center justify-center mb-1">
                         <Users className="h-4 w-4 text-purple-600" />
                       </div>
-                      <p className="text-lg font-bold text-gray-900">{memberCount}</p>
-                      <p className="text-xs text-gray-600">Members</p>
+                      <p className="text-lg font-bold text-gray-900">{sharedMemberCount}</p>
+                      <p className="text-xs text-gray-600">Shared</p>
                     </div>
                   </div>
                 </div>
@@ -831,7 +831,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                   )}
                 </div>
 
-                {/* Enhanced Family Members Section */}
+                {/* Enhanced Family Members Section - Only show if there are shared members */}
                 {list.sharedWith.length > 0 && (
                   <div className="px-6 pb-6">
                     <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center space-x-2">
