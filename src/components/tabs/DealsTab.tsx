@@ -22,13 +22,17 @@ import {
   ChevronDown,
   ChevronUp,
   Grid,
-  List
+  List,
+  Heart,
+  Store
 } from 'lucide-react';
 import { deals, products, retailers } from '../../data/mockData';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useCurrency } from '../../hooks/useCurrency';
 import { Deal, Product, Retailer } from '../../types';
 import { ProductDetailModal } from '../modals/ProductDetailModal';
+import { AddToListModal } from '../modals/AddToListModal';
+import { CreateListModal } from '../modals/CreateListModal';
 
 interface ExtendedDeal extends Deal {
   product?: Product;
@@ -74,10 +78,14 @@ export const DealsTab: React.FC = () => {
   const [bookmarkedDeals, setBookmarkedDeals] = useState<Set<string>>(new Set());
   const [viewedDeals, setViewedDeals] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'compact'>('compact');
+  const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
   const [expandedFilters, setExpandedFilters] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<ExtendedDeal | null>(null);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showAddToListModal, setShowAddToListModal] = useState(false);
+  const [showCreateListModal, setShowCreateListModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
 
   const [filters, setFilters] = useState<FilterState>({
     category: 'all',
@@ -102,7 +110,7 @@ export const DealsTab: React.FC = () => {
       retailer: retailers[1],
       discount: '25%',
       validUntil: '2024-01-21T23:59:59Z',
-      image: 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+      image: 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
       category: 'Fresh Produce',
       isLimited: true,
       originalPrice: 150,
@@ -115,7 +123,7 @@ export const DealsTab: React.FC = () => {
       retailer: retailers[0],
       discount: '33%',
       validUntil: '2024-01-19T23:59:59Z',
-      image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+      image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
       category: 'Household',
       isLimited: false,
       originalPrice: 200,
@@ -128,7 +136,7 @@ export const DealsTab: React.FC = () => {
       retailer: retailers[2],
       discount: '15%',
       validUntil: '2024-01-25T23:59:59Z',
-      image: 'https://images.pexels.com/photos/4481259/pexels-photo-4481259.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop',
+      image: 'https://images.pexels.com/photos/4481259/pexels-photo-4481259.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
       category: 'Bulk',
       isLimited: true,
       originalPrice: 500,
@@ -363,11 +371,19 @@ export const DealsTab: React.FC = () => {
     }
   }, []);
 
-  const handleAddToList = useCallback((deal: ExtendedDeal) => {
-    // Simulate adding to shopping list
-    console.log('Adding deal to shopping list:', deal);
-    // Show success feedback
-    alert(`Added "${deal.product?.name || deal.description}" to your shopping list!`);
+  const handleAddToListClick = useCallback((product: Product, quantity: number = 1) => {
+    setSelectedProduct(product);
+    setSelectedQuantity(quantity);
+    setShowAddToListModal(true);
+  }, []);
+
+  const handleAddToList = useCallback((listId: string, quantity: number) => {
+    console.log('Adding to list:', { listId, product: selectedProduct, quantity });
+    alert(`Added ${quantity} × ${selectedProduct?.name} to your shopping list!`);
+  }, [selectedProduct]);
+
+  const handleCreateNewList = useCallback(() => {
+    setShowCreateListModal(true);
   }, []);
 
   const handleShareDeal = useCallback(async (deal: ExtendedDeal) => {
@@ -780,7 +796,7 @@ export const DealsTab: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className={viewMode === 'compact' ? 'space-y-2' : 'grid grid-cols-1 md:grid-cols-2 gap-4'}>
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-3'}>
             {filteredDeals.map((deal) => {
               const product = deal.product;
               if (!product) return null;
@@ -791,7 +807,171 @@ export const DealsTab: React.FC = () => {
               const isBookmarked = bookmarkedDeals.has(deal.id);
               const isViewed = viewedDeals.has(deal.id);
 
-              if (viewMode === 'compact') {
+              if (viewMode === 'grid') {
+                // Grid view - Product card style with prominent image
+                return (
+                  <article
+                    key={deal.id}
+                    className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group ${
+                      expired ? 'opacity-60' : ''
+                    } ${isViewed ? 'ring-1 ring-blue-100' : ''}`}
+                  >
+                    {/* Large Product Image */}
+                    <div 
+                      className="relative h-48 bg-gray-100 overflow-hidden"
+                      onClick={() => handleDealView(deal)}
+                    >
+                      <img 
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                      
+                      {/* Deal Badge */}
+                      <div className="absolute top-3 left-3">
+                        {deal.type === 'percentage' ? (
+                          <div className="flex items-center space-x-1 bg-red-500 text-white px-2 py-1 rounded-full shadow-lg">
+                            <Percent className="h-3 w-3" />
+                            <span className="font-bold text-sm">{deal.discount}% OFF</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1 bg-green-500 text-white px-2 py-1 rounded-full shadow-lg">
+                            <DollarSign className="h-3 w-3" />
+                            <span className="font-bold text-sm">{formatCurrency(Number(deal.discount))} OFF</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bookmark Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleBookmarkToggle(deal.id);
+                        }}
+                        className={`absolute top-3 right-3 p-2 rounded-full shadow-lg transition-all ${
+                          isBookmarked 
+                            ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
+                            : 'bg-white/90 text-gray-600 hover:bg-white'
+                        }`}
+                      >
+                        {isBookmarked ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+                      </button>
+
+                      {/* Expiry Warning */}
+                      {isExpiring && !expired && (
+                        <div className="absolute bottom-3 left-3 bg-orange-500 text-white px-2 py-1 rounded-full shadow-lg animate-pulse">
+                          <span className="font-bold text-xs">EXPIRING SOON</span>
+                        </div>
+                      )}
+
+                      {/* Retailer Logo */}
+                      <div className="absolute bottom-3 right-3">
+                        <img 
+                          src={deal.retailer.logo}
+                          alt={deal.retailer.name}
+                          className="w-8 h-8 rounded-full border-2 border-white shadow-lg"
+                          loading="lazy"
+                        />
+                      </div>
+
+                      {expired && (
+                        <div className="absolute inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center">
+                          <div className="text-center text-white">
+                            <AlertCircle className="h-8 w-8 mx-auto mb-1" />
+                            <span className="text-sm font-bold">EXPIRED</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Product Details */}
+                    <div className="p-4">
+                      {/* Product Title */}
+                      <h3 
+                        className="font-bold text-gray-900 text-lg mb-1 line-clamp-2 cursor-pointer hover:text-green-600 transition-colors"
+                        onClick={() => handleDealView(deal)}
+                      >
+                        {product.name}
+                      </h3>
+                      
+                      {/* Original and Discounted Price */}
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="text-2xl font-bold text-green-600">
+                          {formatCurrency(89.99)} {/* Mock discounted price */}
+                        </span>
+                        <span className="text-lg text-gray-500 line-through">
+                          {formatCurrency(119.99)} {/* Mock original price */}
+                        </span>
+                      </div>
+                      
+                      {/* Brief Description */}
+                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{deal.description}</p>
+                      
+                      {/* Merchant Name */}
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Store className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700">{deal.retailer.name}</span>
+                        <span className="text-xs text-gray-500">•</span>
+                        <div className="flex items-center space-x-1 text-xs text-gray-500">
+                          <MapPin className="h-3 w-3" />
+                          <span>2.3km away</span>
+                        </div>
+                      </div>
+
+                      {/* Time Remaining */}
+                      <div className="flex items-center space-x-1 text-xs text-gray-500 mb-4">
+                        <Clock className="h-3 w-3" />
+                        <span className={`${isExpiring ? 'text-orange-600 font-medium' : 'text-gray-600'}`}>
+                          {expired ? 'Expired' : `${timeRemaining} left`}
+                        </span>
+                      </div>
+                      
+                      {/* CTA Button */}
+                      {!expired && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToListClick(product, 1);
+                          }}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2 group"
+                        >
+                          <ShoppingCart className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                          <span>Add to List</span>
+                        </button>
+                      )}
+
+                      {/* Secondary Actions */}
+                      {!expired && (
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShareDeal(deal);
+                            }}
+                            className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 transition-colors"
+                          >
+                            <Share2 className="h-4 w-4" />
+                            <span className="text-sm">Share</span>
+                          </button>
+                          
+                          <div className="flex items-center space-x-3 text-xs text-gray-500">
+                            <div className="flex items-center space-x-1">
+                              <Eye className="h-3 w-3" />
+                              <span>{deal.viewCount}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Heart className="h-3 w-3" />
+                              <span>{deal.shareCount}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              } else {
+                // Compact view (existing compact design)
                 return (
                   <article
                     key={deal.id}
@@ -916,7 +1096,7 @@ export const DealsTab: React.FC = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleAddToList(deal);
+                                    handleAddToListClick(product, 1);
                                   }}
                                   className="bg-green-600 hover:bg-green-700 text-white font-medium px-2 py-1 rounded transition-colors flex items-center space-x-1"
                                 >
@@ -926,160 +1106,6 @@ export const DealsTab: React.FC = () => {
                               </div>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              } else {
-                // Grid view (original card design but more compact)
-                return (
-                  <article
-                    key={deal.id}
-                    className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 cursor-pointer ${
-                      expired ? 'opacity-60' : ''
-                    } ${isViewed ? 'ring-1 ring-blue-100' : ''}`}
-                    onClick={() => handleDealView(deal)}
-                  >
-                    <div className="flex items-center p-4">
-                      {/* Product Image */}
-                      <div className="relative mr-4 flex-shrink-0">
-                        <img 
-                          src={product.image}
-                          alt={product.name}
-                          className="w-20 h-20 object-cover rounded-lg shadow-sm"
-                          loading="lazy"
-                        />
-                        <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1">
-                          <Tag className="h-3 w-3" />
-                        </div>
-                        {expired && (
-                          <div className="absolute inset-0 bg-gray-900 bg-opacity-50 rounded-lg flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">EXPIRED</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Deal Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 mr-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <h3 className="font-bold text-gray-900 text-base truncate">{product.name}</h3>
-                              <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
-                                {product.category}
-                              </span>
-                              {isExpiring && !expired && (
-                                <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-bold rounded-full animate-pulse">
-                                  EXPIRING SOON
-                                </span>
-                              )}
-                            </div>
-                            
-                            <p className="text-gray-600 mb-1">{product.brand} • {product.unitSize}</p>
-                            <p className="text-green-600 font-medium mb-3">{deal.description}</p>
-                            
-                            {/* Deal Stats */}
-                            <div className="flex items-center space-x-4 text-sm text-gray-500">
-                              <div className="flex items-center space-x-1">
-                                <Eye className="h-4 w-4" />
-                                <span>{deal.viewCount} views</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Share2 className="h-4 w-4" />
-                                <span>{deal.shareCount} shares</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Retailer and Discount Info */}
-                          <div className="text-right flex-shrink-0">
-                            <div className="flex items-center space-x-3 mb-3">
-                              <img 
-                                src={deal.retailer.logo}
-                                alt={deal.retailer.name}
-                                className="w-10 h-10 rounded-full object-cover shadow-sm"
-                                loading="lazy"
-                              />
-                              <div>
-                                <p className="font-semibold text-gray-900">{deal.retailer.name}</p>
-                                <div className="flex items-center space-x-1">
-                                  <MapPin className="h-3 w-3 text-gray-500" />
-                                  <span className="text-xs text-gray-500">2.3km away</span>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center justify-end space-x-2 mb-3">
-                              {deal.type === 'percentage' ? (
-                                <div className="flex items-center space-x-1 bg-red-100 text-red-800 px-3 py-1 rounded-full">
-                                  <Percent className="h-4 w-4" />
-                                  <span className="font-bold">{deal.discount}% OFF</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-3 py-1 rounded-full">
-                                  <DollarSign className="h-4 w-4" />
-                                  <span className="font-bold">{formatCurrency(Number(deal.discount))} OFF</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Action Bar */}
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                          <div className="flex items-center space-x-4 text-sm">
-                            <div className="flex items-center space-x-1">
-                              <Clock className="h-4 w-4 text-gray-500" />
-                              <span className={`${isExpiring ? 'text-orange-600 font-medium' : 'text-gray-600'}`}>
-                                {expired ? 'Expired' : `${timeRemaining} left`}
-                              </span>
-                            </div>
-                            {deal.conditions && (
-                              <span className="text-gray-500">• {deal.conditions}</span>
-                            )}
-                          </div>
-                          
-                          {!expired && (
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleBookmarkToggle(deal.id);
-                                }}
-                                className={`p-2 rounded-lg transition-colors ${
-                                  isBookmarked 
-                                    ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200' 
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                                aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark deal'}
-                              >
-                                {isBookmarked ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
-                              </button>
-                              
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleShareDeal(deal);
-                                }}
-                                className="p-2 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded-lg transition-colors"
-                                aria-label="Share deal"
-                              >
-                                <Share2 className="h-4 w-4" />
-                              </button>
-                              
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAddToList(deal);
-                                }}
-                                className="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-                              >
-                                <ShoppingCart className="h-4 w-4" />
-                                <span>Add to List</span>
-                              </button>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -1139,10 +1165,39 @@ export const DealsTab: React.FC = () => {
           deal={selectedDeal}
           isBookmarked={bookmarkedDeals.has(selectedDeal.id)}
           onBookmarkToggle={() => handleBookmarkToggle(selectedDeal.id)}
-          onAddToList={() => handleAddToList(selectedDeal)}
+          onAddToList={() => handleAddToListClick(selectedDeal.product!, 1)}
           onShare={() => handleShareDeal(selectedDeal)}
         />
       )}
+
+      {/* Add to List Modal */}
+      {selectedProduct && (
+        <AddToListModal
+          isOpen={showAddToListModal}
+          onClose={() => {
+            setShowAddToListModal(false);
+            setSelectedProduct(null);
+          }}
+          product={selectedProduct}
+          quantity={selectedQuantity}
+          onAddToList={handleAddToList}
+          onCreateNewList={handleCreateNewList}
+        />
+      )}
+
+      {/* Create List Modal */}
+      <CreateListModal
+        isOpen={showCreateListModal}
+        onClose={() => setShowCreateListModal(false)}
+        onCreate={(newList) => {
+          console.log('Created new list:', newList);
+          setShowCreateListModal(false);
+          // In a real app, this would add the list and then show the add to list modal again
+          if (selectedProduct) {
+            setShowAddToListModal(true);
+          }
+        }}
+      />
     </div>
   );
 };
