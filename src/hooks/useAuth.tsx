@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize auth state
+  // Initialize auth state with Sarah's data as default
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -48,6 +48,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const savedUser = localStorage.getItem('budgetSakkie_user');
         if (savedUser) {
           setUser(JSON.parse(savedUser));
+        } else {
+          // Set Sarah as the default logged-in user for demo purposes
+          const defaultUser: User = {
+            id: 'sarah-1',
+            email: 'sarah.vandermerwe@email.com',
+            displayName: 'Sarah Van Der Merwe',
+            profileImageUrl: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop'
+          };
+          
+          setUser(defaultUser);
+          localStorage.setItem('budgetSakkie_user', JSON.stringify(defaultUser));
+          localStorage.setItem('budgetSakkie_token', 'demo-jwt-token');
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -67,17 +79,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Mock successful sign in
+      // Mock successful sign in with Sarah's data
       const mockUser: User = {
-        id: '1',
-        email,
+        id: 'sarah-1',
+        email: 'sarah.vandermerwe@email.com',
         displayName: 'Sarah Van Der Merwe',
         profileImageUrl: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop'
       };
 
       setUser(mockUser);
       localStorage.setItem('budgetSakkie_user', JSON.stringify(mockUser));
-      localStorage.setItem('budgetSakkie_token', 'mock-jwt-token');
+      localStorage.setItem('budgetSakkie_token', 'demo-jwt-token');
 
       return {};
     } catch (error) {
@@ -107,7 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(mockUser);
       localStorage.setItem('budgetSakkie_user', JSON.stringify(mockUser));
-      localStorage.setItem('budgetSakkie_token', 'mock-jwt-token');
+      localStorage.setItem('budgetSakkie_token', 'demo-jwt-token');
 
       return { data: mockUser };
     } catch (error) {

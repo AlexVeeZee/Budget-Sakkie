@@ -18,13 +18,56 @@ export const ProfileTab: React.FC = () => {
     { label: 'Products Compared', value: '156', icon: Settings, color: 'text-purple-600' },
   ];
 
+  // Use actual user data or fallback to Sarah's data
+  const displayUser = user || {
+    displayName: 'Sarah Van Der Merwe',
+    email: 'sarah.vandermerwe@email.com',
+    profileImageUrl: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop'
+  };
+
+  const handlePersonalInfo = () => {
+    console.log('Personal Information clicked');
+    alert('Personal Information feature coming soon!');
+  };
+
+  const handleLocation = () => {
+    console.log('Location clicked');
+    alert('Location settings feature coming soon!');
+  };
+
+  const handleLoyaltyCards = () => {
+    console.log('Loyalty cards clicked');
+    alert('Loyalty Cards feature coming soon!');
+  };
+
+  const handleLanguageToggle = () => {
+    console.log('Language toggle clicked');
+    toggleLanguage();
+    alert(`Language changed to ${language === 'en' ? 'Afrikaans' : 'English'}!`);
+  };
+
+  const handleNotifications = () => {
+    console.log('Notifications clicked');
+    alert('Notification settings feature coming soon!');
+  };
+
+  const handlePrivacy = () => {
+    console.log('Privacy clicked');
+    alert('Privacy & Security settings feature coming soon!');
+  };
+
+  const handleHelp = () => {
+    console.log('Help clicked');
+    alert('Help & Support feature coming soon!');
+  };
+
   const menuSections = [
     {
       title: 'Account',
       items: [
-        { icon: User, label: 'Personal Information', action: () => console.log('Personal Information clicked') },
-        { icon: MapPin, label: t('profile.location'), value: 'Centurion, GP', action: () => console.log('Location clicked') },
-        { icon: CreditCard, label: t('profile.loyalty_cards'), value: '3 cards', action: () => console.log('Loyalty cards clicked') },
+        { icon: User, label: 'Personal Information', action: handlePersonalInfo },
+        { icon: MapPin, label: t('profile.location'), value: 'Centurion, GP', action: handleLocation },
+        { icon: CreditCard, label: t('profile.loyalty_cards'), value: '3 cards', action: handleLoyaltyCards },
       ]
     },
     {
@@ -34,19 +77,16 @@ export const ProfileTab: React.FC = () => {
           icon: Settings, 
           label: t('profile.language'), 
           value: language === 'en' ? 'English' : 'Afrikaans', 
-          action: () => {
-            console.log('Language toggle clicked');
-            toggleLanguage();
-          }
+          action: handleLanguageToggle
         },
-        { icon: Bell, label: 'Notifications', value: 'Enabled', action: () => console.log('Notifications clicked') },
-        { icon: Shield, label: 'Privacy & Security', action: () => console.log('Privacy clicked') },
+        { icon: Bell, label: 'Notifications', value: 'Enabled', action: handleNotifications },
+        { icon: Shield, label: 'Privacy & Security', action: handlePrivacy },
       ]
     },
     {
       title: 'Support',
       items: [
-        { icon: HelpCircle, label: 'Help & Support', action: () => console.log('Help clicked') },
+        { icon: HelpCircle, label: 'Help & Support', action: handleHelp },
       ]
     }
   ];
@@ -62,6 +102,7 @@ export const ProfileTab: React.FC = () => {
     try {
       await signOut();
       console.log('Sign out successful');
+      alert('You have been signed out successfully!');
     } catch (error) {
       console.error('Error signing out:', error);
       alert('Failed to sign out. Please try again.');
@@ -73,8 +114,17 @@ export const ProfileTab: React.FC = () => {
   const handleMenuItemClick = (action: () => void, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    console.log('Menu item clicked');
-    action();
+    console.log('Menu item clicked, executing action...');
+    
+    // Add a small delay to ensure the click is registered
+    setTimeout(() => {
+      action();
+    }, 50);
+  };
+
+  const handleBudgetSave = () => {
+    setEditingBudget(false);
+    alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
   };
 
   return (
@@ -83,7 +133,8 @@ export const ProfileTab: React.FC = () => {
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <h4 className="font-medium text-blue-900">Debug Info</h4>
         <p className="text-sm text-blue-700">ProfileTab is rendering successfully</p>
-        <p className="text-sm text-blue-700">User: {user?.displayName || 'Not logged in'}</p>
+        <p className="text-sm text-blue-700">User: {displayUser.displayName}</p>
+        <p className="text-sm text-blue-700">Email: {displayUser.email}</p>
         <p className="text-sm text-blue-700">Timestamp: {new Date().toLocaleTimeString()}</p>
       </div>
 
@@ -91,10 +142,10 @@ export const ProfileTab: React.FC = () => {
       <div className="bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 rounded-xl p-6 text-white mb-6">
         <div className="flex items-center space-x-4">
           <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
-            {user?.profileImageUrl ? (
+            {displayUser.profileImageUrl ? (
               <img 
-                src={user.profileImageUrl} 
-                alt={user.displayName}
+                src={displayUser.profileImageUrl} 
+                alt={displayUser.displayName}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -102,12 +153,15 @@ export const ProfileTab: React.FC = () => {
             )}
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold">{user?.displayName || 'User'}</h2>
-            <p className="text-white text-opacity-90">{user?.email || 'user@example.com'}</p>
+            <h2 className="text-2xl font-bold">{displayUser.displayName}</h2>
+            <p className="text-white text-opacity-90">{displayUser.email}</p>
             <p className="text-white text-opacity-90">Member since January 2024</p>
             <p className="text-white text-opacity-90">Family of 4 • Premium Member</p>
           </div>
-          <button className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors">
+          <button 
+            onClick={() => alert('Edit profile feature coming soon!')}
+            className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
+          >
             <Edit2 className="h-5 w-5" />
           </button>
         </div>
@@ -131,8 +185,8 @@ export const ProfileTab: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">{t('profile.budget')}</h3>
           <button
-            onClick={() => setEditingBudget(!editingBudget)}
-            className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+            onClick={() => editingBudget ? handleBudgetSave() : setEditingBudget(true)}
+            className="text-blue-600 hover:text-blue-700 font-medium text-sm px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors"
           >
             {editingBudget ? 'Save' : 'Edit'}
           </button>
@@ -142,12 +196,17 @@ export const ProfileTab: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-gray-600">Monthly Budget</span>
             {editingBudget ? (
-              <input
-                type="number"
-                value={monthlyBudget}
-                onChange={(e) => setMonthlyBudget(Number(e.target.value))}
-                className="w-24 px-2 py-1 border border-gray-300 rounded text-right"
-              />
+              <div className="flex items-center space-x-2">
+                <span className="text-gray-500">R</span>
+                <input
+                  type="number"
+                  value={monthlyBudget}
+                  onChange={(e) => setMonthlyBudget(Number(e.target.value))}
+                  className="w-32 px-2 py-1 border border-gray-300 rounded text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
             ) : (
               <span className="text-xl font-bold text-gray-900">R{monthlyBudget.toFixed(2)}</span>
             )}
@@ -160,13 +219,13 @@ export const ProfileTab: React.FC = () => {
           
           <div className="flex items-center justify-between">
             <span className="text-gray-600">Remaining</span>
-            <span className="text-lg font-semibold text-green-600">R652.70</span>
+            <span className="text-lg font-semibold text-green-600">R{(monthlyBudget - 847.30).toFixed(2)}</span>
           </div>
           
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
               className="bg-green-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(847.30 / monthlyBudget) * 100}%` }}
+              style={{ width: `${Math.min((847.30 / monthlyBudget) * 100, 100)}%` }}
             />
           </div>
         </div>
@@ -183,7 +242,8 @@ export const ProfileTab: React.FC = () => {
               <button
                 key={itemIndex}
                 onClick={(e) => handleMenuItemClick(item.action, e)}
-                className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors text-left focus:outline-none focus:bg-gray-50 active:bg-gray-100"
+                type="button"
               >
                 <div className="flex items-center space-x-3">
                   <item.icon className="h-5 w-5 text-gray-600" />
@@ -208,7 +268,8 @@ export const ProfileTab: React.FC = () => {
               handleSignOut();
             }}
             disabled={isSigningOut}
-            className="w-full flex items-center justify-between px-6 py-4 hover:bg-red-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-between px-6 py-4 hover:bg-red-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:bg-red-50 active:bg-red-100"
+            type="button"
           >
             <div className="flex items-center space-x-3">
               <LogOut className="h-5 w-5 text-red-600" />
