@@ -2,13 +2,26 @@ import React, { useState } from 'react';
 import { User, Settings, CreditCard, MapPin, Bell, Shield, HelpCircle, LogOut, Edit2, TrendingUp } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
+import { useSharedActions } from '../../hooks/useSharedActions';
 
 export const ProfileTab: React.FC = () => {
-  const { t, language, toggleLanguage } = useLanguage();
+  const { t } = useLanguage();
   const { user, signOut } = useAuth();
   const [editingBudget, setEditingBudget] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState(1500);
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  // Use shared actions for consistent functionality
+  const {
+    handlePersonalInfo,
+    handleLocation,
+    handleLoyaltyCards,
+    handleLanguageToggle,
+    handleNotifications,
+    handlePrivacySecurity,
+    handleHelpSupport,
+    currentLanguageDisplay
+  } = useSharedActions();
 
   console.log('ProfileTab rendering, user:', user);
 
@@ -23,42 +36,6 @@ export const ProfileTab: React.FC = () => {
     displayName: 'Sarah Van Der Merwe',
     email: 'sarah.vandermerwe@email.com',
     profileImageUrl: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop'
-  };
-
-  const handlePersonalInfo = () => {
-    console.log('Personal Information clicked');
-    alert('Personal Information feature coming soon!');
-  };
-
-  const handleLocation = () => {
-    console.log('Location clicked');
-    alert('Location settings feature coming soon!');
-  };
-
-  const handleLoyaltyCards = () => {
-    console.log('Loyalty cards clicked');
-    alert('Loyalty Cards feature coming soon!');
-  };
-
-  const handleLanguageToggle = () => {
-    console.log('Language toggle clicked');
-    toggleLanguage();
-    alert(`Language changed to ${language === 'en' ? 'Afrikaans' : 'English'}!`);
-  };
-
-  const handleNotifications = () => {
-    console.log('Notifications clicked');
-    alert('Notification settings feature coming soon!');
-  };
-
-  const handlePrivacy = () => {
-    console.log('Privacy clicked');
-    alert('Privacy & Security settings feature coming soon!');
-  };
-
-  const handleHelp = () => {
-    console.log('Help clicked');
-    alert('Help & Support feature coming soon!');
   };
 
   const menuSections = [
@@ -76,17 +53,17 @@ export const ProfileTab: React.FC = () => {
         { 
           icon: Settings, 
           label: t('profile.language'), 
-          value: language === 'en' ? 'English' : 'Afrikaans', 
+          value: currentLanguageDisplay, 
           action: handleLanguageToggle
         },
         { icon: Bell, label: 'Notifications', value: 'Enabled', action: handleNotifications },
-        { icon: Shield, label: 'Privacy & Security', action: handlePrivacy },
+        { icon: Shield, label: 'Privacy & Security', action: handlePrivacySecurity },
       ]
     },
     {
       title: 'Support',
       items: [
-        { icon: HelpCircle, label: 'Help & Support', action: handleHelp },
+        { icon: HelpCircle, label: 'Help & Support', action: handleHelpSupport },
       ]
     }
   ];
@@ -94,7 +71,7 @@ export const ProfileTab: React.FC = () => {
   const handleSignOut = async () => {
     if (isSigningOut) return;
     
-    const confirmed = window.confirm('Are you sure you want to sign out?');
+    const confirmed = window.confirm('Are you sure you want to sign out?\n\nYou will need to sign in again to access your account.');
     if (!confirmed) return;
 
     setIsSigningOut(true);
@@ -102,10 +79,10 @@ export const ProfileTab: React.FC = () => {
     try {
       await signOut();
       console.log('Sign out successful');
-      alert('You have been signed out successfully!');
+      alert('You have been signed out successfully!\n\nThank you for using Budget Sakkie. See you next time!');
     } catch (error) {
       console.error('Error signing out:', error);
-      alert('Failed to sign out. Please try again.');
+      alert('Failed to sign out. Please try again.\n\nIf the problem persists, please contact support.');
     } finally {
       setIsSigningOut(false);
     }
@@ -124,7 +101,11 @@ export const ProfileTab: React.FC = () => {
 
   const handleBudgetSave = () => {
     setEditingBudget(false);
-    alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
+    alert(`Budget updated successfully!\n\nYour new monthly budget is R${monthlyBudget.toFixed(2)}.\nWe'll help you track your spending against this target.`);
+  };
+
+  const handleEditProfile = () => {
+    alert('Edit profile feature coming soon!\n\nThis will allow you to:\n• Update your profile picture\n• Change your display name\n• Modify your contact information\n• Adjust your preferences');
   };
 
   return (
@@ -135,6 +116,7 @@ export const ProfileTab: React.FC = () => {
         <p className="text-sm text-blue-700">ProfileTab is rendering successfully</p>
         <p className="text-sm text-blue-700">User: {displayUser.displayName}</p>
         <p className="text-sm text-blue-700">Email: {displayUser.email}</p>
+        <p className="text-sm text-blue-700">Language: {currentLanguageDisplay}</p>
         <p className="text-sm text-blue-700">Timestamp: {new Date().toLocaleTimeString()}</p>
       </div>
 
@@ -159,8 +141,9 @@ export const ProfileTab: React.FC = () => {
             <p className="text-white text-opacity-90">Family of 4 • Premium Member</p>
           </div>
           <button 
-            onClick={() => alert('Edit profile feature coming soon!')}
+            onClick={handleEditProfile}
             className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
+            title="Edit Profile"
           >
             <Edit2 className="h-5 w-5" />
           </button>
