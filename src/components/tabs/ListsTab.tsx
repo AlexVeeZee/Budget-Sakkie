@@ -8,6 +8,7 @@ import { EditListModal } from '../modals/EditListModal';
 import { DeleteListModal } from '../modals/DeleteListModal';
 import { CreateListModal } from '../modals/CreateListModal';
 import { ListArchiveView } from '../ListArchiveView';
+import { BudgetSummaryCard } from '../BudgetSummaryCard';
 
 interface EditingItem {
   id: string;
@@ -140,17 +141,23 @@ export const ListsTab: React.FC = () => {
     };
     
     setAllLists(prev => [list, ...prev]);
-    setActiveList(list);
-    setViewMode('detail');
+    
+    // If we're in archive view, navigate to the new list
+    if (viewMode === 'archive') {
+      setActiveList(list);
+      setViewMode('detail');
+    }
   };
 
-  const handleSaveList = (name: string, budget: number) => {
+  // Enhanced save function that updates family member data
+  const handleSaveList = (name: string, budget: number, sharedWith: string[]) => {
     if (!activeList) return;
     
     const updatedList = {
       ...activeList,
       name,
       budget,
+      sharedWith, // This now includes the updated family member list
       updatedAt: new Date().toISOString()
     };
     
@@ -167,17 +174,67 @@ export const ListsTab: React.FC = () => {
     handleBackToArchive();
   };
 
-  // If in archive view, show the archive component
+  const handleDeleteListFromArchive = (listId: string) => {
+    setAllLists(prev => prev.filter(list => list.id !== listId));
+  };
+
+  // Real-time update function for when lists are modified
+  const handleUpdateList = (updatedList: ShoppingList) => {
+    setAllLists(prev => prev.map(list => 
+      list.id === updatedList.id ? updatedList : list
+    ));
+    
+    // If this is the currently active list, update it too
+    if (activeList && activeList.id === updatedList.id) {
+      setActiveList(updatedList);
+    }
+  };
+
+  // Budget tracking data
+  const currentSpending = activeList ? activeList.items.reduce((total, item) => {
+    return total + (item.quantity * 20); // Simplified calculation
+  }, 0) : 0;
+
+  const spendingHistory = [
+    { date: '2024-01-01', amount: 450, category: 'Groceries' },
+    { date: '2024-01-08', amount: 380, category: 'Groceries' },
+    { date: '2024-01-15', amount: 520, category: 'Groceries' },
+  ];
+
+  const handleBudgetUpdate = (newBudget: number) => {
+    if (!activeList) return;
+    
+    const updatedList = {
+      ...activeList,
+      budget: newBudget,
+      updatedAt: new Date().toISOString()
+    };
+    
+    setActiveList(updatedList);
+    setAllLists(prev => prev.map(list => 
+      list.id === activeList.id ? updatedList : list
+    ));
+  };
+
+  // If in archive view, show the archive component with enhanced family member support
   if (viewMode === 'archive') {
     return (
-      <ListArchiveView
-        lists={allLists}
-        onSelectList={handleSelectList}
-        onCreateNew={() => setShowCreateModal(true)}
-        onDeleteList={(listId) => {
-          setAllLists(prev => prev.filter(list => list.id !== listId));
-        }}
-      />
+      <>
+        <ListArchiveView
+          lists={allLists}
+          onSelectList={handleSelectList}
+          onCreateNew={() => setShowCreateModal(true)}
+          onDeleteList={handleDeleteListFromArchive}
+          onUpdateList={handleUpdateList}
+        />
+        
+        {/* Create List Modal - Available in Archive View */}
+        <CreateListModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onCreate={handleCreateList}
+        />
+      </>
     );
   }
 
@@ -375,26 +432,40 @@ export const ListsTab: React.FC = () => {
           </button>
           <h2 className="text-2xl font-bold text-gray-900">{activeList.name}</h2>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center space-x-2 transition-colors"
-          style={{ color: 'rgb(255, 255, 255)', backgroundColor: 'rgb(22, 163, 74)' }}
-        >
-          <Plus className="h-5 w-5" />
-          <span>{t('lists.create_new')}</span>
-        </button>
       </div>
 
-      {/* Shopping List Overview */}
+      {/* Optimized Budget Summary Card */}
+      <BudgetSummaryCard
+        currentSpending={currentSpending}
+        budget={activeList.budget || 500}
+        estimatedTotal={estimatedTotal}
+        optimizedSavings={optimizedSavings}
+        familyMemberCount={activeList.sharedWith.length + 1}
+        onBudgetUpdate={handleBudgetUpdate}
+        spendingHistory={spendingHistory}
+      />
+
+      {/* Shopping List Overview - Simplified */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="text-xl font-bold text-gray-900" style={{ color: 'rgb(17, 24, 39)' }}>
               {activeList.name}
             </h3>
-            <p className="text-gray-600">
-              {totalItems} {t('lists.total_items')} • Created {new Date(activeList.createdAt).toLocaleDateString()}
-            </p>
+            <div className="flex items-center space-x-4 text-gray-600 mt-1">
+              <span>{totalItems} {t('lists.total_items')}</span>
+              <span>•</span>
+              <span>Created {new Date(activeList.createdAt).toLocaleDateString()}</span>
+              {activeList.sharedWith.length > 0 && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center space-x-1">
+                    <Users className="h-4 w-4" />
+                    <span>Shared with {activeList.sharedWith.length} member{activeList.sharedWith.length !== 1 ? 's' : ''}</span>
+                  </span>
+                </>
+              )}
+            </div>
           </div>
           <div className="flex space-x-2">
             <button 
@@ -431,49 +502,73 @@ export const ListsTab: React.FC = () => {
             />
           </div>
         </div>
-
-        {/* Cost Summary */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <DollarSign className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgb(22, 163, 74)' }} />
-            <p className="text-lg font-bold" style={{ color: 'rgb(17, 24, 39)' }}>
-              {formatCurrency(estimatedTotal)}
-            </p>
-            <p className="text-xs text-gray-600">{t('lists.estimated_total')}</p>
-          </div>
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <DollarSign className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgb(22, 163, 74)' }} />
-            <p className="text-lg font-bold" style={{ color: 'rgb(22, 163, 74)' }}>
-              -{formatCurrency(optimizedSavings)}
-            </p>
-            <p className="text-xs text-gray-600">{t('lists.optimized_savings')}</p>
-          </div>
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <Users className="h-6 w-6 text-blue-600 mx-auto mb-1" />
-            <p className="text-lg font-bold text-blue-600">{activeList.sharedWith.length + 1}</p>
-            <p className="text-xs text-gray-600">Family Members</p>
-          </div>
-        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+      {/* MOVED: Quick Add Section to TOP for better UX */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+          <Package className="h-5 w-5" />
+          <span>Quick Add Items</span>
+        </h4>
+        
+        {/* Search Bar for Quick Add */}
+        <div className="mb-4">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search items to add or type to filter quick add items..."
+              className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
+              style={{ 
+                fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                fontSize: '16px'
+              }}
+            />
           </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search items in your list or quick add items..."
-            className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
-            style={{ 
-              fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
-              fontSize: '16px'
-            }}
-          />
         </div>
+        
+        {filteredQuickAdd.length === 0 ? (
+          <div className="text-center py-8">
+            <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">No quick add items match your search</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {filteredQuickAdd.map((item, index) => (
+              <button
+                key={index}
+                onClick={() => handleQuickAdd(item)}
+                className="p-3 border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all text-left group"
+              >
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                    <Plus className="h-4 w-4 text-gray-600 group-hover:text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate" style={{ color: 'rgb(17, 24, 39)' }}>
+                      {searchQuery ? (
+                        <span dangerouslySetInnerHTML={{
+                          __html: item.name.replace(
+                            new RegExp(`(${searchQuery})`, 'gi'),
+                            '<mark class="bg-yellow-200">$1</mark>'
+                          )
+                        }} />
+                      ) : item.name}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600">{item.category}</p>
+                <p className="text-xs font-medium" style={{ color: 'rgb(22, 163, 74)' }}>
+                  ~{formatCurrency(item.estimatedPrice)}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Added Item Feedback */}
@@ -499,7 +594,7 @@ export const ListsTab: React.FC = () => {
                 {searchQuery ? 'No items match your search' : 'Your list is empty'}
               </h3>
               <p className="text-gray-600">
-                {searchQuery ? 'Try adjusting your search terms' : 'Add items using the quick add section below'}
+                {searchQuery ? 'Try adjusting your search terms' : 'Add items using the quick add section above'}
               </p>
             </div>
           ) : (
@@ -676,53 +771,6 @@ export const ListsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Add Section */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-          <Package className="h-5 w-5" />
-          <span>Quick Add Items</span>
-        </h4>
-        
-        {filteredQuickAdd.length === 0 ? (
-          <div className="text-center py-8">
-            <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No quick add items match your search</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {filteredQuickAdd.map((item, index) => (
-              <button
-                key={index}
-                onClick={() => handleQuickAdd(item)}
-                className="p-3 border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all text-left group"
-              >
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-green-100 transition-colors">
-                    <Plus className="h-4 w-4 text-gray-600 group-hover:text-green-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate" style={{ color: 'rgb(17, 24, 39)' }}>
-                      {searchQuery ? (
-                        <span dangerouslySetInnerHTML={{
-                          __html: item.name.replace(
-                            new RegExp(`(${searchQuery})`, 'gi'),
-                            '<mark class="bg-yellow-200">$1</mark>'
-                          )
-                        }} />
-                      ) : item.name}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-600">{item.category}</p>
-                <p className="text-xs font-medium" style={{ color: 'rgb(22, 163, 74)' }}>
-                  ~{formatCurrency(item.estimatedPrice)}
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -758,19 +806,13 @@ export const ListsTab: React.FC = () => {
         </div>
       )}
 
-      {/* Create List Modal */}
-      <CreateListModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCreate={handleCreateList}
-      />
-
-      {/* Edit List Modal */}
+      {/* Enhanced Edit List Modal with Family Member Support */}
       <EditListModal
         isOpen={showEditListModal}
         onClose={() => setShowEditListModal(false)}
         listName={activeList.name}
         budget={activeList.budget}
+        sharedWith={activeList.sharedWith}
         onSave={handleSaveList}
       />
 
