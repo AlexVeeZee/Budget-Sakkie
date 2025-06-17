@@ -69,7 +69,7 @@ export const ProfileTab: React.FC = () => {
     
     try {
       await signOut();
-      navigate('login');
+      navigate('search'); // Navigate to search instead of login since we don't have a login route
     } catch (error) {
       console.error('Error signing out:', error);
       alert('Failed to sign out. Please try again.');
@@ -204,7 +204,11 @@ export const ProfileTab: React.FC = () => {
             {section.items.map((item, itemIndex) => (
               <button
                 key={itemIndex}
-                onClick={() => handleMenuItemClick(item.route)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleMenuItemClick(item.route);
+                }}
                 className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors text-left"
               >
                 <div className="flex items-center space-x-3">
@@ -229,7 +233,11 @@ export const ProfileTab: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
         <div className="divide-y divide-gray-200">
           <button
-            onClick={handleSignOut}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleSignOut();
+            }}
             disabled={isSigningOut}
             className="w-full flex items-center justify-between px-6 py-4 hover:bg-red-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
           >
