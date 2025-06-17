@@ -8,7 +8,6 @@ import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
 import { AuthProvider } from './hooks/useAuth';
-import { useSharedActions } from './hooks/useSharedActions';
 
 // Lazy load heavy modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -31,16 +30,6 @@ function AppContent() {
   const [helpSupportOpen, setHelpSupportOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Use shared actions for consistent functionality
-  const {
-    handleSettings,
-    handleLocation,
-    handleLoyaltyCards,
-    handleRewards,
-    handleFamilySharing,
-    handleHelpSupport
-  } = useSharedActions();
-
   const handleSearchClick = () => {
     setActiveTab('search');
   };
@@ -55,47 +44,34 @@ function AppContent() {
     setHelpSupportOpen(false);
   };
 
-  // Updated handlers to use shared actions with modal opening
   const handleSettingsClick = () => {
     closeAllModals();
-    // For now, use the shared action. Later this can open the actual modal
-    handleSettings();
-    // setSettingsOpen(true); // Uncomment when modal is ready
+    setSettingsOpen(true);
   };
 
   const handleLocationClick = () => {
     closeAllModals();
-    // For now, use the shared action. Later this can open the actual modal
-    handleLocation();
-    // setLocationOpen(true); // Uncomment when modal is ready
+    setLocationOpen(true);
   };
 
   const handleLoyaltyCardsClick = () => {
     closeAllModals();
-    // For now, use the shared action. Later this can open the actual modal
-    handleLoyaltyCards();
-    // setLoyaltyCardsOpen(true); // Uncomment when modal is ready
+    setLoyaltyCardsOpen(true);
   };
 
   const handleRewardsClick = () => {
     closeAllModals();
-    // For now, use the shared action. Later this can open the actual modal
-    handleRewards();
-    // setRewardsOpen(true); // Uncomment when modal is ready
+    setRewardsOpen(true);
   };
 
   const handleFamilySharingClick = () => {
     closeAllModals();
-    // For now, use the shared action. Later this can open the actual modal
-    handleFamilySharing();
-    // setFamilySharingOpen(true); // Uncomment when modal is ready
+    setFamilySharingOpen(true);
   };
 
   const handleHelpSupportClick = () => {
     closeAllModals();
-    // For now, use the shared action. Later this can open the actual modal
-    handleHelpSupport();
-    // setHelpSupportOpen(true); // Uncomment when modal is ready
+    setHelpSupportOpen(true);
   };
 
   // Simple tab change handler with explicit logging
