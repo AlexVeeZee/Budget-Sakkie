@@ -45,33 +45,45 @@ function AppContent() {
   };
 
   const handleSettingsClick = () => {
+    console.log('Settings clicked from sidebar/profile');
     closeAllModals();
     setSettingsOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleLocationClick = () => {
+    console.log('Location clicked from sidebar/profile');
     closeAllModals();
     setLocationOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleLoyaltyCardsClick = () => {
+    console.log('Loyalty cards clicked from sidebar/profile');
     closeAllModals();
     setLoyaltyCardsOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleRewardsClick = () => {
+    console.log('Rewards clicked from sidebar/profile');
     closeAllModals();
     setRewardsOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleFamilySharingClick = () => {
+    console.log('Family sharing clicked from sidebar/profile');
     closeAllModals();
     setFamilySharingOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleHelpSupportClick = () => {
+    console.log('Help support clicked from sidebar/profile');
     closeAllModals();
     setHelpSupportOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   // Simple tab change handler with explicit logging
@@ -100,7 +112,16 @@ function AppContent() {
       case 'deals':
         return <DealsTab />;
       case 'profile':
-        return <ProfileTab />;
+        return (
+          <ProfileTab 
+            onSettingsClick={handleSettingsClick}
+            onLocationClick={handleLocationClick}
+            onLoyaltyCardsClick={handleLoyaltyCardsClick}
+            onRewardsClick={handleRewardsClick}
+            onFamilySharingClick={handleFamilySharingClick}
+            onHelpSupportClick={handleHelpSupportClick}
+          />
+        );
       default:
         return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
     }

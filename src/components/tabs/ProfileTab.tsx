@@ -3,7 +3,23 @@ import { User, Settings, CreditCard, MapPin, Bell, Shield, HelpCircle, LogOut, E
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
 
-export const ProfileTab: React.FC = () => {
+interface ProfileTabProps {
+  onSettingsClick?: () => void;
+  onLocationClick?: () => void;
+  onLoyaltyCardsClick?: () => void;
+  onRewardsClick?: () => void;
+  onFamilySharingClick?: () => void;
+  onHelpSupportClick?: () => void;
+}
+
+export const ProfileTab: React.FC<ProfileTabProps> = ({
+  onSettingsClick,
+  onLocationClick,
+  onLoyaltyCardsClick,
+  onRewardsClick,
+  onFamilySharingClick,
+  onHelpSupportClick
+}) => {
   const { t, language, toggleLanguage } = useLanguage();
   const { user, signOut } = useAuth();
   const [editingBudget, setEditingBudget] = useState(false);
@@ -25,19 +41,32 @@ export const ProfileTab: React.FC = () => {
     profileImageUrl: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop'
   };
 
+  // Use sidebar functionality if available, otherwise fallback to alerts
   const handlePersonalInfo = () => {
     console.log('Personal Information clicked');
-    alert('Personal Information feature coming soon!');
+    if (onSettingsClick) {
+      onSettingsClick();
+    } else {
+      alert('Personal Information feature coming soon!');
+    }
   };
 
   const handleLocation = () => {
     console.log('Location clicked');
-    alert('Location settings feature coming soon!');
+    if (onLocationClick) {
+      onLocationClick();
+    } else {
+      alert('Location settings feature coming soon!');
+    }
   };
 
   const handleLoyaltyCards = () => {
     console.log('Loyalty cards clicked');
-    alert('Loyalty Cards feature coming soon!');
+    if (onLoyaltyCardsClick) {
+      onLoyaltyCardsClick();
+    } else {
+      alert('Loyalty Cards feature coming soon!');
+    }
   };
 
   const handleLanguageToggle = () => {
@@ -48,17 +77,31 @@ export const ProfileTab: React.FC = () => {
 
   const handleNotifications = () => {
     console.log('Notifications clicked');
-    alert('Notification settings feature coming soon!');
+    if (onSettingsClick) {
+      // Notifications are part of settings
+      onSettingsClick();
+    } else {
+      alert('Notification settings feature coming soon!');
+    }
   };
 
   const handlePrivacy = () => {
     console.log('Privacy clicked');
-    alert('Privacy & Security settings feature coming soon!');
+    if (onSettingsClick) {
+      // Privacy is part of settings
+      onSettingsClick();
+    } else {
+      alert('Privacy & Security settings feature coming soon!');
+    }
   };
 
   const handleHelp = () => {
     console.log('Help clicked');
-    alert('Help & Support feature coming soon!');
+    if (onHelpSupportClick) {
+      onHelpSupportClick();
+    } else {
+      alert('Help & Support feature coming soon!');
+    }
   };
 
   const menuSections = [
@@ -135,6 +178,7 @@ export const ProfileTab: React.FC = () => {
         <p className="text-sm text-blue-700">ProfileTab is rendering successfully</p>
         <p className="text-sm text-blue-700">User: {displayUser.displayName}</p>
         <p className="text-sm text-blue-700">Email: {displayUser.email}</p>
+        <p className="text-sm text-blue-700">Sidebar handlers connected: {!!onSettingsClick}</p>
         <p className="text-sm text-blue-700">Timestamp: {new Date().toLocaleTimeString()}</p>
       </div>
 
@@ -159,7 +203,7 @@ export const ProfileTab: React.FC = () => {
             <p className="text-white text-opacity-90">Family of 4 • Premium Member</p>
           </div>
           <button 
-            onClick={() => alert('Edit profile feature coming soon!')}
+            onClick={() => handlePersonalInfo()}
             className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
           >
             <Edit2 className="h-5 w-5" />
