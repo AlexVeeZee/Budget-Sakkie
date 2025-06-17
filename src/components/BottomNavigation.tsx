@@ -19,6 +19,15 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
     { id: 'profile', icon: User, label: t('nav.profile') }
   ];
 
+  const handleTabClick = (tabId: string, event: React.MouseEvent) => {
+    // Prevent any default behavior and stop propagation
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Navigate to the tab
+    onTabChange(tabId as Route);
+  };
+
   return (
     <nav 
       className="fixed bottom-0 left-0 right-0 border-t border-gray-200 px-4 py-2 z-40 shadow-lg"
@@ -28,7 +37,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
         {tabs.map(({ id, icon: Icon, label }) => (
           <button
             key={id}
-            onClick={() => onTabChange(id as Route)}
+            onClick={(event) => handleTabClick(id, event)}
             className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
               activeTab === id
                 ? 'text-green-600'

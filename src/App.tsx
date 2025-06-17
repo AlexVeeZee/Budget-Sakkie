@@ -74,7 +74,7 @@ function AppContent() {
   };
 
   const renderActiveTab = () => {
-    // Handle profile sub-routes
+    // Handle profile sub-routes - ensure profile stays rendered
     if (currentRoute.startsWith('profile')) {
       return <ProfileTab />;
     }
@@ -94,10 +94,16 @@ function AppContent() {
   };
 
   const getActiveBottomTab = () => {
+    // Ensure profile tab stays active for all profile routes
     if (currentRoute.startsWith('profile')) {
       return 'profile';
     }
     return currentRoute;
+  };
+
+  const handleTabChange = (tab: string) => {
+    // Ensure proper navigation without interference
+    navigate(tab as any);
   };
 
   return (
@@ -124,7 +130,7 @@ function AppContent() {
       
       <BottomNavigation 
         activeTab={getActiveBottomTab()}
-        onTabChange={navigate}
+        onTabChange={handleTabChange}
       />
 
       {/* Lazy loaded modals with loading fallback */}

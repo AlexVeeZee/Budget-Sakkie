@@ -78,7 +78,10 @@ export const ProfileTab: React.FC = () => {
     }
   };
 
-  const handleMenuItemClick = (route: 'profile/settings' | 'profile/security' | 'profile/preferences' | 'profile/support') => {
+  const handleMenuItemClick = (route: 'profile/settings' | 'profile/security' | 'profile/preferences' | 'profile/support', event: React.MouseEvent) => {
+    // Prevent any event bubbling that might interfere with navigation
+    event.preventDefault();
+    event.stopPropagation();
     navigate(route);
   };
 
@@ -103,7 +106,7 @@ export const ProfileTab: React.FC = () => {
     return <SupportView onBack={handleBackToProfile} />;
   }
 
-  // Main profile view
+  // Main profile view - ensure it stays rendered when profile is active
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Profile Header */}
@@ -127,7 +130,7 @@ export const ProfileTab: React.FC = () => {
             <p className="text-white text-opacity-90">Family of 4 • Premium Member</p>
           </div>
           <button 
-            onClick={() => handleMenuItemClick('profile/settings')}
+            onClick={(e) => handleMenuItemClick('profile/settings', e)}
             className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
           >
             <Edit2 className="h-5 w-5" />
@@ -204,11 +207,7 @@ export const ProfileTab: React.FC = () => {
             {section.items.map((item, itemIndex) => (
               <button
                 key={itemIndex}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleMenuItemClick(item.route);
-                }}
+                onClick={(e) => handleMenuItemClick(item.route, e)}
                 className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors text-left"
               >
                 <div className="flex items-center space-x-3">
