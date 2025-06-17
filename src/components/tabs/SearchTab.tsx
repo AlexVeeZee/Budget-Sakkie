@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, ScanLine, MapPin } from 'lucide-react';
+import { Search, Filter, ScanLine, Loader2, AlertCircle } from 'lucide-react';
 import { ProductCard } from '../ProductCard';
-import { products, prices } from '../../data/mockData';
+import { useProducts, useCategories } from '../../hooks/useProducts';
 import { useLanguage } from '../../hooks/useLanguage';
 
 interface SearchTabProps {
@@ -12,36 +12,46 @@ interface SearchTabProps {
 export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChange }) => {
   const { t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedStore, setSelectedStore] = useState('all');
 
-  const categories = [
-    { id: 'all', name: 'All Categories' },
-    { id: 'Fresh Produce', name: 'Fresh Produce' },
-    { id: 'Dairy', name: 'Dairy' },
-    { id: 'Meat', name: 'Meat' },
-    { id: 'Bakery', name: 'Bakery' },
-    { id: 'Pantry', name: 'Pantry' },
+  const { categories, loading: categoriesLoading } = useCategories();
+  
+  const productFilters = useMemo(() => ({
+    searchQuery: searchQuery || undefined,
+    categoryId: selectedCategory !== 'all' ? selectedCategory : undefined,
+    storeId: selectedStore !== 'all' ? selectedStore : undefined,
+    inStockOnly: true
+  }), [searchQuery, selectedCategory, selectedStore]);
+
+  const { products, loading: productsLoading, error } = useProducts(productFilters);
+
+  const stores = [
+    { id: 'all', name: 'All Stores' },
+    { id: 'pick-n-pay', name: 'Pick n Pay' },
+    { id: 'shoprite', name: 'Shoprite' },
+    { id: 'checkers', name: 'Checkers' },
+    { id: 'woolworths', name: 'Woolworths' },
+    { id: 'spar', name: 'SPAR' },
   ];
 
-  const filteredProducts = useMemo(() => {
-    let filtered = products;
-    
-    if (searchQuery) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.brand.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product => product.category === selectedCategory);
-    }
-    
-    return filtered;
-  }, [searchQuery, selectedCategory]);
+  const categoryOptions = [
+    { id: 'all', name: 'All Categories' },
+    ...categories.map(cat => ({ id: cat.id, name: cat.name }))
+  ];
 
-  const getProductPrices = (productId: string) => {
-    return prices.filter(price => price.productId === productId);
-  };
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Products</h3>
+            <p className="text-gray-600">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -71,74 +81,90 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="bg-white rounded-lg p-3 text-center shadow-sm">
-            <p className="text-2xl font-bold text-green-600">5</p>
+            <p className="text-2xl font-bold text-green-600">{stores.length - 1}</p>
             <p className="text-xs text-gray-600">Retailers</p>
           </div>
           <div className="bg-white rounded-lg p-3 text-center shadow-sm">
-            <p className="text-2xl font-bold text-blue-600">2.3km</p>
-            <p className="text-xs text-gray-600">Nearest Store</p>
+            <p className="text-2xl font-bold text-blue-600">{products.length}</p>
+            <p className="text-xs text-gray-600">Products</p>
           </div>
           <div className="bg-white rounded-lg p-3 text-center shadow-sm">
-            <p className="text-2xl font-bold text-orange-600">15%</p>
-            <p className="text-xs text-gray-600">Avg Savings</p>
+            <p className="text-2xl font-bold text-orange-600">{categories.length}</p>
+            <p className="text-xs text-gray-600">Categories</p>
           </div>
         </div>
 
-        {/* Category Filter */}
-        <div className="flex space-x-2 overflow-x-auto pb-2">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedCategory === category.id
-                  ? 'bg-green-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {category.name}
-            </button>
-          ))}
+        {/* Filters */}
+        <div className="space-y-3">
+          {/* Category Filter */}
+          <div className="flex space-x-2 overflow-x-auto pb-2">
+            {categoryOptions.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                disabled={categoriesLoading}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedCategory === category.id
+                    ? 'bg-green-600 text-white'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Store Filter */}
+          <div className="flex space-x-2 overflow-x-auto pb-2">
+            {stores.map((store) => (
+              <button
+                key={store.id}
+                onClick={() => setSelectedStore(store.id)}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedStore === store.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {store.name}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Recent Searches */}
-      {!searchQuery && (
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('search.recent')}</h3>
-          <div className="flex flex-wrap gap-2">
-            {['Bread', 'Milk', 'Eggs', 'Rice'].map((term) => (
-              <button
-                key={term}
-                onClick={() => onSearchChange(term)}
-                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors"
-              >
-                {term}
-              </button>
-            ))}
+      {/* Loading State */}
+      {productsLoading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-green-600 mx-auto mb-4" />
+            <p className="text-gray-600">Loading products...</p>
           </div>
         </div>
       )}
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProducts.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            prices={getProductPrices(product.id)}
-            onCompare={() => console.log('Compare', product.name)}
-            onAddToList={() => console.log('Add to list', product.name)}
-          />
-        ))}
-      </div>
-
-      {filteredProducts.length === 0 && (
-        <div className="text-center py-12">
-          <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('search.no_results')}</h3>
-          <p className="text-gray-600">Try adjusting your search terms or category filter</p>
-        </div>
+      {!productsLoading && (
+        <>
+          {products.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onCompare={() => console.log('Compare', product.name)}
+                  onAddToList={() => console.log('Add to list', product.name)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('search.no_results')}</h3>
+              <p className="text-gray-600">Try adjusting your search terms or filters</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
