@@ -26,8 +26,6 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   const [monthlyBudget, setMonthlyBudget] = useState(1500);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
-  console.log('ProfileTab rendering, user:', user);
-
   const profileStats = [
     { label: 'Total Saved', value: 'R1,247.50', icon: TrendingUp, color: 'text-green-600' },
     { label: 'Lists Created', value: '12', icon: User, color: 'text-blue-600' },
@@ -43,7 +41,6 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
 
   // Use sidebar functionality if available, otherwise fallback to alerts
   const handlePersonalInfo = () => {
-    console.log('Personal Information clicked');
     if (onSettingsClick) {
       onSettingsClick();
     } else {
@@ -52,7 +49,6 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   };
 
   const handleLocation = () => {
-    console.log('Location clicked');
     if (onLocationClick) {
       onLocationClick();
     } else {
@@ -61,7 +57,6 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   };
 
   const handleLoyaltyCards = () => {
-    console.log('Loyalty cards clicked');
     if (onLoyaltyCardsClick) {
       onLoyaltyCardsClick();
     } else {
@@ -70,13 +65,11 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   };
 
   const handleLanguageToggle = () => {
-    console.log('Language toggle clicked');
     toggleLanguage();
     alert(`Language changed to ${language === 'en' ? 'Afrikaans' : 'English'}!`);
   };
 
   const handleNotifications = () => {
-    console.log('Notifications clicked');
     if (onSettingsClick) {
       // Notifications are part of settings
       onSettingsClick();
@@ -86,7 +79,6 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   };
 
   const handlePrivacy = () => {
-    console.log('Privacy clicked');
     if (onSettingsClick) {
       // Privacy is part of settings
       onSettingsClick();
@@ -96,7 +88,6 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   };
 
   const handleHelp = () => {
-    console.log('Help clicked');
     if (onHelpSupportClick) {
       onHelpSupportClick();
     } else {
@@ -144,7 +135,6 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     
     try {
       await signOut();
-      console.log('Sign out successful');
       alert('You have been signed out successfully!');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -157,7 +147,6 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   const handleMenuItemClick = (action: () => void, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    console.log('Menu item clicked, executing action...');
     
     // Add a small delay to ensure the click is registered
     setTimeout(() => {
@@ -172,16 +161,6 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Debug Info */}
-      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h4 className="font-medium text-blue-900">Debug Info</h4>
-        <p className="text-sm text-blue-700">ProfileTab is rendering successfully</p>
-        <p className="text-sm text-blue-700">User: {displayUser.displayName}</p>
-        <p className="text-sm text-blue-700">Email: {displayUser.email}</p>
-        <p className="text-sm text-blue-700">Sidebar handlers connected: {!!onSettingsClick}</p>
-        <p className="text-sm text-blue-700">Timestamp: {new Date().toLocaleTimeString()}</p>
-      </div>
-
       {/* Profile Header */}
       <div className="bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 rounded-xl p-6 text-white mb-6">
         <div className="flex items-center space-x-4">
