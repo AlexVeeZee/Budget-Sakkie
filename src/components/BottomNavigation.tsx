@@ -1,10 +1,11 @@
 import React from 'react';
 import { Search, BarChart3, List, Tag, User } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { Route } from '../hooks/useRouter';
 
 interface BottomNavigationProps {
   activeTab: string;
-  onTabChange: (tab: string) => void;
+  onTabChange: (tab: Route) => void;
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabChange }) => {
@@ -27,7 +28,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
         {tabs.map(({ id, icon: Icon, label }) => (
           <button
             key={id}
-            onClick={() => onTabChange(id)}
+            onClick={() => onTabChange(id as Route)}
             className={`flex flex-col items-center space-y-1 py-2 px-3 rounded-lg transition-colors ${
               activeTab === id
                 ? 'text-green-600'

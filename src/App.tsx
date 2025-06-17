@@ -7,6 +7,8 @@ import { ListsTab } from './components/tabs/ListsTab';
 import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
+import { AuthProvider } from './hooks/useAuth';
+import { useRouter } from './hooks/useRouter';
 
 // Lazy load heavy modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -16,8 +18,8 @@ const RewardsModal = lazy(() => import('./components/modals/RewardsModal').then(
 const FamilySharingModal = lazy(() => import('./components/modals/FamilySharingModal').then(module => ({ default: module.FamilySharingModal })));
 const HelpSupportModal = lazy(() => import('./components/modals/HelpSupportModal').then(module => ({ default: module.HelpSupportModal })));
 
-function App() {
-  const [activeTab, setActiveTab] = useState('search');
+function AppContent() {
+  const { currentRoute, navigate } = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
@@ -28,7 +30,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearchClick = () => {
-    setActiveTab('search');
+    navigate('search');
   };
 
   // Close all modals helper function
@@ -72,7 +74,12 @@ function App() {
   };
 
   const renderActiveTab = () => {
-    switch (activeTab) {
+    // Handle profile sub-routes
+    if (currentRoute.startsWith('profile')) {
+      return <ProfileTab />;
+    }
+
+    switch (currentRoute) {
       case 'search':
         return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
       case 'compare':
@@ -81,11 +88,16 @@ function App() {
         return <ListsTab />;
       case 'deals':
         return <DealsTab />;
-      case 'profile':
-        return <ProfileTab />;
       default:
         return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
     }
+  };
+
+  const getActiveBottomTab = () => {
+    if (currentRoute.startsWith('profile')) {
+      return 'profile';
+    }
+    return currentRoute;
   };
 
   return (
@@ -111,8 +123,8 @@ function App() {
       </main>
       
       <BottomNavigation 
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
+        activeTab={getActiveBottomTab()}
+        onTabChange={navigate}
       />
 
       {/* Lazy loaded modals with loading fallback */}
@@ -160,6 +172,14 @@ function App() {
         )}
       </Suspense>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
-import { User, Settings, CreditCard, MapPin, Bell, Shield, HelpCircle, LogOut, Edit2, TrendingUp } from 'lucide-react';
+import { User, Settings, CreditCard, MapPin, Bell, Shield, HelpCircle, LogOut, Edit2, TrendingUp, ArrowLeft } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useAuth } from '../../hooks/useAuth';
+import { useRouter } from '../../hooks/useRouter';
+import { ProfileSettingsView } from './profile/ProfileSettingsView';
+import { SecuritySettingsView } from './profile/SecuritySettingsView';
+import { PreferencesView } from './profile/PreferencesView';
+import { SupportView } from './profile/SupportView';
 
 export const ProfileTab: React.FC = () => {
   const { t, language, toggleLanguage } = useLanguage();
+  const { user, signOut } = useAuth();
+  const { currentRoute, navigate } = useRouter();
   const [editingBudget, setEditingBudget] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState(1500);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const profileStats = [
     { label: 'Total Saved', value: 'R1,247.50', icon: TrendingUp, color: 'text-green-600' },
@@ -17,47 +26,110 @@ export const ProfileTab: React.FC = () => {
     {
       title: 'Account',
       items: [
-        { icon: User, label: 'Personal Information', action: () => {} },
-        { icon: MapPin, label: t('profile.location'), value: 'Centurion, GP', action: () => {} },
-        { icon: CreditCard, label: t('profile.loyalty_cards'), value: '3 cards', action: () => {} },
-      ]
-    },
-    {
-      title: 'Preferences',
-      items: [
+        { 
+          icon: User, 
+          label: 'Profile Settings', 
+          route: 'profile/settings' as const,
+          description: 'Manage your personal information and preferences'
+        },
+        { 
+          icon: Shield, 
+          label: 'Security Settings', 
+          route: 'profile/security' as const,
+          description: 'Password, two-factor authentication, and security'
+        },
         { 
           icon: Settings, 
-          label: t('profile.language'), 
-          value: language === 'en' ? 'English' : 'Afrikaans', 
-          action: toggleLanguage 
+          label: 'Account Preferences', 
+          route: 'profile/preferences' as const,
+          description: 'Language, currency, and app preferences'
         },
-        { icon: Bell, label: 'Notifications', value: 'Enabled', action: () => {} },
-        { icon: Shield, label: 'Privacy & Security', action: () => {} },
       ]
     },
     {
       title: 'Support',
       items: [
-        { icon: HelpCircle, label: 'Help & Support', action: () => {} },
-        { icon: LogOut, label: 'Sign Out', action: () => {}, destructive: true },
+        { 
+          icon: HelpCircle, 
+          label: 'Help & Support', 
+          route: 'profile/support' as const,
+          description: 'Get help, contact support, and view documentation'
+        },
       ]
     }
   ];
 
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    
+    const confirmed = window.confirm('Are you sure you want to sign out?');
+    if (!confirmed) return;
+
+    setIsSigningOut(true);
+    
+    try {
+      await signOut();
+      navigate('login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      alert('Failed to sign out. Please try again.');
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
+  const handleMenuItemClick = (route: 'profile/settings' | 'profile/security' | 'profile/preferences' | 'profile/support') => {
+    navigate(route);
+  };
+
+  const handleBackToProfile = () => {
+    navigate('profile');
+  };
+
+  // Render specific profile sub-views
+  if (currentRoute === 'profile/settings') {
+    return <ProfileSettingsView onBack={handleBackToProfile} />;
+  }
+
+  if (currentRoute === 'profile/security') {
+    return <SecuritySettingsView onBack={handleBackToProfile} />;
+  }
+
+  if (currentRoute === 'profile/preferences') {
+    return <PreferencesView onBack={handleBackToProfile} />;
+  }
+
+  if (currentRoute === 'profile/support') {
+    return <SupportView onBack={handleBackToProfile} />;
+  }
+
+  // Main profile view
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Profile Header */}
       <div className="bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 rounded-xl p-6 text-white mb-6">
         <div className="flex items-center space-x-4">
-          <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-            <User className="h-10 w-10" />
+          <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
+            {user?.profileImageUrl ? (
+              <img 
+                src={user.profileImageUrl} 
+                alt={user.displayName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="h-10 w-10" />
+            )}
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold">Sarah Van Der Merwe</h2>
+            <h2 className="text-2xl font-bold">{user?.displayName || 'User'}</h2>
+            <p className="text-white text-opacity-90">{user?.email}</p>
             <p className="text-white text-opacity-90">Member since January 2024</p>
             <p className="text-white text-opacity-90">Family of 4 • Premium Member</p>
           </div>
-          <button className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors">
+          <button 
+            onClick={() => handleMenuItemClick('profile/settings')}
+            className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
+          >
             <Edit2 className="h-5 w-5" />
           </button>
         </div>
@@ -132,23 +204,47 @@ export const ProfileTab: React.FC = () => {
             {section.items.map((item, itemIndex) => (
               <button
                 key={itemIndex}
-                onClick={item.action}
-                className={`w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors ${
-                  item.destructive ? 'text-red-600' : 'text-gray-900'
-                }`}
+                onClick={() => handleMenuItemClick(item.route)}
+                className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors text-left"
               >
                 <div className="flex items-center space-x-3">
-                  <item.icon className={`h-5 w-5 ${item.destructive ? 'text-red-600' : 'text-gray-600'}`} />
-                  <span className="font-medium">{item.label}</span>
+                  <item.icon className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <span className="font-medium text-gray-900">{item.label}</span>
+                    <p className="text-sm text-gray-500 mt-1">{item.description}</p>
+                  </div>
                 </div>
-                {item.value && (
-                  <span className="text-sm text-gray-600">{item.value}</span>
-                )}
+                <div className="text-gray-400">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </button>
             ))}
           </div>
         </div>
       ))}
+
+      {/* Sign Out Section */}
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
+        <div className="divide-y divide-gray-200">
+          <button
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            className="w-full flex items-center justify-between px-6 py-4 hover:bg-red-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <div className="flex items-center space-x-3">
+              <LogOut className="h-5 w-5 text-red-600" />
+              <span className="font-medium text-red-600">
+                {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+              </span>
+            </div>
+            {isSigningOut && (
+              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+            )}
+          </button>
+        </div>
+      </div>
 
       {/* App Info */}
       <div className="bg-gray-50 rounded-xl p-6 text-center">
