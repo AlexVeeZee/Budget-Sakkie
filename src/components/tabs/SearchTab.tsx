@@ -8,6 +8,18 @@ import type { ProductWithCategory } from '../../services/productService';
 // Lazy load heavy components
 const FilterModal = lazy(() => import('../modals/FilterModal'));
 
+// Move getStoreDisplayName to top level to avoid hoisting issues
+const getStoreDisplayName = (storeId: string) => {
+  const storeNames: { [key: string]: string } = {
+    'pick-n-pay': 'Pick n Pay',
+    'shoprite': 'Shoprite',
+    'checkers': 'Checkers',
+    'woolworths': 'Woolworths',
+    'spar': 'SPAR'
+  };
+  return storeNames[storeId] || storeId;
+};
+
 interface SearchTabProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -21,17 +33,6 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToList }) => {
   const { formatCurrency } = useCurrency();
-
-  const getStoreDisplayName = (storeId: string) => {
-    const storeNames: { [key: string]: string } = {
-      'pick-n-pay': 'Pick n Pay',
-      'shoprite': 'Shoprite',
-      'checkers': 'Checkers',
-      'woolworths': 'Woolworths',
-      'spar': 'SPAR'
-    };
-    return storeNames[storeId] || storeId;
-  };
 
   const getStoreColor = (storeId: string) => {
     const storeColors: { [key: string]: string } = {
@@ -192,17 +193,6 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
       name: getStoreDisplayName(storeId)
     }));
   }, [products]);
-
-  const getStoreDisplayName = (storeId: string) => {
-    const storeNames: { [key: string]: string } = {
-      'pick-n-pay': 'Pick n Pay',
-      'shoprite': 'Shoprite',
-      'checkers': 'Checkers',
-      'woolworths': 'Woolworths',
-      'spar': 'SPAR'
-    };
-    return storeNames[storeId] || storeId;
-  };
 
   // Filter products based on current selections
   const filteredProducts = useMemo(() => {
