@@ -8,7 +8,6 @@ import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
 import { AuthProvider } from './hooks/useAuth';
-import { useRouter } from './hooks/useRouter';
 
 // Lazy load heavy modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -18,8 +17,10 @@ const RewardsModal = lazy(() => import('./components/modals/RewardsModal').then(
 const FamilySharingModal = lazy(() => import('./components/modals/FamilySharingModal').then(module => ({ default: module.FamilySharingModal })));
 const HelpSupportModal = lazy(() => import('./components/modals/HelpSupportModal').then(module => ({ default: module.HelpSupportModal })));
 
+type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile';
+
 function AppContent() {
-  const { currentRoute, navigate } = useRouter();
+  const [activeTab, setActiveTab] = useState<TabType>('search');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
@@ -30,7 +31,7 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearchClick = () => {
-    navigate('search');
+    setActiveTab('search');
   };
 
   // Close all modals helper function
@@ -73,13 +74,23 @@ function AppContent() {
     setHelpSupportOpen(true);
   };
 
-  const renderActiveTab = () => {
-    // Handle profile sub-routes - ensure profile stays rendered
-    if (currentRoute.startsWith('profile')) {
-      return <ProfileTab />;
-    }
+  // Simple tab change handler with explicit logging
+  const handleTabChange = (tab: TabType) => {
+    console.log('Tab change requested:', tab);
+    console.log('Current active tab:', activeTab);
+    
+    setActiveTab(tab);
+    
+    // Log after state change (will show in next render)
+    setTimeout(() => {
+      console.log('Tab changed to:', tab);
+    }, 0);
+  };
 
-    switch (currentRoute) {
+  const renderActiveTab = () => {
+    console.log('Rendering tab:', activeTab);
+    
+    switch (activeTab) {
       case 'search':
         return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
       case 'compare':
@@ -88,22 +99,11 @@ function AppContent() {
         return <ListsTab />;
       case 'deals':
         return <DealsTab />;
+      case 'profile':
+        return <ProfileTab />;
       default:
         return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
     }
-  };
-
-  const getActiveBottomTab = () => {
-    // Ensure profile tab stays active for all profile routes
-    if (currentRoute.startsWith('profile')) {
-      return 'profile';
-    }
-    return currentRoute;
-  };
-
-  const handleTabChange = (tab: string) => {
-    // Ensure proper navigation without interference
-    navigate(tab as any);
   };
 
   return (
@@ -129,7 +129,7 @@ function AppContent() {
       </main>
       
       <BottomNavigation 
-        activeTab={getActiveBottomTab()}
+        activeTab={activeTab}
         onTabChange={handleTabChange}
       />
 

@@ -1,31 +1,35 @@
 import React from 'react';
 import { Search, BarChart3, List, Tag, User } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
-import { Route } from '../hooks/useRouter';
+
+type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile';
 
 interface BottomNavigationProps {
-  activeTab: string;
-  onTabChange: (tab: Route) => void;
+  activeTab: TabType;
+  onTabChange: (tab: TabType) => void;
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabChange }) => {
   const { t } = useLanguage();
 
   const tabs = [
-    { id: 'search', icon: Search, label: t('nav.search') },
-    { id: 'compare', icon: BarChart3, label: t('nav.compare') },
-    { id: 'lists', icon: List, label: t('nav.lists') },
-    { id: 'deals', icon: Tag, label: t('nav.deals') },
-    { id: 'profile', icon: User, label: t('nav.profile') }
+    { id: 'search' as const, icon: Search, label: t('nav.search') },
+    { id: 'compare' as const, icon: BarChart3, label: t('nav.compare') },
+    { id: 'lists' as const, icon: List, label: t('nav.lists') },
+    { id: 'deals' as const, icon: Tag, label: t('nav.deals') },
+    { id: 'profile' as const, icon: User, label: t('nav.profile') }
   ];
 
-  const handleTabClick = (tabId: string, event: React.MouseEvent) => {
+  const handleTabClick = (tabId: TabType, event: React.MouseEvent) => {
     // Prevent any default behavior and stop propagation
     event.preventDefault();
     event.stopPropagation();
     
-    // Navigate to the tab
-    onTabChange(tabId as Route);
+    console.log('Bottom nav clicked:', tabId);
+    console.log('Current active tab:', activeTab);
+    
+    // Call the tab change handler
+    onTabChange(tabId);
   };
 
   return (

@@ -1,20 +1,16 @@
 import React, { useState } from 'react';
-import { User, Settings, CreditCard, MapPin, Bell, Shield, HelpCircle, LogOut, Edit2, TrendingUp, ArrowLeft } from 'lucide-react';
+import { User, Settings, CreditCard, MapPin, Bell, Shield, HelpCircle, LogOut, Edit2, TrendingUp } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
-import { useRouter } from '../../hooks/useRouter';
-import { ProfileSettingsView } from './profile/ProfileSettingsView';
-import { SecuritySettingsView } from './profile/SecuritySettingsView';
-import { PreferencesView } from './profile/PreferencesView';
-import { SupportView } from './profile/SupportView';
 
 export const ProfileTab: React.FC = () => {
   const { t, language, toggleLanguage } = useLanguage();
   const { user, signOut } = useAuth();
-  const { currentRoute, navigate } = useRouter();
   const [editingBudget, setEditingBudget] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState(1500);
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  console.log('ProfileTab rendering, user:', user);
 
   const profileStats = [
     { label: 'Total Saved', value: 'R1,247.50', icon: TrendingUp, color: 'text-green-600' },
@@ -26,35 +22,31 @@ export const ProfileTab: React.FC = () => {
     {
       title: 'Account',
       items: [
-        { 
-          icon: User, 
-          label: 'Profile Settings', 
-          route: 'profile/settings' as const,
-          description: 'Manage your personal information and preferences'
-        },
-        { 
-          icon: Shield, 
-          label: 'Security Settings', 
-          route: 'profile/security' as const,
-          description: 'Password, two-factor authentication, and security'
-        },
+        { icon: User, label: 'Personal Information', action: () => console.log('Personal Information clicked') },
+        { icon: MapPin, label: t('profile.location'), value: 'Centurion, GP', action: () => console.log('Location clicked') },
+        { icon: CreditCard, label: t('profile.loyalty_cards'), value: '3 cards', action: () => console.log('Loyalty cards clicked') },
+      ]
+    },
+    {
+      title: 'Preferences',
+      items: [
         { 
           icon: Settings, 
-          label: 'Account Preferences', 
-          route: 'profile/preferences' as const,
-          description: 'Language, currency, and app preferences'
+          label: t('profile.language'), 
+          value: language === 'en' ? 'English' : 'Afrikaans', 
+          action: () => {
+            console.log('Language toggle clicked');
+            toggleLanguage();
+          }
         },
+        { icon: Bell, label: 'Notifications', value: 'Enabled', action: () => console.log('Notifications clicked') },
+        { icon: Shield, label: 'Privacy & Security', action: () => console.log('Privacy clicked') },
       ]
     },
     {
       title: 'Support',
       items: [
-        { 
-          icon: HelpCircle, 
-          label: 'Help & Support', 
-          route: 'profile/support' as const,
-          description: 'Get help, contact support, and view documentation'
-        },
+        { icon: HelpCircle, label: 'Help & Support', action: () => console.log('Help clicked') },
       ]
     }
   ];
@@ -69,7 +61,7 @@ export const ProfileTab: React.FC = () => {
     
     try {
       await signOut();
-      navigate('search'); // Navigate to search instead of login since we don't have a login route
+      console.log('Sign out successful');
     } catch (error) {
       console.error('Error signing out:', error);
       alert('Failed to sign out. Please try again.');
@@ -78,37 +70,23 @@ export const ProfileTab: React.FC = () => {
     }
   };
 
-  const handleMenuItemClick = (route: 'profile/settings' | 'profile/security' | 'profile/preferences' | 'profile/support', event: React.MouseEvent) => {
-    // Prevent any event bubbling that might interfere with navigation
+  const handleMenuItemClick = (action: () => void, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    navigate(route);
+    console.log('Menu item clicked');
+    action();
   };
 
-  const handleBackToProfile = () => {
-    navigate('profile');
-  };
-
-  // Render specific profile sub-views
-  if (currentRoute === 'profile/settings') {
-    return <ProfileSettingsView onBack={handleBackToProfile} />;
-  }
-
-  if (currentRoute === 'profile/security') {
-    return <SecuritySettingsView onBack={handleBackToProfile} />;
-  }
-
-  if (currentRoute === 'profile/preferences') {
-    return <PreferencesView onBack={handleBackToProfile} />;
-  }
-
-  if (currentRoute === 'profile/support') {
-    return <SupportView onBack={handleBackToProfile} />;
-  }
-
-  // Main profile view - ensure it stays rendered when profile is active
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Debug Info */}
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h4 className="font-medium text-blue-900">Debug Info</h4>
+        <p className="text-sm text-blue-700">ProfileTab is rendering successfully</p>
+        <p className="text-sm text-blue-700">User: {user?.displayName || 'Not logged in'}</p>
+        <p className="text-sm text-blue-700">Timestamp: {new Date().toLocaleTimeString()}</p>
+      </div>
+
       {/* Profile Header */}
       <div className="bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 rounded-xl p-6 text-white mb-6">
         <div className="flex items-center space-x-4">
@@ -125,14 +103,11 @@ export const ProfileTab: React.FC = () => {
           </div>
           <div className="flex-1">
             <h2 className="text-2xl font-bold">{user?.displayName || 'User'}</h2>
-            <p className="text-white text-opacity-90">{user?.email}</p>
+            <p className="text-white text-opacity-90">{user?.email || 'user@example.com'}</p>
             <p className="text-white text-opacity-90">Member since January 2024</p>
             <p className="text-white text-opacity-90">Family of 4 • Premium Member</p>
           </div>
-          <button 
-            onClick={(e) => handleMenuItemClick('profile/settings', e)}
-            className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
-          >
+          <button className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors">
             <Edit2 className="h-5 w-5" />
           </button>
         </div>
@@ -207,21 +182,16 @@ export const ProfileTab: React.FC = () => {
             {section.items.map((item, itemIndex) => (
               <button
                 key={itemIndex}
-                onClick={(e) => handleMenuItemClick(item.route, e)}
+                onClick={(e) => handleMenuItemClick(item.action, e)}
                 className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors text-left"
               >
                 <div className="flex items-center space-x-3">
                   <item.icon className="h-5 w-5 text-gray-600" />
-                  <div>
-                    <span className="font-medium text-gray-900">{item.label}</span>
-                    <p className="text-sm text-gray-500 mt-1">{item.description}</p>
-                  </div>
+                  <span className="font-medium text-gray-900">{item.label}</span>
                 </div>
-                <div className="text-gray-400">
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
+                {item.value && (
+                  <span className="text-sm text-gray-600">{item.value}</span>
+                )}
               </button>
             ))}
           </div>
