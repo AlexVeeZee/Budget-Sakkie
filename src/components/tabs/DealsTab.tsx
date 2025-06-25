@@ -282,7 +282,7 @@ export const DealsTab: React.FC = () => {
       
       return b.totalSavings - a.totalSavings; // Higher savings first
     });
-  }, [bundleDeals, selectedStore, showExpiredDeals, isExpired]);
+  }, [bundleDeals, selectedStore, showExpiredDeals, isExpired];
 
   // Event handlers
   const handleDealClick = useCallback((deal: BundleDeal) => {
