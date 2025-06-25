@@ -264,7 +264,6 @@ export const DealsTab: React.FC = () => {
     if (selectedStore !== 'all') {
       filtered = filtered.filter(deal => deal.retailer.id === selectedStore);
     }
-  }, [products]);
 
     // Filter by expiry status
     if (!showExpiredDeals) {
@@ -282,7 +281,7 @@ export const DealsTab: React.FC = () => {
       
       return b.totalSavings - a.totalSavings; // Higher savings first
     });
-  }, [bundleDeals, selectedStore, showExpiredDeals, isExpired];
+  }, [bundleDeals, selectedStore, showExpiredDeals, isExpired]);
 
   // Event handlers
   const handleDealClick = useCallback((deal: BundleDeal) => {
