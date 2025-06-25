@@ -1,69 +1,28 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  Tag, 
-  Clock, 
-  MapPin, 
-  Filter, 
-  TrendingDown, 
-  Percent, 
-  Search,
-  Star,
-  ShoppingCart,
-  AlertCircle,
-  RefreshCw,
-  SortAsc,
-  SortDesc,
-  Calendar,
-  DollarSign,
-  Eye,
-  Share2,
-  Bookmark,
-  BookmarkCheck,
-  ChevronDown,
-  ChevronUp,
-  Grid,
-  List,
-  Heart,
-  Store
-} from 'lucide-react';
-import { deals, products, retailers } from '../../data/mockData';
+import React, { useState, useMemo, useCallback, lazy, Suspense } from 'react';
+import { Tag, Clock, TrendingDown, MapPin, Filter, ToggleLeft, ToggleRight, Star, Package, AlertCircle, CheckCircle, Eye, ShoppingCart } from 'lucide-react';
+import { Deal, Product, Price, Retailer } from '../../types';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useCurrency } from '../../hooks/useCurrency';
-import { Deal, Product, Retailer } from '../../types';
-import { ProductDetailModal } from '../modals/ProductDetailModal';
-import { AddToListModal } from '../modals/AddToListModal';
-import { CreateListModal } from '../modals/CreateListModal';
+import { retailers, products, prices } from '../../data/mockData';
 
-interface ExtendedDeal extends Deal {
-  product?: Product;
-  isBookmarked?: boolean;
-  viewCount?: number;
-  shareCount?: number;
+// Lazy load the deal detail modal
+const DealDetailModal = lazy(() => import('../modals/DealDetailModal').then(module => ({ default: module.DealDetailModal })));
+
+interface BundleDeal extends Deal {
+  bundleItems: Array<{
+    product: Product;
+    quantity: number;
+    originalPrice: number;
+    discountedPrice: number;
+  }>;
+  totalOriginalPrice: number;
+  totalDiscountedPrice: number;
+  totalSavings: number;
+  termsAndConditions: string[];
 }
 
-interface FilterState {
-  category: string;
-  retailer: string;
-  discountType: string;
-  minDiscount: number;
-  maxDiscount: number;
-  expiryFilter: string;
-  sortBy: string;
-  sortOrder: 'asc' | 'desc';
-}
-
-interface FeaturedDeal {
-  id: string;
-  title: string;
-  description: string;
-  retailer: Retailer;
-  discount: string;
-  validUntil: string;
-  image: string;
-  category: string;
-  isLimited?: boolean;
-  originalPrice?: number;
-  salePrice?: number;
+interface DealCache {
+  [storeId: string]: BundleDeal[];
 }
 
 export const DealsTab: React.FC = () => {
@@ -71,138 +30,210 @@ export const DealsTab: React.FC = () => {
   const { formatCurrency } = useCurrency();
   
   // State management
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [bookmarkedDeals, setBookmarkedDeals] = useState<Set<string>>(new Set());
-  const [viewedDeals, setViewedDeals] = useState<Set<string>>(new Set());
-  const [refreshing, setRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
-  const [expandedFilters, setExpandedFilters] = useState(false);
-  const [selectedDeal, setSelectedDeal] = useState<ExtendedDeal | null>(null);
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [showAddToListModal, setShowAddToListModal] = useState(false);
-  const [showCreateListModal, setShowCreateListModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [showExpiredDeals, setShowExpiredDeals] = useState(false);
+  const [selectedStore, setSelectedStore] = useState<string>('all');
+  const [selectedDeal, setSelectedDeal] = useState<BundleDeal | null>(null);
+  const [showDealModal, setShowDealModal] = useState(false);
+  const [dealCache] = useState<DealCache>({});
 
-  const [filters, setFilters] = useState<FilterState>({
-    category: 'all',
-    retailer: 'all',
-    discountType: 'all',
-    minDiscount: 0,
-    maxDiscount: 100,
-    expiryFilter: 'all',
-    sortBy: 'savings',
-    sortOrder: 'desc'
-  });
-
-  // Enhanced deals data with additional properties
-  const [extendedDeals, setExtendedDeals] = useState<ExtendedDeal[]>([]);
-
-  // Featured deals with more comprehensive data
-  const featuredDeals: FeaturedDeal[] = [
+  // Generate comprehensive bundle deals data
+  const bundleDeals: BundleDeal[] = useMemo(() => [
     {
-      id: 'weekend-special',
-      title: 'Weekend Grocery Special',
-      description: 'Save up to 25% on selected fresh produce and dairy items',
-      retailer: retailers[1],
-      discount: '25%',
-      validUntil: '2024-01-21T23:59:59Z',
-      image: 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-      category: 'Fresh Produce',
-      isLimited: true,
-      originalPrice: 150,
-      salePrice: 112.50
-    },
-    {
-      id: 'family-pack',
-      title: 'Family Pack Savings',
-      description: 'Buy 2 get 1 free on family essentials and household items',
-      retailer: retailers[0],
-      discount: '33%',
-      validUntil: '2024-01-19T23:59:59Z',
-      image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-      category: 'Household',
-      isLimited: false,
-      originalPrice: 200,
-      salePrice: 134
-    },
-    {
-      id: 'bulk-discount',
-      title: 'Bulk Shopping Bonanza',
-      description: 'Extra 15% off when you spend R500 or more',
-      retailer: retailers[2],
-      discount: '15%',
+      id: '1',
+      productId: 'bundle-1',
+      retailer: retailers[0], // Pick n Pay
+      discount: 25,
+      type: 'percentage',
+      description: 'Family Breakfast Bundle - Everything you need for a perfect family breakfast',
       validUntil: '2024-01-25T23:59:59Z',
-      image: 'https://images.pexels.com/photos/4481259/pexels-photo-4481259.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
-      category: 'Bulk',
-      isLimited: true,
-      originalPrice: 500,
-      salePrice: 425
+      conditions: 'Valid until Sunday, while stocks last',
+      bundleItems: [
+        {
+          product: products[0], // Bread
+          quantity: 2,
+          originalPrice: 15.99,
+          discountedPrice: 11.99
+        },
+        {
+          product: products[1], // Milk
+          quantity: 2,
+          originalPrice: 22.99,
+          discountedPrice: 17.24
+        },
+        {
+          product: products[2], // Eggs
+          quantity: 1,
+          originalPrice: 34.99,
+          discountedPrice: 26.24
+        }
+      ],
+      totalOriginalPrice: 112.96,
+      totalDiscountedPrice: 84.72,
+      totalSavings: 28.24,
+      termsAndConditions: [
+        'Valid until January 25, 2024',
+        'While stocks last',
+        'Cannot be combined with other offers',
+        'Limit 2 bundles per customer',
+        'Valid at participating stores only'
+      ]
+    },
+    {
+      id: '2',
+      productId: 'bundle-2',
+      retailer: retailers[1], // Shoprite
+      discount: 30,
+      type: 'percentage',
+      description: 'Weekend BBQ Special - Perfect for your weekend braai',
+      validUntil: '2024-01-21T23:59:59Z',
+      conditions: 'Weekend special offer',
+      bundleItems: [
+        {
+          product: products[4], // Chicken
+          quantity: 2,
+          originalPrice: 89.99,
+          discountedPrice: 62.99
+        },
+        {
+          product: products[3], // Rice
+          quantity: 1,
+          originalPrice: 45.99,
+          discountedPrice: 32.19
+        }
+      ],
+      totalOriginalPrice: 225.97,
+      totalDiscountedPrice: 158.17,
+      totalSavings: 67.80,
+      termsAndConditions: [
+        'Valid until January 21, 2024',
+        'Weekend special - Friday to Sunday only',
+        'Fresh meat products only',
+        'Subject to availability',
+        'Cannot be reserved'
+      ]
+    },
+    {
+      id: '3',
+      productId: 'bundle-3',
+      retailer: retailers[2], // Checkers
+      discount: 20,
+      type: 'percentage',
+      description: 'Healthy Living Bundle - Fresh and nutritious essentials',
+      validUntil: '2024-01-30T23:59:59Z',
+      conditions: 'Health month special',
+      bundleItems: [
+        {
+          product: products[5], // Bananas
+          quantity: 3,
+          originalPrice: 19.99,
+          discountedPrice: 15.99
+        },
+        {
+          product: products[1], // Milk
+          quantity: 1,
+          originalPrice: 22.99,
+          discountedPrice: 18.39
+        },
+        {
+          product: products[2], // Eggs
+          quantity: 1,
+          originalPrice: 34.99,
+          discountedPrice: 27.99
+        }
+      ],
+      totalOriginalPrice: 97.96,
+      totalDiscountedPrice: 78.37,
+      totalSavings: 19.59,
+      termsAndConditions: [
+        'Valid until January 30, 2024',
+        'Health month promotion',
+        'Fresh produce subject to seasonal availability',
+        'Quality guarantee on all fresh items',
+        'Nutritionist approved selection'
+      ]
+    },
+    {
+      id: '4',
+      productId: 'bundle-4',
+      retailer: retailers[3], // Woolworths
+      discount: 15,
+      type: 'percentage',
+      description: 'Premium Pantry Essentials - Quality ingredients for your kitchen',
+      validUntil: '2024-01-15T23:59:59Z', // Expired
+      conditions: 'Premium quality guarantee',
+      bundleItems: [
+        {
+          product: products[3], // Rice
+          quantity: 2,
+          originalPrice: 45.99,
+          discountedPrice: 39.09
+        },
+        {
+          product: products[0], // Bread
+          quantity: 1,
+          originalPrice: 15.99,
+          discountedPrice: 13.59
+        }
+      ],
+      totalOriginalPrice: 107.97,
+      totalDiscountedPrice: 91.77,
+      totalSavings: 16.20,
+      termsAndConditions: [
+        'Premium quality products only',
+        'Organic and sustainable sourcing',
+        'Money-back quality guarantee',
+        'Valid at Woolworths stores nationwide',
+        'Offer has expired'
+      ]
+    },
+    {
+      id: '5',
+      productId: 'bundle-5',
+      retailer: retailers[4], // SPAR
+      discount: 35,
+      type: 'percentage',
+      description: 'Student Special - Budget-friendly essentials for students',
+      validUntil: '2024-01-28T23:59:59Z',
+      conditions: 'Student ID required',
+      bundleItems: [
+        {
+          product: products[0], // Bread
+          quantity: 3,
+          originalPrice: 15.99,
+          discountedPrice: 10.39
+        },
+        {
+          product: products[1], // Milk
+          quantity: 2,
+          originalPrice: 22.99,
+          discountedPrice: 14.94
+        },
+        {
+          product: products[3], // Rice
+          quantity: 1,
+          originalPrice: 45.99,
+          discountedPrice: 29.89
+        }
+      ],
+      totalOriginalPrice: 122.95,
+      totalDiscountedPrice: 79.92,
+      totalSavings: 43.03,
+      termsAndConditions: [
+        'Valid student ID required',
+        'Valid until January 28, 2024',
+        'Limit one bundle per student per week',
+        'Cannot be combined with loyalty discounts',
+        'Available at campus stores only'
+      ]
     }
-  ];
+  ], []);
 
-  // Filter options
-  const filterOptions = {
-    categories: [
-      { id: 'all', label: 'All Categories' },
-      { id: 'Fresh Produce', label: 'Fresh Produce' },
-      { id: 'Dairy', label: 'Dairy & Eggs' },
-      { id: 'Meat', label: 'Meat & Poultry' },
-      { id: 'Bakery', label: 'Bakery' },
-      { id: 'Pantry', label: 'Pantry Essentials' },
-      { id: 'Household', label: 'Household Items' },
-      { id: 'Beverages', label: 'Beverages' }
-    ],
-    retailers: [
-      { id: 'all', label: 'All Retailers' },
-      ...retailers.map(r => ({ id: r.id, label: r.name }))
-    ],
-    discountTypes: [
-      { id: 'all', label: 'All Discounts' },
-      { id: 'percentage', label: 'Percentage Off' },
-      { id: 'fixed', label: 'Fixed Amount' },
-      { id: 'bogo', label: 'Buy One Get One' },
-      { id: 'bulk', label: 'Bulk Discounts' }
-    ],
-    expiryFilters: [
-      { id: 'all', label: 'All Deals' },
-      { id: 'today', label: 'Expiring Today' },
-      { id: 'week', label: 'This Week' },
-      { id: 'month', label: 'This Month' }
-    ],
-    sortOptions: [
-      { id: 'savings', label: 'Highest Savings' },
-      { id: 'discount', label: 'Discount Amount' },
-      { id: 'expiry', label: 'Expiry Date' },
-      { id: 'popularity', label: 'Most Popular' },
-      { id: 'recent', label: 'Recently Added' }
-    ]
-  };
+  // Utility functions
+  const isExpired = useCallback((validUntil: string): boolean => {
+    return new Date(validUntil) < new Date();
+  }, []);
 
-  // Initialize extended deals data
-  useEffect(() => {
-    const initializeDeals = () => {
-      const enhanced = deals.map(deal => {
-        const product = products.find(p => p.id === deal.productId);
-        return {
-          ...deal,
-          product,
-          isBookmarked: bookmarkedDeals.has(deal.id),
-          viewCount: Math.floor(Math.random() * 1000) + 50,
-          shareCount: Math.floor(Math.random() * 100) + 10
-        };
-      });
-      setExtendedDeals(enhanced);
-    };
-
-    initializeDeals();
-  }, [bookmarkedDeals]);
-
-  // Time calculation utilities
-  const getTimeRemaining = useCallback((validUntil: string) => {
+  const getTimeRemaining = useCallback((validUntil: string): string => {
     const now = new Date();
     const end = new Date(validUntil);
     const diff = end.getTime() - now.getTime();
@@ -211,14 +242,13 @@ export const DealsTab: React.FC = () => {
     
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
+    if (days > 0) return `${days}d ${hours}h left`;
+    if (hours > 0) return `${hours}h left`;
+    return 'Expires soon';
   }, []);
 
-  const isExpiringSoon = useCallback((validUntil: string) => {
+  const isExpiringSoon = useCallback((validUntil: string): boolean => {
     const now = new Date();
     const end = new Date(validUntil);
     const diff = end.getTime() - now.getTime();
@@ -226,978 +256,329 @@ export const DealsTab: React.FC = () => {
     return hoursRemaining <= 24 && hoursRemaining > 0;
   }, []);
 
-  const isExpired = useCallback((validUntil: string) => {
-    const now = new Date();
-    const end = new Date(validUntil);
-    return end.getTime() <= now.getTime();
-  }, []);
-
-  // Filter and search logic
+  // Filtered deals with client-side caching
   const filteredDeals = useMemo(() => {
-    let filtered = extendedDeals;
+    let filtered = bundleDeals;
 
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(deal => 
-        deal.description.toLowerCase().includes(query) ||
-        deal.product?.name.toLowerCase().includes(query) ||
-        deal.product?.brand.toLowerCase().includes(query) ||
-        deal.retailer.name.toLowerCase().includes(query)
-      );
+    // Filter by store
+    if (selectedStore !== 'all') {
+      filtered = filtered.filter(deal => deal.retailer.id === selectedStore);
     }
 
-    // Category filter
-    if (filters.category !== 'all') {
-      filtered = filtered.filter(deal => 
-        deal.product?.category === filters.category
-      );
+    // Filter by expiry status
+    if (!showExpiredDeals) {
+      filtered = filtered.filter(deal => !isExpired(deal.validUntil));
     }
 
-    // Retailer filter
-    if (filters.retailer !== 'all') {
-      filtered = filtered.filter(deal => 
-        deal.retailer.id === filters.retailer
-      );
-    }
-
-    // Discount type filter
-    if (filters.discountType !== 'all') {
-      filtered = filtered.filter(deal => 
-        deal.type === filters.discountType
-      );
-    }
-
-    // Discount amount filter
-    filtered = filtered.filter(deal => {
-      const discountValue = typeof deal.discount === 'number' ? deal.discount : parseFloat(deal.discount.toString());
-      return discountValue >= filters.minDiscount && discountValue <= filters.maxDiscount;
-    });
-
-    // Expiry filter
-    if (filters.expiryFilter !== 'all') {
-      const now = new Date();
-      filtered = filtered.filter(deal => {
-        const expiryDate = new Date(deal.validUntil);
-        const diffHours = (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-        
-        switch (filters.expiryFilter) {
-          case 'today':
-            return diffHours <= 24 && diffHours > 0;
-          case 'week':
-            return diffHours <= 168 && diffHours > 0; // 7 days
-          case 'month':
-            return diffHours <= 720 && diffHours > 0; // 30 days
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Sorting
-    filtered.sort((a, b) => {
-      let comparison = 0;
+    // Sort by savings (highest first) and then by expiry
+    return filtered.sort((a, b) => {
+      const aExpired = isExpired(a.validUntil);
+      const bExpired = isExpired(b.validUntil);
       
-      switch (filters.sortBy) {
-        case 'savings':
-          const aSavings = typeof a.discount === 'number' ? a.discount : parseFloat(a.discount.toString());
-          const bSavings = typeof b.discount === 'number' ? b.discount : parseFloat(b.discount.toString());
-          comparison = aSavings - bSavings;
-          break;
-        case 'expiry':
-          comparison = new Date(a.validUntil).getTime() - new Date(b.validUntil).getTime();
-          break;
-        case 'popularity':
-          comparison = (a.viewCount || 0) - (b.viewCount || 0);
-          break;
-        case 'recent':
-          comparison = new Date(a.validUntil).getTime() - new Date(b.validUntil).getTime();
-          break;
-        default:
-          comparison = 0;
+      if (aExpired !== bExpired) {
+        return aExpired ? 1 : -1; // Non-expired first
       }
       
-      return filters.sortOrder === 'desc' ? -comparison : comparison;
+      return b.totalSavings - a.totalSavings; // Higher savings first
     });
-
-    return filtered;
-  }, [extendedDeals, searchQuery, filters]);
+  }, [bundleDeals, selectedStore, showExpiredDeals, isExpired]);
 
   // Event handlers
-  const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-    setError(null);
-  }, []);
-
-  const handleFilterChange = useCallback((key: keyof FilterState, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  }, []);
-
-  const handleBookmarkToggle = useCallback((dealId: string) => {
-    setBookmarkedDeals(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(dealId)) {
-        newSet.delete(dealId);
-      } else {
-        newSet.add(dealId);
-      }
-      return newSet;
-    });
-  }, []);
-
-  const handleDealView = useCallback((deal: ExtendedDeal) => {
-    if (!deal.product) return;
-    
-    setViewedDeals(prev => new Set([...prev, deal.id]));
+  const handleDealClick = useCallback((deal: BundleDeal) => {
     setSelectedDeal(deal);
-    setShowProductModal(true);
+    setShowDealModal(true);
   }, []);
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    setError(null);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // In a real app, this would fetch fresh data
-      console.log('Refreshing deals data...');
-      
-    } catch (err) {
-      setError('Failed to refresh deals. Please try again.');
-    } finally {
-      setRefreshing(false);
-    }
+  const handleCloseModal = useCallback(() => {
+    setShowDealModal(false);
+    setSelectedDeal(null);
   }, []);
 
-  const handleAddToListClick = useCallback((product: Product, quantity: number = 1) => {
-    setSelectedProduct(product);
-    setSelectedQuantity(quantity);
-    setShowAddToListModal(true);
+  const handleToggleExpired = useCallback(() => {
+    setShowExpiredDeals(prev => !prev);
   }, []);
-
-  const handleAddToList = useCallback((listId: string, quantity: number) => {
-    console.log('Adding to list:', { listId, product: selectedProduct, quantity });
-    alert(`Added ${quantity} × ${selectedProduct?.name} to your shopping list!`);
-  }, [selectedProduct]);
-
-  const handleCreateNewList = useCallback(() => {
-    setShowCreateListModal(true);
-  }, []);
-
-  const handleShareDeal = useCallback(async (deal: ExtendedDeal) => {
-    try {
-      const shareData = {
-        title: `Great Deal: ${deal.product?.name || deal.description}`,
-        text: `Check out this deal: ${deal.description}`,
-        url: window.location.href
-      };
-
-      // Check if the browser supports the Web Share API and can share this data
-      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-        await navigator.share(shareData);
-        
-        // Update share count on successful share
-        setExtendedDeals(prev => prev.map(d => 
-          d.id === deal.id 
-            ? { ...d, shareCount: (d.shareCount || 0) + 1 }
-            : d
-        ));
-      } else if (navigator.share) {
-        // Try sharing with just title and URL if full data isn't supported
-        try {
-          await navigator.share({
-            title: shareData.title,
-            url: shareData.url
-          });
-          
-          // Update share count on successful share
-          setExtendedDeals(prev => prev.map(d => 
-            d.id === deal.id 
-              ? { ...d, shareCount: (d.shareCount || 0) + 1 }
-              : d
-          ));
-        } catch (shareError) {
-          // Fall back to clipboard if sharing fails
-          await navigator.clipboard.writeText(`${shareData.title}\n${shareData.url}`);
-          alert('Deal details copied to clipboard!');
-          
-          // Update share count even for clipboard fallback
-          setExtendedDeals(prev => prev.map(d => 
-            d.id === deal.id 
-              ? { ...d, shareCount: (d.shareCount || 0) + 1 }
-              : d
-          ));
-        }
-      } else {
-        // Fallback for browsers without Web Share API
-        try {
-          await navigator.clipboard.writeText(`${shareData.title}\n${shareData.url}`);
-          alert('Deal link copied to clipboard!');
-          
-          // Update share count for clipboard fallback
-          setExtendedDeals(prev => prev.map(d => 
-            d.id === deal.id 
-              ? { ...d, shareCount: (d.shareCount || 0) + 1 }
-              : d
-          ));
-        } catch (clipboardError) {
-          console.error('Failed to copy to clipboard:', clipboardError);
-          alert('Unable to share deal. Please try again.');
-        }
-      }
-    } catch (error) {
-      console.error('Error sharing deal:', error);
-      alert('Unable to share deal. Please try again.');
-    }
-  }, []);
-
-  const clearFilters = useCallback(() => {
-    setFilters({
-      category: 'all',
-      retailer: 'all',
-      discountType: 'all',
-      minDiscount: 0,
-      maxDiscount: 100,
-      expiryFilter: 'all',
-      sortBy: 'savings',
-      sortOrder: 'desc'
-    });
-    setSearchQuery('');
-  }, []);
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-          <span className="ml-3 text-lg text-gray-600">Loading amazing deals...</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Compact Header Section */}
-      <header className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">{t('deals.hot_deals')}</h1>
-            <p className="text-sm text-gray-600">Discover the best savings across South African retailers</p>
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('deals.hot_deals')}</h2>
+        <p className="text-gray-600">Discover amazing bundle deals and save more on your grocery shopping</p>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white rounded-lg p-4 text-center shadow-sm border border-gray-200">
+          <div className="flex items-center justify-center mb-2">
+            <Tag className="h-6 w-6 text-green-600" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">{filteredDeals.length}</p>
+          <p className="text-xs text-gray-600">Active Deals</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 text-center shadow-sm border border-gray-200">
+          <div className="flex items-center justify-center mb-2">
+            <TrendingDown className="h-6 w-6 text-blue-600" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            {formatCurrency(filteredDeals.reduce((sum, deal) => sum + deal.totalSavings, 0))}
+          </p>
+          <p className="text-xs text-gray-600">Total Savings</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 text-center shadow-sm border border-gray-200">
+          <div className="flex items-center justify-center mb-2">
+            <Clock className="h-6 w-6 text-orange-600" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            {filteredDeals.filter(deal => isExpiringSoon(deal.validUntil)).length}
+          </p>
+          <p className="text-xs text-gray-600">Expiring Soon</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 text-center shadow-sm border border-gray-200">
+          <div className="flex items-center justify-center mb-2">
+            <Star className="h-6 w-6 text-purple-600" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">
+            {Math.round(filteredDeals.reduce((sum, deal) => sum + deal.discount, 0) / filteredDeals.length || 0)}%
+          </p>
+          <p className="text-xs text-gray-600">Avg Discount</p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
+          <div className="flex items-center space-x-4">
+            <Filter className="h-5 w-5 text-gray-600" />
+            <span className="font-medium text-gray-900">Filters</span>
           </div>
           
-          <div className="flex items-center space-x-2 mt-3 sm:mt-0">
-            {/* View Mode Toggle */}
-            <div className="flex bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('compact')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'compact' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
-                }`}
-                aria-label="Compact view"
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
+            {/* Store Filter */}
+            <div className="flex items-center space-x-3">
+              <label className="text-sm font-medium text-gray-700">Store:</label>
+              <select
+                value={selectedStore}
+                onChange={(e) => setSelectedStore(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
               >
-                <List className="h-4 w-4" />
-              </button>
+                <option value="all">All Stores</option>
+                {retailers.map((retailer) => (
+                  <option key={retailer.id} value={retailer.id}>
+                    {retailer.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Show Expired Toggle */}
+            <div className="flex items-center space-x-3">
+              <label className="text-sm font-medium text-gray-700">Show Expired Deals:</label>
               <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'grid' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
+                onClick={handleToggleExpired}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                  showExpiredDeals ? 'bg-green-600' : 'bg-gray-200'
                 }`}
-                aria-label="Grid view"
               >
-                <Grid className="h-4 w-4" />
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    showExpiredDeals ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
               </button>
             </div>
-            
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="flex items-center space-x-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-lg transition-colors disabled:opacity-50"
-              aria-label="Refresh deals"
-            >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline text-sm">Refresh</span>
-            </button>
-            
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium rounded-lg transition-colors"
-              aria-label="Toggle filters"
-              aria-expanded={showFilters}
-            >
-              <Filter className="h-4 w-4" />
-              <span className="text-sm">Filters</span>
-              {Object.values(filters).some(v => v !== 'all' && v !== 0 && v !== 100 && v !== 'desc') && (
-                <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-              )}
-            </button>
           </div>
         </div>
+      </div>
 
-        {/* Compact Search Bar */}
-        <div className="relative mb-4">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400" />
-          </div>
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search deals, products, or retailers..."
-            className="block w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500 text-sm"
-            aria-label="Search deals"
-          />
-        </div>
+      {/* Deals Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredDeals.map((deal) => {
+          const expired = isExpired(deal.validUntil);
+          const expiringSoon = isExpiringSoon(deal.validUntil);
+          const timeRemaining = getTimeRemaining(deal.validUntil);
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2" role="alert">
-            <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
-            <div>
-              <p className="text-red-800 font-medium text-sm">Error</p>
-              <p className="text-red-700 text-xs">{error}</p>
-            </div>
-          </div>
-        )}
-      </header>
-
-      {/* Collapsible Filters Panel */}
-      {showFilters && (
-        <section className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6" aria-label="Deal filters">
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-semibold text-gray-900">Filter Deals</h3>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={clearFilters}
-                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  Clear All
-                </button>
-                <button
-                  onClick={() => setExpandedFilters(!expandedFilters)}
-                  className="p-1 text-gray-400 hover:text-gray-600"
-                >
-                  {expandedFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            
-            {/* Basic Filters - Always Visible */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-              <select
-                value={filters.category}
-                onChange={(e) => handleFilterChange('category', e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-              >
-                {filterOptions.categories.map(option => (
-                  <option key={option.id} value={option.id}>{option.label}</option>
-                ))}
-              </select>
-
-              <select
-                value={filters.retailer}
-                onChange={(e) => handleFilterChange('retailer', e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-              >
-                {filterOptions.retailers.map(option => (
-                  <option key={option.id} value={option.id}>{option.label}</option>
-                ))}
-              </select>
-
-              <select
-                value={filters.sortBy}
-                onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                className="px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-              >
-                {filterOptions.sortOptions.map(option => (
-                  <option key={option.id} value={option.id}>{option.label}</option>
-                ))}
-              </select>
-
-              <button
-                onClick={() => handleFilterChange('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="px-2 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm flex items-center justify-center"
-                aria-label={`Sort ${filters.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
-              >
-                {filters.sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
-              </button>
-            </div>
-
-            {/* Advanced Filters - Collapsible */}
-            {expandedFilters && (
-              <div className="space-y-3 pt-3 border-t border-gray-100">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <select
-                    value={filters.discountType}
-                    onChange={(e) => handleFilterChange('discountType', e.target.value)}
-                    className="px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-                  >
-                    {filterOptions.discountTypes.map(option => (
-                      <option key={option.id} value={option.id}>{option.label}</option>
-                    ))}
-                  </select>
-
-                  <select
-                    value={filters.expiryFilter}
-                    onChange={(e) => handleFilterChange('expiryFilter', e.target.value)}
-                    className="px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-                  >
-                    {filterOptions.expiryFilters.map(option => (
-                      <option key={option.id} value={option.id}>{option.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Discount Range: {filters.minDiscount}% - {filters.maxDiscount}%
-                  </label>
+          return (
+            <div
+              key={deal.id}
+              onClick={() => handleDealClick(deal)}
+              className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border cursor-pointer group ${
+                expired 
+                  ? 'border-gray-200 opacity-60' 
+                  : expiringSoon 
+                    ? 'border-orange-200 hover:border-orange-300' 
+                    : 'border-gray-200 hover:border-green-300'
+              }`}
+            >
+              {/* Deal Header */}
+              <div className={`relative p-4 ${
+                expired 
+                  ? 'bg-gray-50' 
+                  : expiringSoon 
+                    ? 'bg-orange-50' 
+                    : 'bg-green-50'
+              }`}>
+                <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center space-x-3">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={filters.minDiscount}
-                      onChange={(e) => handleFilterChange('minDiscount', parseInt(e.target.value))}
-                      className="flex-1"
-                      aria-label="Minimum discount percentage"
-                    />
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={filters.maxDiscount}
-                      onChange={(e) => handleFilterChange('maxDiscount', parseInt(e.target.value))}
-                      className="flex-1"
-                      aria-label="Maximum discount percentage"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Compact Featured Deals Section */}
-      <section className="mb-6" aria-label="Featured deals">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Featured Deals</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {featuredDeals.map((deal) => {
-            const timeRemaining = getTimeRemaining(deal.validUntil);
-            const isExpiring = isExpiringSoon(deal.validUntil);
-            const expired = isExpired(deal.validUntil);
-            
-            return (
-              <article
-                key={deal.id}
-                className={`relative overflow-hidden rounded-lg shadow-sm transition-all duration-300 hover:shadow-md cursor-pointer ${
-                  expired ? 'opacity-60 grayscale' : ''
-                }`}
-                onClick={() => console.log('Featured deal clicked:', deal.id)}
-              >
-                <div className="relative h-32 bg-gradient-to-br from-orange-500 to-red-600">
-                  <img 
-                    src={deal.image}
-                    alt={deal.title}
-                    className="absolute inset-0 w-full h-full object-cover mix-blend-overlay"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-30" />
-                  
-                  {/* Compact badges */}
-                  <div className="absolute top-2 left-2 flex flex-col space-y-1">
-                    <span className="bg-white bg-opacity-90 backdrop-blur-sm text-gray-900 px-2 py-0.5 rounded-full text-xs font-bold">
-                      {deal.discount} OFF
-                    </span>
-                    {deal.isLimited && (
-                      <span className="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">
-                        LIMITED
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Retailer logo */}
-                  <div className="absolute top-2 right-2">
                     <img 
                       src={deal.retailer.logo}
                       alt={deal.retailer.name}
-                      className="w-8 h-8 rounded-full border border-white shadow-sm"
-                      loading="lazy"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
                     />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{deal.retailer.name}</h3>
+                      <p className="text-sm text-gray-600">{deal.retailer.locations[0]?.distance}km away</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
+                      expired 
+                        ? 'bg-gray-200 text-gray-700' 
+                        : expiringSoon 
+                          ? 'bg-orange-200 text-orange-800' 
+                          : 'bg-green-200 text-green-800'
+                    }`}>
+                      {deal.discount}% OFF
+                    </div>
                   </div>
                 </div>
-                
-                <div className="p-3 bg-white">
-                  <h3 className="text-sm font-bold text-gray-900 mb-1 line-clamp-1">{deal.title}</h3>
-                  <p className="text-xs text-gray-600 mb-2 line-clamp-2">{deal.description}</p>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-1 text-xs">
-                      <Clock className="h-3 w-3 text-gray-500" />
-                      <span className={`${isExpiring ? 'text-orange-600 font-medium' : 'text-gray-600'}`}>
-                        {expired ? 'Expired' : `${timeRemaining} left`}
+
+                {/* Status Badges */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    {expired && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Expired
                       </span>
-                    </div>
-                    
-                    {!expired && deal.originalPrice && deal.salePrice && (
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-green-600">
-                          {formatCurrency(deal.salePrice)}
+                    )}
+                    {!expired && expiringSoon && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 animate-pulse">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Expiring Soon
+                      </span>
+                    )}
+                    {!expired && !expiringSoon && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center space-x-1 text-xs text-gray-600">
+                    <Clock className="h-3 w-3" />
+                    <span>{timeRemaining}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Deal Content */}
+              <div className="p-4">
+                <h4 className="font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors">
+                  {deal.description}
+                </h4>
+                
+                <p className="text-sm text-gray-600 mb-4">{deal.conditions}</p>
+
+                {/* Bundle Preview */}
+                <div className="mb-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Package className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">
+                      Bundle includes {deal.bundleItems.length} items:
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {deal.bundleItems.slice(0, 2).map((item, index) => (
+                      <div key={index} className="flex items-center justify-between text-xs">
+                        <span className="text-gray-600">
+                          {item.quantity}x {item.product.name}
                         </span>
-                        <span className="text-xs text-gray-500 line-through ml-1">
-                          {formatCurrency(deal.originalPrice)}
+                        <span className="font-medium text-gray-900">
+                          {formatCurrency(item.discountedPrice)}
                         </span>
+                      </div>
+                    ))}
+                    {deal.bundleItems.length > 2 && (
+                      <div className="text-xs text-gray-500">
+                        +{deal.bundleItems.length - 2} more items
                       </div>
                     )}
                   </div>
                 </div>
-              </article>
-            );
-          })}
+
+                {/* Savings Summary */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600">Original Price:</span>
+                    <span className="text-sm text-gray-500 line-through">
+                      {formatCurrency(deal.totalOriginalPrice)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600">Bundle Price:</span>
+                    <span className="text-lg font-bold text-gray-900">
+                      {formatCurrency(deal.totalDiscountedPrice)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-green-600">You Save:</span>
+                    <span className="text-lg font-bold text-green-600">
+                      {formatCurrency(deal.totalSavings)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Hint */}
+                <div className="mt-4 flex items-center justify-center text-sm text-gray-500 group-hover:text-green-600 transition-colors">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Click to view details and add to list
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Empty State */}
+      {filteredDeals.length === 0 && (
+        <div className="text-center py-12">
+          <Tag className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No deals found</h3>
+          <p className="text-gray-600 mb-4">
+            {selectedStore !== 'all' 
+              ? `No deals available for ${retailers.find(r => r.id === selectedStore)?.name || 'selected store'}`
+              : showExpiredDeals 
+                ? 'No deals match your current filters'
+                : 'Try enabling "Show Expired Deals" to see more options'
+            }
+          </p>
+          {selectedStore !== 'all' && (
+            <button
+              onClick={() => setSelectedStore('all')}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Show All Stores
+            </button>
+          )}
         </div>
-      </section>
+      )}
 
-      {/* Product Deals Section */}
-      <section aria-label="Product deals">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Product Deals</h2>
-          <div className="text-sm text-gray-600">
-            {filteredDeals.length} deal{filteredDeals.length !== 1 ? 's' : ''} found
-          </div>
+      {/* Deal Detail Modal */}
+      <Suspense fallback={
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
         </div>
-        
-        {filteredDeals.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-            <Tag className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {searchQuery || Object.values(filters).some(v => v !== 'all' && v !== 0 && v !== 100 && v !== 'desc')
-                ? 'No deals match your criteria'
-                : 'No deals available'
-              }
-            </h3>
-            <p className="text-gray-600 mb-4 text-sm">
-              {searchQuery || Object.values(filters).some(v => v !== 'all' && v !== 0 && v !== 100 && v !== 'desc')
-                ? 'Try adjusting your search terms or filters'
-                : 'Check back soon for new deals and savings opportunities'
-              }
-            </p>
-            {(searchQuery || Object.values(filters).some(v => v !== 'all' && v !== 0 && v !== 100 && v !== 'desc')) && (
-              <button
-                onClick={clearFilters}
-                className="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-3'}>
-            {filteredDeals.map((deal) => {
-              const product = deal.product;
-              if (!product) return null;
-
-              const timeRemaining = getTimeRemaining(deal.validUntil);
-              const isExpiring = isExpiringSoon(deal.validUntil);
-              const expired = isExpired(deal.validUntil);
-              const isBookmarked = bookmarkedDeals.has(deal.id);
-              const isViewed = viewedDeals.has(deal.id);
-
-              if (viewMode === 'grid') {
-                // Grid view - Product card style with prominent image
-                return (
-                  <article
-                    key={deal.id}
-                    className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group ${
-                      expired ? 'opacity-60' : ''
-                    } ${isViewed ? 'ring-1 ring-blue-100' : ''}`}
-                  >
-                    {/* Large Product Image */}
-                    <div 
-                      className="relative h-48 bg-gray-100 overflow-hidden"
-                      onClick={() => handleDealView(deal)}
-                    >
-                      <img 
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                      
-                      {/* Deal Badge */}
-                      <div className="absolute top-3 left-3">
-                        {deal.type === 'percentage' ? (
-                          <div className="flex items-center space-x-1 bg-red-500 text-white px-2 py-1 rounded-full shadow-lg">
-                            <Percent className="h-3 w-3" />
-                            <span className="font-bold text-sm">{deal.discount}% OFF</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-1 bg-green-500 text-white px-2 py-1 rounded-full shadow-lg">
-                            <DollarSign className="h-3 w-3" />
-                            <span className="font-bold text-sm">{formatCurrency(Number(deal.discount))} OFF</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Bookmark Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleBookmarkToggle(deal.id);
-                        }}
-                        className={`absolute top-3 right-3 p-2 rounded-full shadow-lg transition-all ${
-                          isBookmarked 
-                            ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
-                            : 'bg-white/90 text-gray-600 hover:bg-white'
-                        }`}
-                      >
-                        {isBookmarked ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
-                      </button>
-
-                      {/* Expiry Warning */}
-                      {isExpiring && !expired && (
-                        <div className="absolute bottom-3 left-3 bg-orange-500 text-white px-2 py-1 rounded-full shadow-lg animate-pulse">
-                          <span className="font-bold text-xs">EXPIRING SOON</span>
-                        </div>
-                      )}
-
-                      {/* Retailer Logo */}
-                      <div className="absolute bottom-3 right-3">
-                        <img 
-                          src={deal.retailer.logo}
-                          alt={deal.retailer.name}
-                          className="w-8 h-8 rounded-full border-2 border-white shadow-lg"
-                          loading="lazy"
-                        />
-                      </div>
-
-                      {expired && (
-                        <div className="absolute inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center">
-                          <div className="text-center text-white">
-                            <AlertCircle className="h-8 w-8 mx-auto mb-1" />
-                            <span className="text-sm font-bold">EXPIRED</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Product Details */}
-                    <div className="p-4">
-                      {/* Product Title */}
-                      <h3 
-                        className="font-bold text-gray-900 text-lg mb-1 line-clamp-2 cursor-pointer hover:text-green-600 transition-colors"
-                        onClick={() => handleDealView(deal)}
-                      >
-                        {product.name}
-                      </h3>
-                      
-                      {/* Original and Discounted Price */}
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-2xl font-bold text-green-600">
-                          {formatCurrency(89.99)} {/* Mock discounted price */}
-                        </span>
-                        <span className="text-lg text-gray-500 line-through">
-                          {formatCurrency(119.99)} {/* Mock original price */}
-                        </span>
-                      </div>
-                      
-                      {/* Brief Description */}
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{deal.description}</p>
-                      
-                      {/* Merchant Name */}
-                      <div className="flex items-center space-x-2 mb-3">
-                        <Store className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm font-medium text-gray-700">{deal.retailer.name}</span>
-                        <span className="text-xs text-gray-500">•</span>
-                        <div className="flex items-center space-x-1 text-xs text-gray-500">
-                          <MapPin className="h-3 w-3" />
-                          <span>2.3km away</span>
-                        </div>
-                      </div>
-
-                      {/* Time Remaining */}
-                      <div className="flex items-center space-x-1 text-xs text-gray-500 mb-4">
-                        <Clock className="h-3 w-3" />
-                        <span className={`${isExpiring ? 'text-orange-600 font-medium' : 'text-gray-600'}`}>
-                          {expired ? 'Expired' : `${timeRemaining} left`}
-                        </span>
-                      </div>
-                      
-                      {/* CTA Button */}
-                      {!expired && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddToListClick(product, 1);
-                          }}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2 group"
-                        >
-                          <ShoppingCart className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                          <span>Add to List</span>
-                        </button>
-                      )}
-
-                      {/* Secondary Actions */}
-                      {!expired && (
-                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleShareDeal(deal);
-                            }}
-                            className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 transition-colors"
-                          >
-                            <Share2 className="h-4 w-4" />
-                            <span className="text-sm">Share</span>
-                          </button>
-                          
-                          <div className="flex items-center space-x-3 text-xs text-gray-500">
-                            <div className="flex items-center space-x-1">
-                              <Eye className="h-3 w-3" />
-                              <span>{deal.viewCount}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Heart className="h-3 w-3" />
-                              <span>{deal.shareCount}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </article>
-                );
-              } else {
-                // Compact view (existing compact design)
-                return (
-                  <article
-                    key={deal.id}
-                    className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 cursor-pointer ${
-                      expired ? 'opacity-60' : ''
-                    } ${isViewed ? 'ring-1 ring-blue-100' : ''}`}
-                    onClick={() => handleDealView(deal)}
-                  >
-                    <div className="flex items-center p-3">
-                      {/* Compact Product Image */}
-                      <div className="relative mr-3 flex-shrink-0">
-                        <img 
-                          src={product.image}
-                          alt={product.name}
-                          className="w-16 h-16 object-cover rounded-lg shadow-sm"
-                          loading="lazy"
-                        />
-                        <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5">
-                          <Tag className="h-2.5 w-2.5" />
-                        </div>
-                        {expired && (
-                          <div className="absolute inset-0 bg-gray-900 bg-opacity-50 rounded-lg flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">EXPIRED</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Compact Deal Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 mr-3">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h3 className="font-bold text-gray-900 text-sm truncate">{product.name}</h3>
-                              <span className="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-xs font-medium rounded">
-                                {product.category}
-                              </span>
-                              {isExpiring && !expired && (
-                                <span className="px-1.5 py-0.5 bg-orange-100 text-orange-800 text-xs font-bold rounded animate-pulse">
-                                  EXPIRING
-                                </span>
-                              )}
-                            </div>
-                            
-                            <p className="text-gray-600 text-xs mb-1">{product.brand} • {product.unitSize}</p>
-                            <p className="text-green-600 font-medium text-xs mb-2 line-clamp-1">{deal.description}</p>
-                            
-                            {/* Compact Stats */}
-                            <div className="flex items-center space-x-3 text-xs text-gray-500">
-                              <div className="flex items-center space-x-1">
-                                <Eye className="h-3 w-3" />
-                                <span>{deal.viewCount}</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Clock className="h-3 w-3" />
-                                <span className={`${isExpiring ? 'text-orange-600 font-medium' : 'text-gray-600'}`}>
-                                  {expired ? 'Expired' : `${timeRemaining}`}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Compact Retailer and Actions */}
-                          <div className="text-right flex-shrink-0">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <img 
-                                src={deal.retailer.logo}
-                                alt={deal.retailer.name}
-                                className="w-6 h-6 rounded-full object-cover shadow-sm"
-                                loading="lazy"
-                              />
-                              <div className="text-right">
-                                <p className="font-semibold text-gray-900 text-xs">{deal.retailer.name}</p>
-                                <div className="flex items-center space-x-1 text-xs">
-                                  <MapPin className="h-2.5 w-2.5 text-gray-500" />
-                                  <span className="text-gray-500">2.3km</span>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center justify-end space-x-1 mb-2">
-                              {deal.type === 'percentage' ? (
-                                <div className="flex items-center space-x-1 bg-red-100 text-red-800 px-2 py-0.5 rounded-full">
-                                  <Percent className="h-3 w-3" />
-                                  <span className="font-bold text-xs">{deal.discount}%</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                                  <DollarSign className="h-3 w-3" />
-                                  <span className="font-bold text-xs">{formatCurrency(Number(deal.discount))}</span>
-                                </div>
-                              )}
-                            </div>
-                            
-                            {!expired && (
-                              <div className="flex items-center space-x-1">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleBookmarkToggle(deal.id);
-                                  }}
-                                  className={`p-1 rounded transition-colors ${
-                                    isBookmarked 
-                                      ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200' 
-                                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                  }`}
-                                  aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark deal'}
-                                >
-                                  {isBookmarked ? <BookmarkCheck className="h-3 w-3" /> : <Bookmark className="h-3 w-3" />}
-                                </button>
-                                
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleShareDeal(deal);
-                                  }}
-                                  className="p-1 bg-blue-100 text-blue-600 hover:bg-blue-200 rounded transition-colors"
-                                  aria-label="Share deal"
-                                >
-                                  <Share2 className="h-3 w-3" />
-                                </button>
-                                
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAddToListClick(product, 1);
-                                  }}
-                                  className="bg-green-600 hover:bg-green-700 text-white font-medium px-2 py-1 rounded transition-colors flex items-center space-x-1"
-                                >
-                                  <ShoppingCart className="h-3 w-3" />
-                                  <span className="text-xs">Add</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              }
-            })}
-          </div>
+      }>
+        {showDealModal && selectedDeal && (
+          <DealDetailModal
+            isOpen={showDealModal}
+            onClose={handleCloseModal}
+            deal={selectedDeal}
+          />
         )}
-      </section>
-
-      {/* Load More / Pagination */}
-      {filteredDeals.length > 0 && (
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              // Simulate loading more deals
-              console.log('Loading more deals...');
-              alert('Loading more deals... (This would fetch additional deals in a real app)');
-            }}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-6 py-3 rounded-lg transition-colors"
-          >
-            Load More Deals
-          </button>
-        </div>
-      )}
-
-      {/* Coming Soon Section */}
-      <section className="mt-8 text-center py-8 bg-gradient-to-br from-green-50 to-blue-50 rounded-lg" aria-label="Coming soon">
-        <Tag className="h-12 w-12 text-green-600 mx-auto mb-3" />
-        <h3 className="text-xl font-bold text-gray-900 mb-2">More Deals Coming Soon!</h3>
-        <p className="text-gray-600 mb-4 max-w-2xl mx-auto text-sm">
-          We're working with more retailers to bring you even better savings. 
-          Sign up for notifications to be the first to know about new deals.
-        </p>
-        <button 
-          onClick={() => {
-            // Simulate notification signup
-            console.log('Signing up for notifications...');
-            alert('Thank you! You\'ll be notified when new deals are available.');
-          }}
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
-        >
-          Notify Me
-        </button>
-      </section>
-
-      {/* Product Detail Modal */}
-      {selectedDeal && selectedDeal.product && (
-        <ProductDetailModal
-          isOpen={showProductModal}
-          onClose={() => {
-            setShowProductModal(false);
-            setSelectedDeal(null);
-          }}
-          product={selectedDeal.product}
-          deal={selectedDeal}
-          isBookmarked={bookmarkedDeals.has(selectedDeal.id)}
-          onBookmarkToggle={() => handleBookmarkToggle(selectedDeal.id)}
-          onAddToList={() => handleAddToListClick(selectedDeal.product!, 1)}
-          onShare={() => handleShareDeal(selectedDeal)}
-        />
-      )}
-
-      {/* Add to List Modal */}
-      {selectedProduct && (
-        <AddToListModal
-          isOpen={showAddToListModal}
-          onClose={() => {
-            setShowAddToListModal(false);
-            setSelectedProduct(null);
-          }}
-          product={selectedProduct}
-          quantity={selectedQuantity}
-          onAddToList={handleAddToList}
-          onCreateNewList={handleCreateNewList}
-        />
-      )}
-
-      {/* Create List Modal */}
-      <CreateListModal
-        isOpen={showCreateListModal}
-        onClose={() => setShowCreateListModal(false)}
-        onCreate={(newList) => {
-          console.log('Created new list:', newList);
-          setShowCreateListModal(false);
-          // In a real app, this would add the list and then show the add to list modal again
-          if (selectedProduct) {
-            setShowAddToListModal(true);
-          }
-        }}
-      />
+      </Suspense>
     </div>
   );
 };
