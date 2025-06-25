@@ -1,44 +1,106 @@
-import React, { useState } from 'react';
-import { Tag, Clock, MapPin, Filter, TrendingDown, Percent } from 'lucide-react';
-import { deals, products, retailers } from '../../data/mockData';
+import React, { useState, useEffect } from 'react';
+import { Tag, TrendingDown, Clock, MapPin, Star, Filter, Search, Percent, DollarSign } from 'lucide-react';
+import { useProducts } from '../../hooks/useProducts';
+import { useCurrency } from '../../hooks/useCurrency';
 import { useLanguage } from '../../hooks/useLanguage';
+import type { ProductWithCategory } from '../../services/productService';
+
+interface Deal {
+  id: string;
+  product: ProductWithCategory;
+  originalPrice: number;
+  discountedPrice: number;
+  discountPercentage: number;
+  savings: number;
+  store: string;
+  validUntil: string;
+  isLimitedTime: boolean;
+}
 
 export const DealsTab: React.FC = () => {
   const { t } = useLanguage();
-  const [filter, setFilter] = useState('all');
+  const { formatCurrency } = useCurrency();
+  const { products, loading, error } = useProducts();
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [filteredDeals, setFilteredDeals] = useState<Deal[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStore, setSelectedStore] = useState('all');
+  const [sortBy, setSortBy] = useState<'savings' | 'percentage' | 'expiry'>('savings');
 
-  const filterOptions = [
-    { id: 'all', label: 'All Deals' },
-    { id: 'percentage', label: 'Percentage Off' },
-    { id: 'fixed', label: 'Fixed Amount' },
-    { id: 'expiring', label: 'Expiring Soon' },
-  ];
+  // Generate deals from products
+  useEffect(() => {
+    if (products.length > 0) {
+      const generatedDeals: Deal[] = products.map((product, index) => {
+        // Generate realistic discount percentages (10-40%)
+        const discountPercentage = Math.floor(Math.random() * 30) + 10;
+        const originalPrice = product.price;
+        const discountedPrice = originalPrice * (1 - discountPercentage / 100);
+        const savings = originalPrice - discountedPrice;
+        
+        // Generate expiry dates (1-7 days from now)
+        const daysUntilExpiry = Math.floor(Math.random() * 7) + 1;
+        const validUntil = new Date();
+        validUntil.setDate(validUntil.getDate() + daysUntilExpiry);
+        
+        return {
+          id: `deal-${product.id}`,
+          product,
+          originalPrice,
+          discountedPrice,
+          discountPercentage,
+          savings,
+          store: product.store_id,
+          validUntil: validUntil.toISOString(),
+          isLimitedTime: daysUntilExpiry <= 2
+        };
+      });
 
-  const featuredDeals = [
-    {
-      id: 'weekend-special',
-      title: 'Weekend Grocery Special',
-      description: 'Save up to 25% on selected items',
-      retailer: retailers[1],
-      discount: '25%',
-      validUntil: '2024-01-21T23:59:59Z',
-      image: 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop'
-    },
-    {
-      id: 'family-pack',
-      title: 'Family Pack Savings',
-      description: 'Buy 2 get 1 free on family essentials',
-      retailer: retailers[0],
-      discount: '33%',
-      validUntil: '2024-01-19T23:59:59Z',
-      image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop'
+      setDeals(generatedDeals);
     }
-  ];
+  }, [products]);
+
+  // Filter and sort deals
+  useEffect(() => {
+    let filtered = deals;
+
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(deal =>
+        deal.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        deal.product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        deal.store.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Filter by store
+    if (selectedStore !== 'all') {
+      filtered = filtered.filter(deal => deal.store === selectedStore);
+    }
+
+    // Sort deals
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'savings':
+          return b.savings - a.savings;
+        case 'percentage':
+          return b.discountPercentage - a.discountPercentage;
+        case 'expiry':
+          return new Date(a.validUntil).getTime() - new Date(b.validUntil).getTime();
+        default:
+          return b.savings - a.savings;
+      }
+    });
+
+    setFilteredDeals(filtered);
+  }, [deals, searchQuery, selectedStore, sortBy]);
 
   const getTimeRemaining = (validUntil: string) => {
     const now = new Date();
-    const end = new Date(validUntil);
-    const diff = end.getTime() - now.getTime();
+    const expiry = new Date(validUntil);
+    const diff = expiry.getTime() - now.getTime();
+    
+    if (diff <= 0) return 'Expired';
+    
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     
@@ -46,167 +108,225 @@ export const DealsTab: React.FC = () => {
     return `${hours}h`;
   };
 
+  const getStoreDisplayName = (storeId: string) => {
+    const storeNames: { [key: string]: string } = {
+      'pick-n-pay': 'Pick n Pay',
+      'shoprite': 'Shoprite',
+      'checkers': 'Checkers',
+      'woolworths': 'Woolworths',
+      'spar': 'SPAR'
+    };
+    return storeNames[storeId] || storeId;
+  };
+
+  const uniqueStores = Array.from(new Set(deals.map(deal => deal.store)));
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Deals</h3>
+          <p className="text-red-700">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">{t('deals.hot_deals')}</h2>
-        <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
-          <Filter className="h-5 w-5" />
-          <span>Filter</span>
-        </button>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex space-x-2 mb-6 overflow-x-auto">
-        {filterOptions.map((option) => (
-          <button
-            key={option.id}
-            onClick={() => setFilter(option.id)}
-            className={`whitespace-nowrap px-4 py-2 rounded-lg font-medium transition-colors ${
-              filter === option.id
-                ? 'bg-green-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Featured Deals */}
       <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">Featured Deals</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {featuredDeals.map((deal) => (
-            <div key={deal.id} className="bg-gradient-to-r from-orange-500 to-red-600 rounded-xl overflow-hidden text-white relative">
-              <div className="absolute inset-0 bg-black bg-opacity-20" />
-              <img 
-                src={deal.image}
-                alt={deal.title}
-                className="absolute inset-0 w-full h-full object-cover mix-blend-overlay"
-              />
-              <div className="relative p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <img 
-                      src={deal.retailer.logo}
-                      alt={deal.retailer.name}
-                      className="w-8 h-8 rounded-full border-2 border-white"
-                    />
-                    <span className="font-semibold">{deal.retailer.name}</span>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('deals.hot_deals')}</h2>
+        <p className="text-gray-600">Discover the best deals and save money on your grocery shopping</p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100">Total Deals</p>
+              <p className="text-3xl font-bold">{deals.length}</p>
+            </div>
+            <Tag className="h-8 w-8 text-green-200" />
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100">Avg Savings</p>
+              <p className="text-3xl font-bold">
+                {deals.length > 0 ? Math.round(deals.reduce((sum, deal) => sum + deal.discountPercentage, 0) / deals.length) : 0}%
+              </p>
+            </div>
+            <TrendingDown className="h-8 w-8 text-blue-200" />
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-orange-100">Expiring Soon</p>
+              <p className="text-3xl font-bold">
+                {deals.filter(deal => deal.isLimitedTime).length}
+              </p>
+            </div>
+            <Clock className="h-8 w-8 text-orange-200" />
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100">Stores</p>
+              <p className="text-3xl font-bold">{uniqueStores.length}</p>
+            </div>
+            <MapPin className="h-8 w-8 text-purple-200" />
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search deals..."
+              className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
+          
+          {/* Store Filter */}
+          <select
+            value={selectedStore}
+            onChange={(e) => setSelectedStore(e.target.value)}
+            className="px-4 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          >
+            <option value="all">All Stores</option>
+            {uniqueStores.map(store => (
+              <option key={store} value={store}>{getStoreDisplayName(store)}</option>
+            ))}
+          </select>
+          
+          {/* Sort */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'savings' | 'percentage' | 'expiry')}
+            className="px-4 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          >
+            <option value="savings">Highest Savings</option>
+            <option value="percentage">Best Percentage</option>
+            <option value="expiry">Expiring Soon</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Deals Grid */}
+      {filteredDeals.length === 0 ? (
+        <div className="text-center py-16">
+          <Tag className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">No deals found</h3>
+          <p className="text-gray-600">Try adjusting your search or filters</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredDeals.map((deal) => (
+            <div key={deal.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
+              <div className="relative">
+                <img 
+                  src={deal.product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'}
+                  alt={deal.product.name}
+                  className="w-full h-48 object-cover"
+                />
+                
+                {/* Discount Badge */}
+                <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                  {deal.discountPercentage}% OFF
+                </div>
+                
+                {/* Limited Time Badge */}
+                {deal.isLimitedTime && (
+                  <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+                    LIMITED TIME
                   </div>
-                  <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-3 py-1">
-                    <span className="font-bold">{deal.discount} OFF</span>
+                )}
+              </div>
+              
+              <div className="p-6">
+                <div className="mb-4">
+                  <h3 className="font-bold text-lg text-gray-900 mb-1">{deal.product.name}</h3>
+                  <p className="text-gray-600 text-sm">{deal.product.description}</p>
+                  <p className="text-blue-600 text-sm font-medium mt-1">{getStoreDisplayName(deal.store)}</p>
+                </div>
+
+                {/* Price Section */}
+                <div className="mb-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className="text-2xl font-bold text-green-600">
+                      {formatCurrency(deal.discountedPrice)}
+                    </span>
+                    <span className="text-lg text-gray-500 line-through">
+                      {formatCurrency(deal.originalPrice)}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-4 text-sm">
+                    <div className="flex items-center space-x-1 text-green-600">
+                      <TrendingDown className="h-4 w-4" />
+                      <span className="font-semibold">{formatCurrency(deal.savings)} saved</span>
+                    </div>
+                    <div className="flex items-center space-x-1 text-red-600">
+                      <Percent className="h-4 w-4" />
+                      <span className="font-semibold">{deal.discountPercentage}% off</span>
+                    </div>
                   </div>
                 </div>
-                <h4 className="text-xl font-bold mb-2">{deal.title}</h4>
-                <p className="text-white text-opacity-90 mb-4">{deal.description}</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1 text-sm">
+
+                {/* Expiry Info */}
+                <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+                  <div className="flex items-center space-x-1">
                     <Clock className="h-4 w-4" />
-                    <span>{t('deals.expires_in')} {getTimeRemaining(deal.validUntil)}</span>
+                    <span>{getTimeRemaining(deal.validUntil)} remaining</span>
                   </div>
-                  <button className="bg-white text-gray-900 font-semibold px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                    View Deal
+                  <div className="flex items-center space-x-1">
+                    <MapPin className="h-4 w-4" />
+                    <span>2.3km away</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button className="flex items-center justify-center space-x-2 bg-green-50 hover:bg-green-100 text-green-700 font-medium py-3 px-4 rounded-lg transition-colors">
+                    <Star className="h-4 w-4" />
+                    <span>Save Deal</span>
+                  </button>
+                  <button className="flex items-center justify-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-3 px-4 rounded-lg transition-colors">
+                    <MapPin className="h-4 w-4" />
+                    <span>View Store</span>
                   </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Product Deals */}
-      <div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">Product Deals</h3>
-        <div className="space-y-4">
-          {deals.map((deal) => {
-            const product = products.find(p => p.id === deal.productId);
-            if (!product) return null;
-
-            return (
-              <div key={deal.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                <div className="flex items-center p-4">
-                  <div className="relative mr-4">
-                    <img 
-                      src={product.image}
-                      alt={product.name}
-                      className="w-20 h-20 object-cover rounded-lg"
-                    />
-                    <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1">
-                      <Tag className="h-4 w-4" />
-                    </div>
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-semibold text-gray-900 text-lg">{product.name}</h4>
-                        <p className="text-gray-600">{product.brand} • {product.unitSize}</p>
-                        <p className="text-green-600 font-medium mt-1">{deal.description}</p>
-                      </div>
-                      
-                      <div className="text-right">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <img 
-                            src={deal.retailer.logo}
-                            alt={deal.retailer.name}
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                          <span className="font-semibold text-gray-900">{deal.retailer.name}</span>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          {deal.type === 'percentage' ? (
-                            <div className="flex items-center space-x-1 bg-red-100 text-red-800 px-2 py-1 rounded-full">
-                              <Percent className="h-4 w-4" />
-                              <span className="font-bold">{deal.discount}% OFF</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                              <TrendingDown className="h-4 w-4" />
-                              <span className="font-bold">R{deal.discount} OFF</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{t('deals.expires_in')} {getTimeRemaining(deal.validUntil)}</span>
-                        </div>
-                        {deal.conditions && (
-                          <span className="text-gray-500">• {deal.conditions}</span>
-                        )}
-                      </div>
-                      
-                      <div className="flex space-x-2">
-                        <button className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium px-3 py-1 rounded-lg transition-colors text-sm">
-                          View Store
-                        </button>
-                        <button className="bg-green-50 hover:bg-green-100 text-green-700 font-medium px-3 py-1 rounded-lg transition-colors text-sm">
-                          Add to List
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* More Deals Coming Soon */}
-      <div className="mt-8 text-center py-8 bg-gray-50 rounded-xl">
-        <Tag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">More Deals Coming Soon!</h3>
-        <p className="text-gray-600">We're working with retailers to bring you even more savings.</p>
-      </div>
+      )}
     </div>
   );
 };

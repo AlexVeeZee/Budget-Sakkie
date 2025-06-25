@@ -1,0 +1,27 @@
+{
+  "name": "sa-grocery-scraper",
+  "version": "1.0.0",
+  "description": "Data scraper for South African grocery retailers",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "scrape": "node index.js",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "puppeteer": "^21.6.1",
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12",
+    "fs-extra": "^11.2.0"
+  },
+  "keywords": [
+    "scraping",
+    "grocery",
+    "south-africa",
+    "retail",
+    "data-collection"
+  ],
+  "author": "Budget Sakkie Team",
+  "license": "MIT"
+}
