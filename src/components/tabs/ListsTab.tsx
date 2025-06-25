@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, ShoppingCart, Users, DollarSign, Clock, Edit2, Trash2, Search, Check, X, Star, Package, Calendar, Share2 } from 'lucide-react';
-import { sampleShoppingList, products } from '../../data/mockData';
+import { useProducts } from '../../hooks/useProducts';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useCurrency } from '../../hooks/useCurrency';
-import { Product, ShoppingListItem, ShoppingList } from '../../types';
+import { ShoppingListItem, ShoppingList } from '../../types';
 import { EditListModal } from '../modals/EditListModal';
 import { DeleteListModal } from '../modals/DeleteListModal';
 import { CreateListModal } from '../modals/CreateListModal';
 import { ListArchiveView } from '../ListArchiveView';
 import { BudgetSummaryCard } from '../BudgetSummaryCard';
+import type { ProductWithCategory } from '../../services/productService';
 
 interface EditingItem {
   id: string;
@@ -21,55 +22,134 @@ interface EditingItem {
 export const ListsTab: React.FC = () => {
   const { t } = useLanguage();
   const { formatCurrency } = useCurrency();
+  const { products, loading: productsLoading, error: productsError } = useProducts();
   const [viewMode, setViewMode] = useState<'archive' | 'detail'>('archive');
   const [activeList, setActiveList] = useState<ShoppingList | null>(null);
-  const [allLists, setAllLists] = useState<ShoppingList[]>([
-    sampleShoppingList,
-    {
+  
+  // Create sample shopping list using real products from Supabase
+  const createSampleList = (products: ProductWithCategory[]): ShoppingList => {
+    if (products.length === 0) {
+      return {
+        id: '1',
+        name: 'Weekly Groceries',
+        items: [],
+        createdAt: '2024-01-15T10:00:00Z',
+        updatedAt: '2024-01-15T12:00:00Z',
+        sharedWith: [],
+        budget: 500
+      };
+    }
+
+    // Convert first few products to shopping list items
+    const listItems: ShoppingListItem[] = products.slice(0, 3).map((product, index) => ({
+      id: (index + 1).toString(),
+      productId: product.id,
+      product: {
+        id: product.id,
+        name: product.name,
+        brand: 'Generic', // Could be enhanced with brand detection
+        category: product.category?.name || 'General',
+        image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+        unit: 'each',
+        unitSize: 'each',
+        barcode: product.sku || undefined
+      },
+      quantity: index === 0 ? 2 : index === 1 ? 3 : 1,
+      priority: index === 0 ? 'high' : index === 1 ? 'high' : 'medium',
+      completed: index === 2,
+      notes: index === 1 ? 'Get the organic version if available' : ''
+    }));
+
+    return {
+      id: '1',
+      name: 'Weekly Groceries',
+      items: listItems,
+      createdAt: '2024-01-15T10:00:00Z',
+      updatedAt: '2024-01-15T12:00:00Z',
+      sharedWith: [],
+      budget: 500
+    };
+  };
+
+  // Create additional sample lists
+  const createAdditionalLists = (products: ProductWithCategory[]): ShoppingList[] => {
+    if (products.length < 6) return [];
+
+    const partyList: ShoppingList = {
       id: '2',
       name: 'Party Supplies',
-      items: [
-        {
-          id: '1',
-          productId: '1',
-          product: products[0],
-          quantity: 3,
-          priority: 'high',
-          completed: false
+      items: products.slice(3, 5).map((product, index) => ({
+        id: (index + 4).toString(),
+        productId: product.id,
+        product: {
+          id: product.id,
+          name: product.name,
+          brand: 'Generic',
+          category: product.category?.name || 'General',
+          image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+          unit: 'each',
+          unitSize: 'each',
+          barcode: product.sku || undefined
         },
-        {
-          id: '2',
-          productId: '2',
-          product: products[1],
-          quantity: 2,
-          priority: 'medium',
-          completed: true
-        }
-      ],
+        quantity: index === 0 ? 3 : 2,
+        priority: 'high',
+        completed: index === 1,
+        notes: ''
+      })),
       createdAt: '2024-01-10T10:00:00Z',
       updatedAt: '2024-01-12T15:30:00Z',
       sharedWith: ['Johan Van Der Merwe'],
       budget: 300
-    },
-    {
+    };
+
+    const bulkList: ShoppingList = {
       id: '3',
       name: 'Monthly Bulk Shopping',
-      items: [
-        {
-          id: '1',
-          productId: '3',
-          product: products[2],
-          quantity: 5,
-          priority: 'medium',
-          completed: false
-        }
-      ],
+      items: products.slice(5, 6).map((product, index) => ({
+        id: (index + 6).toString(),
+        productId: product.id,
+        product: {
+          id: product.id,
+          name: product.name,
+          brand: 'Generic',
+          category: product.category?.name || 'General',
+          image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+          unit: 'each',
+          unitSize: 'each',
+          barcode: product.sku || undefined
+        },
+        quantity: 5,
+        priority: 'medium',
+        completed: false,
+        notes: ''
+      })),
       createdAt: '2024-01-05T14:20:00Z',
       updatedAt: '2024-01-05T14:20:00Z',
       sharedWith: [],
       budget: 800
+    };
+
+    return [partyList, bulkList];
+  };
+
+  // Generate lists from Supabase products
+  const allLists = useMemo(() => {
+    if (products.length === 0) return [];
+    
+    const sampleList = createSampleList(products);
+    const additionalLists = createAdditionalLists(products);
+    
+    return [sampleList, ...additionalLists];
+  }, [products]);
+
+  const [lists, setLists] = useState<ShoppingList[]>([]);
+  
+  // Update lists when products change
+  React.useEffect(() => {
+    if (allLists.length > 0) {
+      setLists(allLists);
     }
-  ]);
+  }, [allLists]);
   
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
@@ -80,23 +160,36 @@ export const ListsTab: React.FC = () => {
   const [showDeleteListModal, setShowDeleteListModal] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
-  // Quick add items - common grocery items
-  const quickAddItems = [
-    { name: 'Bread', category: 'Bakery', estimatedPrice: 15.99 },
-    { name: 'Milk', category: 'Dairy', estimatedPrice: 22.99 },
-    { name: 'Eggs', category: 'Dairy', estimatedPrice: 34.99 },
-    { name: 'Rice', category: 'Pantry', estimatedPrice: 45.99 },
-    { name: 'Chicken', category: 'Meat', estimatedPrice: 89.99 },
-    { name: 'Bananas', category: 'Fresh Produce', estimatedPrice: 19.99 },
-    { name: 'Apples', category: 'Fresh Produce', estimatedPrice: 24.99 },
-    { name: 'Pasta', category: 'Pantry', estimatedPrice: 18.99 },
-    { name: 'Tomatoes', category: 'Fresh Produce', estimatedPrice: 28.99 },
-    { name: 'Cheese', category: 'Dairy', estimatedPrice: 45.99 },
-    { name: 'Onions', category: 'Fresh Produce', estimatedPrice: 16.99 },
-    { name: 'Potatoes', category: 'Fresh Produce', estimatedPrice: 12.99 }
-  ];
+  // Quick add items - now using real products from Supabase
+  const quickAddItems = useMemo(() => {
+    if (products.length === 0) {
+      // Fallback items if no products loaded yet
+      return [
+        { name: 'Bread', category: 'Bakery', estimatedPrice: 15.99 },
+        { name: 'Milk', category: 'Dairy', estimatedPrice: 22.99 },
+        { name: 'Eggs', category: 'Dairy', estimatedPrice: 34.99 },
+        { name: 'Rice', category: 'Pantry', estimatedPrice: 45.99 },
+        { name: 'Chicken', category: 'Meat', estimatedPrice: 89.99 },
+        { name: 'Bananas', category: 'Fresh Produce', estimatedPrice: 19.99 },
+        { name: 'Apples', category: 'Fresh Produce', estimatedPrice: 24.99 },
+        { name: 'Pasta', category: 'Pantry', estimatedPrice: 18.99 },
+        { name: 'Tomatoes', category: 'Fresh Produce', estimatedPrice: 28.99 },
+        { name: 'Cheese', category: 'Dairy', estimatedPrice: 45.99 },
+        { name: 'Onions', category: 'Fresh Produce', estimatedPrice: 16.99 },
+        { name: 'Potatoes', category: 'Fresh Produce', estimatedPrice: 12.99 }
+      ];
+    }
 
-  // Filter items based on search query - moved to top level before any conditional returns
+    // Use real products from Supabase
+    return products.slice(0, 12).map(product => ({
+      name: product.name,
+      category: product.category?.name || 'General',
+      estimatedPrice: product.price,
+      productData: product // Store the full product data
+    }));
+  }, [products]);
+
+  // Filter items based on search query
   const filteredItems = useMemo(() => {
     if (!activeList || !searchQuery) return activeList?.items || [];
     
@@ -109,7 +202,7 @@ export const ListsTab: React.FC = () => {
     );
   }, [activeList?.items, searchQuery]);
 
-  // Filter quick add items based on search - moved to top level before any conditional returns
+  // Filter quick add items based on search
   const filteredQuickAdd = useMemo(() => {
     if (!searchQuery) return quickAddItems;
     
@@ -140,7 +233,7 @@ export const ListsTab: React.FC = () => {
       updatedAt: new Date().toISOString()
     };
     
-    setAllLists(prev => [list, ...prev]);
+    setLists(prev => [list, ...prev]);
     
     // If we're in archive view, navigate to the new list
     if (viewMode === 'archive') {
@@ -149,7 +242,6 @@ export const ListsTab: React.FC = () => {
     }
   };
 
-  // Enhanced save function that updates family member data
   const handleSaveList = (name: string, budget: number, sharedWith: string[]) => {
     if (!activeList) return;
     
@@ -157,12 +249,12 @@ export const ListsTab: React.FC = () => {
       ...activeList,
       name,
       budget,
-      sharedWith, // This now includes the updated family member list
+      sharedWith,
       updatedAt: new Date().toISOString()
     };
     
     setActiveList(updatedList);
-    setAllLists(prev => prev.map(list => 
+    setLists(prev => prev.map(list => 
       list.id === activeList.id ? updatedList : list
     ));
   };
@@ -170,21 +262,19 @@ export const ListsTab: React.FC = () => {
   const handleDeleteList = () => {
     if (!activeList) return;
     
-    setAllLists(prev => prev.filter(list => list.id !== activeList.id));
+    setLists(prev => prev.filter(list => list.id !== activeList.id));
     handleBackToArchive();
   };
 
   const handleDeleteListFromArchive = (listId: string) => {
-    setAllLists(prev => prev.filter(list => list.id !== listId));
+    setLists(prev => prev.filter(list => list.id !== listId));
   };
 
-  // Real-time update function for when lists are modified
   const handleUpdateList = (updatedList: ShoppingList) => {
-    setAllLists(prev => prev.map(list => 
+    setLists(prev => prev.map(list => 
       list.id === updatedList.id ? updatedList : list
     ));
     
-    // If this is the currently active list, update it too
     if (activeList && activeList.id === updatedList.id) {
       setActiveList(updatedList);
     }
@@ -211,24 +301,47 @@ export const ListsTab: React.FC = () => {
     };
     
     setActiveList(updatedList);
-    setAllLists(prev => prev.map(list => 
+    setLists(prev => prev.map(list => 
       list.id === activeList.id ? updatedList : list
     ));
   };
 
-  // If in archive view, show the archive component with enhanced family member support
+  // Show loading state while products are loading
+  if (productsLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if products failed to load
+  if (productsError) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Products</h3>
+          <p className="text-red-700 mb-4">{productsError}</p>
+          <p className="text-red-600">Please try refreshing the page or check your connection.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If in archive view, show the archive component
   if (viewMode === 'archive') {
     return (
       <>
         <ListArchiveView
-          lists={allLists}
+          lists={lists}
           onSelectList={handleSelectList}
           onCreateNew={() => setShowCreateModal(true)}
           onDeleteList={handleDeleteListFromArchive}
           onUpdateList={handleUpdateList}
         />
         
-        {/* Create List Modal - Available in Archive View */}
         <CreateListModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
@@ -285,7 +398,7 @@ export const ListsTab: React.FC = () => {
     };
 
     setActiveList(updatedList);
-    setAllLists(prev => prev.map(list => 
+    setLists(prev => prev.map(list => 
       list.id === activeList.id ? updatedList : list
     ));
     setEditingItem(null);
@@ -299,7 +412,6 @@ export const ListsTab: React.FC = () => {
     setDeletingItemId(itemId);
     
     try {
-      // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const updatedList = {
@@ -309,11 +421,10 @@ export const ListsTab: React.FC = () => {
       };
       
       setActiveList(updatedList);
-      setAllLists(prev => prev.map(list => 
+      setLists(prev => prev.map(list => 
         list.id === activeList.id ? updatedList : list
       ));
       
-      // Show success feedback
       setAddedItemFeedback('Item removed successfully!');
       setTimeout(() => setAddedItemFeedback(null), 2000);
       
@@ -343,22 +454,25 @@ export const ListsTab: React.FC = () => {
         updatedAt: new Date().toISOString()
       };
       setActiveList(updatedList);
-      setAllLists(prev => prev.map(list => 
+      setLists(prev => prev.map(list => 
         list.id === activeList.id ? updatedList : list
       ));
     } else {
-      // Add new item
+      // Add new item - use real product data if available
+      const productData = 'productData' in quickItem ? quickItem.productData : null;
+      
       const newItem: ShoppingListItem = {
         id: Date.now().toString(),
-        productId: Date.now().toString(),
+        productId: productData?.id || Date.now().toString(),
         product: {
-          id: Date.now().toString(),
+          id: productData?.id || Date.now().toString(),
           name: quickItem.name,
           brand: 'Generic',
           category: quickItem.category,
-          image: getDefaultImage(quickItem.category),
+          image: productData?.image_url || getDefaultImage(quickItem.category),
           unit: 'each',
-          unitSize: 'each'
+          unitSize: 'each',
+          barcode: productData?.sku || undefined
         },
         quantity: 1,
         priority: 'medium',
@@ -373,7 +487,7 @@ export const ListsTab: React.FC = () => {
       };
       
       setActiveList(updatedList);
-      setAllLists(prev => prev.map(list => 
+      setLists(prev => prev.map(list => 
         list.id === activeList.id ? updatedList : list
       ));
     }
@@ -393,7 +507,7 @@ export const ListsTab: React.FC = () => {
     };
     
     setActiveList(updatedList);
-    setAllLists(prev => prev.map(list => 
+    setLists(prev => prev.map(list => 
       list.id === activeList.id ? updatedList : list
     ));
   };
@@ -404,7 +518,10 @@ export const ListsTab: React.FC = () => {
       'Dairy': 'https://images.pexels.com/photos/416978/pexels-photo-416978.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
       'Meat': 'https://images.pexels.com/photos/616354/pexels-photo-616354.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
       'Bakery': 'https://images.pexels.com/photos/209206/pexels-photo-209206.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
-      'Pantry': 'https://images.pexels.com/photos/315755/pexels-photo-315755.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'
+      'Pantry': 'https://images.pexels.com/photos/315755/pexels-photo-315755.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+      'Pantry Essentials': 'https://images.pexels.com/photos/315755/pexels-photo-315755.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+      'Beverages': 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+      'Household Items': 'https://images.pexels.com/photos/4099354/pexels-photo-4099354.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'
     };
     return categoryImages[category as keyof typeof categoryImages] || categoryImages['Pantry'];
   };
@@ -434,7 +551,7 @@ export const ListsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Optimized Budget Summary Card */}
+      {/* Budget Summary Card */}
       <BudgetSummaryCard
         currentSpending={currentSpending}
         budget={activeList.budget || 500}
@@ -445,7 +562,7 @@ export const ListsTab: React.FC = () => {
         spendingHistory={spendingHistory}
       />
 
-      {/* Shopping List Overview - Simplified */}
+      {/* Shopping List Overview */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -504,7 +621,7 @@ export const ListsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* MOVED: Quick Add Section to TOP for better UX */}
+      {/* Quick Add Section */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
           <Package className="h-5 w-5" />
@@ -806,7 +923,7 @@ export const ListsTab: React.FC = () => {
         </div>
       )}
 
-      {/* Enhanced Edit List Modal with Family Member Support */}
+      {/* Edit List Modal */}
       <EditListModal
         isOpen={showEditListModal}
         onClose={() => setShowEditListModal(false)}
