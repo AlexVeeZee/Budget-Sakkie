@@ -7,6 +7,7 @@ import { ListsTab } from './components/tabs/ListsTab';
 import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
+import { AuthProvider } from './hooks/useAuth';
 
 // Lazy load heavy modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -16,8 +17,10 @@ const RewardsModal = lazy(() => import('./components/modals/RewardsModal').then(
 const FamilySharingModal = lazy(() => import('./components/modals/FamilySharingModal').then(module => ({ default: module.FamilySharingModal })));
 const HelpSupportModal = lazy(() => import('./components/modals/HelpSupportModal').then(module => ({ default: module.HelpSupportModal })));
 
-function App() {
-  const [activeTab, setActiveTab] = useState('search');
+type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile';
+
+function AppContent() {
+  const [activeTab, setActiveTab] = useState<TabType>('search');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
@@ -42,36 +45,63 @@ function App() {
   };
 
   const handleSettingsClick = () => {
+    console.log('Settings clicked from sidebar/profile');
     closeAllModals();
     setSettingsOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleLocationClick = () => {
+    console.log('Location clicked from sidebar/profile');
     closeAllModals();
     setLocationOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleLoyaltyCardsClick = () => {
+    console.log('Loyalty cards clicked from sidebar/profile');
     closeAllModals();
     setLoyaltyCardsOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleRewardsClick = () => {
+    console.log('Rewards clicked from sidebar/profile');
     closeAllModals();
     setRewardsOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleFamilySharingClick = () => {
+    console.log('Family sharing clicked from sidebar/profile');
     closeAllModals();
     setFamilySharingOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleHelpSupportClick = () => {
+    console.log('Help support clicked from sidebar/profile');
     closeAllModals();
     setHelpSupportOpen(true);
+    setSidebarOpen(false); // Close sidebar when opening modal
+  };
+
+  // Simple tab change handler with explicit logging
+  const handleTabChange = (tab: TabType) => {
+    console.log('Tab change requested:', tab);
+    console.log('Current active tab:', activeTab);
+    
+    setActiveTab(tab);
+    
+    // Log after state change (will show in next render)
+    setTimeout(() => {
+      console.log('Tab changed to:', tab);
+    }, 0);
   };
 
   const renderActiveTab = () => {
+    console.log('Rendering tab:', activeTab);
+    
     switch (activeTab) {
       case 'search':
         return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
@@ -82,7 +112,16 @@ function App() {
       case 'deals':
         return <DealsTab />;
       case 'profile':
-        return <ProfileTab />;
+        return (
+          <ProfileTab 
+            onSettingsClick={handleSettingsClick}
+            onLocationClick={handleLocationClick}
+            onLoyaltyCardsClick={handleLoyaltyCardsClick}
+            onRewardsClick={handleRewardsClick}
+            onFamilySharingClick={handleFamilySharingClick}
+            onHelpSupportClick={handleHelpSupportClick}
+          />
+        );
       default:
         return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
     }
@@ -112,7 +151,7 @@ function App() {
       
       <BottomNavigation 
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
       />
 
       {/* Lazy loaded modals with loading fallback */}
@@ -160,6 +199,14 @@ function App() {
         )}
       </Suspense>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
