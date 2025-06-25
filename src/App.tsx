@@ -156,7 +156,7 @@ function AppContent() {
         `
       }} />
       
-      <div className="fixed top-4 right-4 z-50">
+      <div className="fixed top-4 right-4" style={{ zIndex: 1000000 }}>
         <a 
           href="https://bolt.new/?rid=os72mi" 
           target="_blank" 
