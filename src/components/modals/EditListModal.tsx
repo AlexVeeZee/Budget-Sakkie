@@ -55,8 +55,11 @@ export const EditListModal: React.FC<EditListModalProps> = ({
     {
       id: '3',
       name: 'Pieter Van Der Merwe
+    }
+  ]
+}
 
-I understand! I'll create beautiful, production-worthy designs that stand out from typical templates. I'll focus on:
+I understand! I'll create beautiful, production-worthy designs that stand out from typical templates. I\'ll focus on:
 
 - **Unique, polished aesthetics** with thoughtful design details
 - **Premium user experiences** with smooth interactions and micro-animations

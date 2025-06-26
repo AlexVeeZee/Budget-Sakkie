@@ -19,8 +19,11 @@ export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
     switch (status) {
       case 'active': return 'text-green-600 bg-green-100';
       case 'pending': return 'text-yellow-600 bg-yellow
+    }
+  }
+}
 
-I understand! I'll create beautiful, production-worthy designs that stand out from typical templates. I'll focus on:
+I understand! I'll create beautiful, production-worthy designs that stand out from typical templates. I\'ll focus on:
 
 - **Unique, polished aesthetics** with thoughtful design details
 - **Premium user experiences** with smooth interactions and micro-animations
