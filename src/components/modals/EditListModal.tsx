@@ -54,7 +54,7 @@ export const EditListModal: React.FC<EditListModalProps> = ({
     },
     {
       id: '3',
-      name: 'Pieter Van Der Merwe
+      name: 'Pieter Van Der Merwe'
     }
   ]
 }
