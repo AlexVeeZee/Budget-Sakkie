@@ -20,7 +20,7 @@
     - Helper functions for family management
     - Invitation handling functions
     - Activity logging functions
-*/
+
 
 -- Create family invitations table
 CREATE TABLE IF NOT EXISTS family_invitations (
@@ -406,3 +406,4 @@ CREATE TRIGGER update_family_invitations_updated_at
 CREATE TRIGGER update_shared_shopping_lists_updated_at
   BEFORE UPDATE ON shared_shopping_lists
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+*/
