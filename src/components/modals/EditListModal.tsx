@@ -58,4 +58,3 @@ export const EditListModal: React.FC<EditListModalProps> = ({
     }
   ]
 }
-<boltArtifact id="family-sharing-feature" title="Family Sharing Feature Implementation">
