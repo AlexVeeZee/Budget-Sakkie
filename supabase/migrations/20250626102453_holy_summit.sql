@@ -22,7 +22,7 @@
     - Family invitation management
     - Real-time collaboration triggers
     - Budget calculation functions
-*/
+
 
 -- Family Invitations Table
 CREATE TABLE IF NOT EXISTS family_invitations (
@@ -413,3 +413,4 @@ CREATE TRIGGER update_family_expenses_updated_at
   BEFORE UPDATE ON family_expenses
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+*/
