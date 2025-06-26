@@ -7,7 +7,7 @@ import { ListsTab } from './components/tabs/ListsTab';
 import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
-import { AuthProvider } from './hooks/useAuth';
+import { AuthProvider } from './hooks/useAuth.tsx';
 import { AuthModal } from './components/auth/AuthModal';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
