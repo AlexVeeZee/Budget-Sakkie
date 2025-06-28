@@ -85,9 +85,10 @@ export class FamilyService {
    */
   static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?: string }> {
     try {
-      const { user } = useAuthStore.getState();
+      const authState = useAuthStore.getState();
+      const { user } = authState;
       
-      if (!user) {
+      if (!user || !user.id) {
         return { family: null, error: 'Not authenticated' };
       }
       
@@ -99,12 +100,16 @@ export class FamilyService {
         throw new Error(`Failed to get user family: ${error.message}`);
       }
       
-      if (!data || data.length === 0) {
+      if (!data || !Array.isArray(data) || data.length === 0) {
         return { family: null };
       }
       
       // Get the first family's members
       const familyData = data[0];
+      if (!familyData || !familyData.id) {
+        return { family: null };
+      }
+      
       const { members, error: membersError } = await this.getFamilyMembers(familyData.id);
       
       if (membersError) {
@@ -115,7 +120,7 @@ export class FamilyService {
       return { 
         family: {
           id: familyData.id,
-          name: familyData.name,
+          name: familyData.name || 'Unnamed Family',
           description: familyData.description,
           createdBy: familyData.created_by,
           createdAt: familyData.created_at,
@@ -137,9 +142,10 @@ export class FamilyService {
    */
   static async getUserFamilies(): Promise<{ families: Array<any>; error?: string }> {
     try {
-      const { user } = useAuthStore.getState();
+      const authState = useAuthStore.getState();
+      const { user } = authState;
       
-      if (!user) {
+      if (!user || !user.id) {
         return { families: [], error: 'Not authenticated' };
       }
       
@@ -175,6 +181,10 @@ export class FamilyService {
     familyId: string
   ): Promise<{ members: FamilyMember[]; error?: string }> {
     try {
+      if (!familyId) {
+        return { members: [], error: 'Family ID is required' };
+      }
+      
       // Get family members using the RPC function
       const { data, error } = await supabase
         .rpc('get_family_members', { p_family_id: familyId });
@@ -186,8 +196,8 @@ export class FamilyService {
       // Transform the data to match our FamilyMember type
       const members: FamilyMember[] = (data || []).map((member: any) => ({
         id: member.member_id,
-        name: `${member.first_name} ${member.last_name}`,
-        email: member.email,
+        name: `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'Unknown User',
+        email: member.email || '',
         role: member.is_admin ? 'admin' : 'member',
         avatar: member.profile_image_url,
         status: member.status || 'active',
@@ -222,9 +232,10 @@ export class FamilyService {
     description?: string
   ): Promise<{ success: boolean; family?: FamilyGroup; error?: string }> {
     try {
-      const { user } = useAuthStore.getState();
+      const authState = useAuthStore.getState();
+      const { user } = authState;
       
-      if (!user) {
+      if (!user || !user.id) {
         return { success: false, error: 'You must be logged in to create a family' };
       }
       
@@ -241,6 +252,10 @@ export class FamilyService {
       
       if (familyError) {
         throw new Error(`Failed to create family: ${familyError.message}`);
+      }
+      
+      if (!familyData || !familyData.id) {
+        throw new Error('Failed to create family: No data returned');
       }
       
       // Add current user as admin
@@ -298,9 +313,10 @@ export class FamilyService {
     relationship?: string
   ): Promise<{ success: boolean; invitation?: FamilyInvitation; error?: string }> {
     try {
-      const { user } = useAuthStore.getState();
+      const authState = useAuthStore.getState();
+      const { user } = authState;
       
-      if (!user) {
+      if (!user || !user.id) {
         return { success: false, error: 'You must be logged in to invite members' };
       }
       
@@ -316,7 +332,7 @@ export class FamilyService {
         throw new Error(`Failed to verify your membership: ${membershipError.message}`);
       }
       
-      if (membership.role !== 'admin') {
+      if (!membership || membership.role !== 'admin') {
         return { success: false, error: 'Only family admins can invite members' };
       }
       
@@ -329,6 +345,10 @@ export class FamilyService {
       
       if (familyError) {
         throw new Error(`Failed to get family details: ${familyError.message}`);
+      }
+      
+      if (!family) {
+        throw new Error('Family not found');
       }
       
       // Create invitation
@@ -353,6 +373,10 @@ export class FamilyService {
         throw new Error(`Failed to create invitation: ${inviteError.message}`);
       }
       
+      if (!invitation) {
+        throw new Error('Failed to create invitation: No data returned');
+      }
+      
       // In a real app, we would send an email here
       console.log(`Invitation sent to ${email} for family ${family.name}`);
       
@@ -362,7 +386,7 @@ export class FamilyService {
           id: invitation.id,
           familyId: invitation.family_id,
           familyName: family.name,
-          invitedByName: user.displayName || user.username,
+          invitedByName: user.displayName || user.username || 'Unknown User',
           email: invitation.email,
           role: invitation.role,
           status: 'pending',
@@ -384,9 +408,10 @@ export class FamilyService {
    */
   static async getPendingInvitations(): Promise<{ invitations: FamilyInvitation[]; error?: string }> {
     try {
-      const { user } = useAuthStore.getState();
+      const authState = useAuthStore.getState();
+      const { user } = authState;
       
-      if (!user) {
+      if (!user || !user.email) {
         return { invitations: [], error: 'Not authenticated' };
       }
       
@@ -442,9 +467,10 @@ export class FamilyService {
     invitationId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { user } = useAuthStore.getState();
+      const authState = useAuthStore.getState();
+      const { user } = authState;
       
-      if (!user) {
+      if (!user || !user.id || !user.email) {
         return { success: false, error: 'You must be logged in to accept invitations' };
       }
       
@@ -457,6 +483,10 @@ export class FamilyService {
       
       if (inviteError) {
         throw new Error(`Failed to get invitation: ${inviteError.message}`);
+      }
+      
+      if (!invitation) {
+        return { success: false, error: 'Invitation not found' };
       }
       
       // Check if invitation is valid
@@ -524,9 +554,10 @@ export class FamilyService {
     invitationId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { user } = useAuthStore.getState();
+      const authState = useAuthStore.getState();
+      const { user } = authState;
       
-      if (!user) {
+      if (!user || !user.email) {
         return { success: false, error: 'You must be logged in to decline invitations' };
       }
       
@@ -539,6 +570,10 @@ export class FamilyService {
       
       if (inviteError) {
         throw new Error(`Failed to get invitation: ${inviteError.message}`);
+      }
+      
+      if (!invitation) {
+        return { success: false, error: 'Invitation not found' };
       }
       
       // Check if invitation is valid
@@ -581,9 +616,10 @@ export class FamilyService {
     }
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { user } = useAuthStore.getState();
+      const authState = useAuthStore.getState();
+      const { user } = authState;
       
-      if (!user) {
+      if (!user || !user.id) {
         return { success: false, error: 'You must be logged in to update members' };
       }
       
@@ -599,7 +635,7 @@ export class FamilyService {
         throw new Error(`Failed to verify your membership: ${membershipError.message}`);
       }
       
-      if (membership.role !== 'admin') {
+      if (!membership || membership.role !== 'admin') {
         return { success: false, error: 'Only family admins can update members' };
       }
       
@@ -637,9 +673,10 @@ export class FamilyService {
     memberId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { user } = useAuthStore.getState();
+      const authState = useAuthStore.getState();
+      const { user } = authState;
       
-      if (!user) {
+      if (!user || !user.id) {
         return { success: false, error: 'You must be logged in to remove members' };
       }
       
@@ -655,7 +692,7 @@ export class FamilyService {
         throw new Error(`Failed to verify your membership: ${membershipError.message}`);
       }
       
-      if (membership.role !== 'admin') {
+      if (!membership || membership.role !== 'admin') {
         return { success: false, error: 'Only family admins can remove members' };
       }
       
@@ -703,6 +740,10 @@ export class FamilyService {
     familyId: string
   ): Promise<{ lists: SharedListWithItems[]; error?: string }> {
     try {
+      if (!familyId) {
+        return { lists: [], error: 'Family ID is required' };
+      }
+      
       // Get all shared lists for the family
       const { data, error } = await supabase
         .from('shared_shopping_lists')
@@ -737,10 +778,15 @@ export class FamilyService {
     budget?: number
   ): Promise<{ list?: SharedListWithItems; error?: string }> {
     try {
-      const { user } = useAuthStore.getState();
+      const authState = useAuthStore.getState();
+      const { user } = authState;
       
-      if (!user) {
+      if (!user || !user.id) {
         return { error: 'You must be logged in to create a list' };
+      }
+      
+      if (!familyId) {
+        return { error: 'Family ID is required' };
       }
       
       // Create the list
@@ -780,6 +826,10 @@ export class FamilyService {
     familyId: string
   ): Promise<{ budgets: FamilyBudgetWithExpenses[]; error?: string }> {
     try {
+      if (!familyId) {
+        return { budgets: [], error: 'Family ID is required' };
+      }
+      
       // Get all budgets for the family
       const { data, error } = await supabase
         .from('family_budgets')
