@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useEffect } from 'react';
 import { Header } from './components/Header';
 import { BottomNavigation } from './components/BottomNavigation';
 import { SearchTab } from './components/tabs/SearchTab';
@@ -8,6 +8,8 @@ import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
 import { AuthProvider } from './hooks/useAuth.tsx';
+import { AuthModal } from './components/auth/AuthModal';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Lazy load heavy modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -29,10 +31,8 @@ function AppContent() {
   const [familySharingOpen, setFamilySharingOpen] = useState(false);
   const [helpSupportOpen, setHelpSupportOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  const handleSearchClick = () => {
-    setActiveTab('search');
-  };
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
 
   // Close all modals helper function
   const closeAllModals = () => {
@@ -42,66 +42,81 @@ function AppContent() {
     setRewardsOpen(false);
     setFamilySharingOpen(false);
     setHelpSupportOpen(false);
+    setShowAuthModal(false);
+  };
+
+  const handleSearchClick = () => {
+    setActiveTab('search');
   };
 
   const handleSettingsClick = () => {
-    console.log('Settings clicked from sidebar/profile');
     closeAllModals();
     setSettingsOpen(true);
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleLocationClick = () => {
-    console.log('Location clicked from sidebar/profile');
     closeAllModals();
     setLocationOpen(true);
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleLoyaltyCardsClick = () => {
-    console.log('Loyalty cards clicked from sidebar/profile');
     closeAllModals();
     setLoyaltyCardsOpen(true);
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleRewardsClick = () => {
-    console.log('Rewards clicked from sidebar/profile');
     closeAllModals();
     setRewardsOpen(true);
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleFamilySharingClick = () => {
-    console.log('Family sharing clicked from sidebar/profile');
     closeAllModals();
     setFamilySharingOpen(true);
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleHelpSupportClick = () => {
-    console.log('Help support clicked from sidebar/profile');
     closeAllModals();
     setHelpSupportOpen(true);
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
-  // Simple tab change handler with explicit logging
-  const handleTabChange = (tab: TabType) => {
-    console.log('Tab change requested:', tab);
-    console.log('Current active tab:', activeTab);
-    
-    setActiveTab(tab);
-    
-    // Log after state change (will show in next render)
-    setTimeout(() => {
-      console.log('Tab changed to:', tab);
-    }, 0);
+  const handleSignInClick = () => {
+    closeAllModals();
+    setAuthModalMode('signin');
+    setShowAuthModal(true);
   };
 
+  const handleSignUpClick = () => {
+    closeAllModals();
+    setAuthModalMode('signup');
+    setShowAuthModal(true);
+  };
+
+  // Simple tab change handler with explicit logging
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+  };
+
+  // Handle escape key to close modals
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeAllModals();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, []);
+
   const renderActiveTab = () => {
-    console.log('Rendering tab:', activeTab);
-    
     switch (activeTab) {
       case 'search':
         return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
@@ -120,6 +135,7 @@ function AppContent() {
             onRewardsClick={handleRewardsClick}
             onFamilySharingClick={handleFamilySharingClick}
             onHelpSupportClick={handleHelpSupportClick}
+            onSignInClick={handleSignInClick}
           />
         );
       default:
@@ -186,10 +202,40 @@ function AppContent() {
         onRewardsClick={handleRewardsClick}
         onFamilySharingClick={handleFamilySharingClick}
         onHelpSupportClick={handleHelpSupportClick}
+        onSignInClick={handleSignInClick}
       />
       
       <main className={`pb-20 pt-4 transition-all duration-300 ${sidebarOpen ? 'ml-80' : ''}`}>
-        {renderActiveTab()}
+        <ProtectedRoute fallback={
+          <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-xl shadow-md">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Budget Sakkie</h2>
+            <p className="text-gray-600 mb-6">
+              Sign in to access all features and start saving on your grocery shopping.
+            </p>
+            <div className="space-y-4">
+              <button
+                onClick={handleSignInClick}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={handleSignUpClick}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+              >
+                Create Account
+              </button>
+              <button
+                onClick={() => setActiveTab('search')}
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Continue as Guest
+              </button>
+            </div>
+          </div>
+        }>
+          {renderActiveTab()}
+        </ProtectedRoute>
       </main>
       
       <BottomNavigation 
@@ -241,6 +287,13 @@ function AppContent() {
           />
         )}
       </Suspense>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode={authModalMode}
+      />
     </div>
   );
 }

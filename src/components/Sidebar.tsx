@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { X, Settings, HelpCircle, Star, Gift, Users, MapPin } from 'lucide-react';
+import React from 'react';
+import { X, Settings, HelpCircle, Star, Gift, Users, MapPin, LogIn, UserPlus } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { useAuth } from '../hooks/useAuth';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface SidebarProps {
   onRewardsClick: () => void;
   onFamilySharingClick: () => void;
   onHelpSupportClick: () => void;
+  onSignInClick?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -21,11 +23,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLoyaltyCardsClick,
   onRewardsClick,
   onFamilySharingClick,
-  onHelpSupportClick
+  onHelpSupportClick,
+  onSignInClick
 }) => {
   const { t } = useLanguage();
+  const { isAuthenticated, user } = useAuth();
 
-  const menuItems = [
+  const authenticatedMenuItems = [
     { 
       icon: Settings, 
       label: t('profile.settings'), 
@@ -57,6 +61,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
       action: onHelpSupportClick
     },
   ];
+
+  const unauthenticatedMenuItems = [
+    { 
+      icon: LogIn, 
+      label: 'Sign In', 
+      action: onSignInClick
+    },
+    { 
+      icon: UserPlus, 
+      label: 'Create Account', 
+      action: onSignInClick
+    },
+    { 
+      icon: HelpCircle, 
+      label: 'Help & Support', 
+      action: onHelpSupportClick
+    },
+  ];
+
+  const menuItems = isAuthenticated ? authenticatedMenuItems : unauthenticatedMenuItems;
 
   if (!isOpen) return null;
 
@@ -90,11 +114,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="p-6"
           style={{ backgroundColor: '#ffffff' }}
         >
-          <div className="bg-gradient-to-r from-green-500 to-blue-500 rounded-lg p-4 text-white mb-6">
-            <h3 className="font-semibold mb-1">Monthly Savings</h3>
-            <p className="text-2xl font-bold">R247.50</p>
-            <p className="text-sm opacity-90">15% saved this month</p>
-          </div>
+          {isAuthenticated && user && (
+            <div className="bg-gradient-to-r from-green-500 to-blue-500 rounded-lg p-4 text-white mb-6">
+              <h3 className="font-semibold mb-1">Welcome, {user.displayName}</h3>
+              <p className="text-sm opacity-90">Monthly Savings: R247.50</p>
+              <p className="text-sm opacity-90">15% saved this month</p>
+            </div>
+          )}
 
           <nav className="space-y-2">
             {menuItems.map((item, index) => (
