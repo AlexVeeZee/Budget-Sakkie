@@ -72,7 +72,7 @@ export const UnifiedSidebarModal: React.FC<UnifiedSidebarModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-hidden">
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
       
-      <div className="absolute inset-y-0 right-0 max-w-full flex">
+      <div className="absolute inset-y-0 left-0 max-w-full flex">
         <div 
           className="relative w-screen max-w-4xl"
           style={{ 
@@ -94,7 +94,6 @@ export const UnifiedSidebarModal: React.FC<UnifiedSidebarModalProps> = ({
                         </div>
                         <div>
                           <h3 className="font-semibold text-gray-900">{user.displayName || user.username}</h3>
-                          <p className="text-sm text-gray-600">{user.email}</p>
                         </div>
                       </div>
                     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Settings, UserPlus, LogIn, ChevronDown } from 'lucide-react';
+import { User, LogOut, Settings, UserPlus, LogIn, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { AuthModal } from './AuthModal';
 import { GuestConversionModal } from './GuestConversionModal';
@@ -32,39 +32,38 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-  
+
   const handleSignIn = () => {
     setAuthModalMode('signin');
     setShowAuthModal(true);
     setIsDropdownOpen(false);
   };
-  
+
   const handleSignUp = () => {
     setAuthModalMode('signup');
     setShowAuthModal(true);
     setIsDropdownOpen(false);
   };
-  
+
   const handleSignOut = async () => {
     await signOut();
     setIsDropdownOpen(false);
   };
-  
+
   const handleConvertAccount = () => {
     setShowConversionModal(true);
     setIsDropdownOpen(false);
   };
-  
+
   const handleSettingsClick = () => {
     if (onSettingsClick) {
       onSettingsClick();
       setIsDropdownOpen(false);
     }
   };
-  
+
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Profile Button */}
       <button
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/20 transition-colors"
@@ -90,7 +89,10 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             }
           </p>
         </div>
-        <ChevronDown className="h-4 w-4 text-white" />
+        {isDropdownOpen ? 
+          <ChevronUp className="h-4 w-4 text-white" /> : 
+          <ChevronDown className="h-4 w-4 text-white" />
+        }
       </button>
       
       {/* Dropdown Menu */}
@@ -102,7 +104,6 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                 <p className="text-sm font-medium text-gray-900 truncate">
                   {user?.displayName || user?.username}
                 </p>
-                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
               </div>
               <button
                 onClick={handleSettingsClick}
