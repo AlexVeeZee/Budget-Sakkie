@@ -1,8 +1,9 @@
 import React, { memo } from 'react';
-import { ShoppingCart, TrendingDown, TrendingUp, MapPin, Clock, HelpCircle } from 'lucide-react';
+import { ShoppingCart, TrendingDown, TrendingUp, MapPin, Clock, HelpCircle, Check, Plus } from 'lucide-react';
 import { Product, Price } from '../types';
 import { useLanguage } from '../hooks/useLanguage';
 import { useCurrency } from '../hooks/useCurrency';
+import { useCart } from '../context/CartContext';
 
 interface ProductCardProps {
   product: Product;
@@ -19,6 +20,7 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
 }) => {
   const { t } = useLanguage();
   const { formatCurrency } = useCurrency();
+  const { addItem, isInCart } = useCart();
   
   const sortedPrices = [...prices].sort((a, b) => a.price - b.price);
   const bestPrice = sortedPrices[0];
@@ -42,6 +44,19 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
       default: return 'Unknown';
     }
   };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    addItem(product);
+    
+    if (onAddToList) {
+      onAddToList();
+    }
+  };
+
+  const productInCart = isInCart(product.id);
 
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
@@ -125,11 +140,24 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
           </button>
           
           <button
-            onClick={onAddToList}
-            className="flex items-center justify-center space-x-2 bg-green-50 hover:bg-green-100 text-green-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
+            onClick={handleAddToCart}
+            className={`flex items-center justify-center space-x-2 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px] ${
+              productInCart 
+                ? 'bg-green-600 text-white hover:bg-green-700' 
+                : 'bg-green-50 text-green-700 hover:bg-green-100'
+            }`}
           >
-            <ShoppingCart className="h-4 w-4" />
-            <span className="text-sm">{t('product.add_to_list')}</span>
+            {productInCart ? (
+              <>
+                <Check className="h-4 w-4" />
+                <span className="text-sm">Added to List</span>
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                <span className="text-sm">{t('product.add_to_list')}</span>
+              </>
+            )}
           </button>
         </div>
 

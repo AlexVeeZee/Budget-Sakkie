@@ -3,6 +3,7 @@ import { Search, Filter, ScanLine, MapPin, TrendingDown, ShoppingCart } from 'lu
 import { useProducts } from '../../hooks/useProducts';
 import { useCurrency } from '../../hooks/useCurrency';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useCart } from '../../context/CartContext';
 import type { ProductWithCategory } from '../../services/productService';
 
 // Lazy load heavy components
@@ -33,6 +34,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToList }) => {
   const { formatCurrency } = useCurrency();
+  const { addItem, isInCart } = useCart();
 
   const getStoreColor = (storeId: string) => {
     const storeColors: { [key: string]: string } = {
@@ -52,6 +54,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
   };
 
   const stockStatus = getStockStatus(product.stock_quantity);
+  const productInCart = isInCart(product.id);
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    addItem({
+      id: product.id,
+      name: product.name,
+      brand: product.category?.name || 'Generic',
+      category: product.category?.name || 'General',
+      image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+      unit: 'each',
+      unitSize: 'each',
+      price: product.price
+    });
+    
+    if (onAddToList) {
+      onAddToList();
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
@@ -122,11 +145,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
           </button>
           
           <button
-            onClick={onAddToList}
-            className="flex items-center justify-center space-x-2 bg-green-50 hover:bg-green-100 text-green-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
+            onClick={handleAddToCart}
+            className={`flex items-center justify-center space-x-2 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px] ${
+              productInCart 
+                ? 'bg-green-600 text-white hover:bg-green-700' 
+                : 'bg-green-50 text-green-700 hover:bg-green-100'
+            }`}
           >
-            <ShoppingCart className="h-4 w-4" />
-            <span className="text-sm">Add to List</span>
+            {productInCart ? (
+              <>
+                <ShoppingCart className="h-4 w-4" />
+                <span className="text-sm">Added to List</span>
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4" />
+                <span className="text-sm">Add to List</span>
+              </>
+            )}
           </button>
         </div>
 
@@ -160,6 +196,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
   const [selectedStore, setSelectedStore] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const [addedToCartMessage, setAddedToCartMessage] = useState<string | null>(null);
 
   // Debounced search effect
   useEffect(() => {
@@ -244,6 +281,12 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
     }
   };
 
+  const handleAddToList = (product: ProductWithCategory) => {
+    // Show temporary message
+    setAddedToCartMessage(`Added ${product.name} to list`);
+    setTimeout(() => setAddedToCartMessage(null), 2000);
+  };
+
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -263,6 +306,16 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Success Message */}
+      {addedToCartMessage && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in-down">
+          <div className="flex items-center space-x-2">
+            <ShoppingCart className="h-4 w-4" />
+            <span>{addedToCartMessage}</span>
+          </div>
+        </div>
+      )}
+
       {/* Search Header */}
       <div className="mb-6">
         <div className="relative mb-4">
@@ -395,7 +448,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
                   key={product.id}
                   product={product}
                   onCompare={() => console.log('Compare', product.name)}
-                  onAddToList={() => console.log('Add to list', product.name)}
+                  onAddToList={() => handleAddToList(product)}
                 />
               ))}
             </div>
@@ -412,6 +465,23 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
           />
         )}
       </Suspense>
+
+      {/* Add animation styles */}
+      <style jsx>{`
+        @keyframes fade-in-down {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -20px);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+          }
+        }
+        .animate-fade-in-down {
+          animation: fade-in-down 0.3s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 };
