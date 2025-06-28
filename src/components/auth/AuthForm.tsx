@@ -5,7 +5,7 @@ import { AuthFormState } from '../../types/auth';
 
 interface AuthFormProps {
   mode: 'signin' | 'signup' | 'reset';
-  onModeChange: (mode: 'signin' | 'signup' | 'reset') => void;
+  onModeChange: (mode: 'signin' | 'signup' | 'reset' | 'guest') => void;
   onSuccess?: () => void;
 }
 

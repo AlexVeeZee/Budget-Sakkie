@@ -11,6 +11,7 @@ import { AuthProvider } from './components/auth/AuthProvider';
 import { AuthModal } from './components/auth/AuthModal';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { useAuthStore } from './store/authStore';
+import { GuestBanner } from './components/auth/GuestBanner';
 
 // Lazy load heavy modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -231,7 +232,10 @@ function AppContent() {
                   Create Account
                 </button>
                 <button
-                  onClick={() => setActiveTab('search')}
+                  onClick={() => {
+                    setAuthModalMode('guest');
+                    setShowAuthModal(true);
+                  }}
                   className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
                 >
                   Continue as Guest

@@ -67,9 +67,9 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
       {/* Profile Button */}
       <button
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+        className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/20 transition-colors"
       >
-        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center overflow-hidden">
           {user?.avatarUrl ? (
             <img 
               src={user.avatarUrl} 
@@ -77,11 +77,11 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
               className="w-full h-full object-cover"
             />
           ) : (
-            <User className="h-5 w-5 text-gray-500" />
+            <User className="h-5 w-5 text-white" />
           )}
         </div>
         <div className="hidden md:block text-left">
-          <p className="text-sm font-medium text-gray-700">
+          <p className="text-sm font-medium text-white">
             {isAuthenticated 
               ? (user?.displayName || user?.username) 
               : isGuest 
@@ -89,7 +89,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                 : 'Sign In'
             }
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-white/80">
             {isAuthenticated 
               ? 'Account' 
               : isGuest 
@@ -98,7 +98,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             }
           </p>
         </div>
-        <ChevronDown className="h-4 w-4 text-gray-500" />
+        <ChevronDown className="h-4 w-4 text-white" />
       </button>
       
       {/* Dropdown Menu */}
