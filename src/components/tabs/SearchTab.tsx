@@ -1,8 +1,9 @@
 import React, { useState, useMemo, lazy, Suspense, useEffect } from 'react';
-import { Search, Filter, ScanLine, MapPin, TrendingDown, ShoppingCart } from 'lucide-react';
+import { Search, Filter, ScanLine, MapPin, TrendingDown, ShoppingCart, X, Plus } from 'lucide-react';
 import { useProducts } from '../../hooks/useProducts';
 import { useCurrency } from '../../hooks/useCurrency';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useCart } from '../../context/CartContext';
 import type { ProductWithCategory } from '../../services/productService';
 import { AddToListModal } from '../modals/AddToListModal';
 
@@ -31,9 +32,16 @@ interface ProductCardProps {
   product: ProductWithCategory;
   onCompare: () => void;
   onAddToList: () => void;
+  isSelected: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToList }) => {
+interface TemporaryItem {
+  id: string;
+  product: ProductWithCategory;
+  quantity: number;
+}
+
+const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToList, isSelected }) => {
   const { formatCurrency } = useCurrency();
 
   const getStoreColor = (storeId: string) => {
@@ -55,11 +63,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
 
   const stockStatus = getStockStatus(product.stock_quantity);
 
+  const handleAddToList = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onAddToList();
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer" onClick={onCompare}>
-      <div 
-        className="relative cursor-pointer"
-      >
+      <div className="relative cursor-pointer">
         <img 
           src={product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'}
           alt={product.name}
@@ -119,7 +131,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <button
             onClick={(e) => {
-              e.stopPropagation(); // Prevent triggering the parent onClick
+              e.stopPropagation();
               onCompare();
             }}
             className="flex items-center justify-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
@@ -129,14 +141,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
           </button>
           
           <button
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent triggering the parent onClick
-              onAddToList();
-            }}
-            className="flex items-center justify-center space-x-2 bg-green-50 hover:bg-green-100 text-green-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
+            onClick={handleAddToList}
+            className={`flex items-center justify-center space-x-2 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px] ${
+              isSelected 
+                ? 'bg-green-600 text-white hover:bg-green-700' 
+                : 'bg-green-50 text-green-700 hover:bg-green-100'
+            }`}
           >
-            <ShoppingCart className="h-4 w-4" />
-            <span className="text-sm">Add to List</span>
+            {isSelected ? (
+              <>
+                <ShoppingCart className="h-4 w-4" />
+                <span className="text-sm">Selected</span>
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                <span className="text-sm">Add to List</span>
+              </>
+            )}
           </button>
         </div>
 
@@ -148,6 +170,94 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Temporary Items Bar Component
+const TemporaryItemsBar: React.FC<{
+  items: TemporaryItem[];
+  onRemoveItem: (productId: string) => void;
+  onClearAll: () => void;
+  onCreateNewList: () => void;
+  onAddToExistingList: () => void;
+}> = ({ items, onRemoveItem, onClearAll, onCreateNewList, onAddToExistingList }) => {
+  const { formatCurrency } = useCurrency();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 animate-slide-up">
+      {/* Collapsed View */}
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center space-x-2 text-gray-700 font-medium"
+          >
+            <ShoppingCart className="h-5 w-5 text-green-600" />
+            <span>{items.length} item{items.length > 1 ? 's' : ''} selected</span>
+          </button>
+          
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={onClearAll}
+              className="p-2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          <button
+            onClick={onCreateNewList}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+          >
+            Create New List
+          </button>
+          <button
+            onClick={onAddToExistingList}
+            className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+          >
+            Add to Existing List
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded View */}
+      {isExpanded && (
+        <div className="border-t border-gray-200 bg-gray-50 max-h-40 overflow-y-auto">
+          <div className="px-4 py-2">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Items</h4>
+            <div className="space-y-2">
+              {items.map((item) => (
+                <div key={item.id} className="flex items-center justify-between bg-white rounded-lg p-2">
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={item.product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'}
+                      alt={item.product.name}
+                      className="w-8 h-8 rounded object-cover"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{item.product.name}</p>
+                      <p className="text-xs text-gray-500">{formatCurrency(item.product.price)}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onRemoveItem(item.product.id)}
+                    className="p-1 text-gray-400 hover:text-red-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -174,8 +284,11 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [selectedStore, setSelectedStore] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  
+  // Temporary items state
+  const [temporaryItems, setTemporaryItems] = useState<TemporaryItem[]>([]);
   const [showAddToListModal, setShowAddToListModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<ProductWithCategory | null>(null);
+  const [listAction, setListAction] = useState<'create' | 'existing' | null>(null);
 
   // Debounced search effect
   useEffect(() => {
@@ -261,7 +374,6 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   };
 
   const handleCompareProduct = (product: ProductWithCategory) => {
-    // Use the onProductSelect callback to navigate to the compare tab
     if (onProductSelect) {
       onProductSelect({
         id: product.id,
@@ -271,8 +383,41 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   };
 
   const handleAddToList = (product: ProductWithCategory) => {
-    setSelectedProduct(product);
+    const existingItem = temporaryItems.find(item => item.product.id === product.id);
+    
+    if (existingItem) {
+      // Remove from temporary list if already selected
+      setTemporaryItems(prev => prev.filter(item => item.product.id !== product.id));
+    } else {
+      // Add to temporary list
+      setTemporaryItems(prev => [...prev, {
+        id: product.id,
+        product,
+        quantity: 1
+      }]);
+    }
+  };
+
+  const handleRemoveFromTemporary = (productId: string) => {
+    setTemporaryItems(prev => prev.filter(item => item.product.id !== productId));
+  };
+
+  const handleClearAll = () => {
+    setTemporaryItems([]);
+  };
+
+  const handleCreateNewList = () => {
+    setListAction('create');
     setShowAddToListModal(true);
+  };
+
+  const handleAddToExistingList = () => {
+    setListAction('existing');
+    setShowAddToListModal(true);
+  };
+
+  const isProductSelected = (productId: string) => {
+    return temporaryItems.some(item => item.product.id === productId);
   };
 
   if (error) {
@@ -293,7 +438,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
       {/* Search Header */}
       <div className="mb-6">
         <div className="relative mb-4">
@@ -427,12 +572,22 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                   product={product}
                   onCompare={() => handleCompareProduct(product)}
                   onAddToList={() => handleAddToList(product)}
+                  isSelected={isProductSelected(product.id)}
                 />
               ))}
             </div>
           )}
         </>
       )}
+
+      {/* Temporary Items Bar */}
+      <TemporaryItemsBar
+        items={temporaryItems}
+        onRemoveItem={handleRemoveFromTemporary}
+        onClearAll={handleClearAll}
+        onCreateNewList={handleCreateNewList}
+        onAddToExistingList={handleAddToExistingList}
+      />
 
       {/* Lazy loaded Filter Modal */}
       <Suspense fallback={<div>Loading...</div>}>
@@ -445,33 +600,52 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       </Suspense>
 
       {/* Add to List Modal */}
-      {showAddToListModal && selectedProduct && (
+      {showAddToListModal && temporaryItems.length > 0 && (
         <AddToListModal
           isOpen={showAddToListModal}
           onClose={() => setShowAddToListModal(false)}
           product={{
-            id: selectedProduct.id,
-            name: selectedProduct.name,
-            brand: 'Generic',
-            category: selectedProduct.category?.name || 'General',
-            image: selectedProduct.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
-            unit: 'each',
-            unitSize: 'each',
-            barcode: selectedProduct.sku
+            id: temporaryItems[0].product.id,
+            name: `${temporaryItems.length} selected items`,
+            brand: 'Multiple',
+            category: 'Multiple',
+            image: temporaryItems[0].product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+            unit: 'items',
+            unitSize: `${temporaryItems.length}`,
+            barcode: 'MULTIPLE'
           }}
-          quantity={1}
+          quantity={temporaryItems.length}
           onAddToList={(listId, quantity) => {
-            console.log('Adding to list:', listId, 'product:', selectedProduct.name, 'quantity:', quantity);
-            alert(`Added ${selectedProduct.name} to shopping list!`);
+            console.log('Adding items to list:', listId, 'items:', temporaryItems.length);
+            alert(`Added ${temporaryItems.length} items to shopping list!`);
+            setTemporaryItems([]);
             setShowAddToListModal(false);
           }}
           onCreateNewList={() => {
-            console.log('Creating new list with product:', selectedProduct.name);
-            alert(`Created new list with ${selectedProduct.name}!`);
+            console.log('Creating new list with items:', temporaryItems.length);
+            alert(`Created new list with ${temporaryItems.length} items!`);
+            setTemporaryItems([]);
             setShowAddToListModal(false);
           }}
         />
       )}
+
+      {/* Add animation styles */}
+      <style jsx>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 };

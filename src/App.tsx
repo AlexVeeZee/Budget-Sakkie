@@ -10,6 +10,8 @@ import { Sidebar } from './components/Sidebar';
 import { AuthProvider } from './hooks/useAuth.tsx';
 import { AuthModal } from './components/auth/AuthModal';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { CartProvider } from './context/CartContext';
+import { TemporaryItemsBar } from './components/TemporaryItemsBar';
 
 // Lazy load heavy modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -255,6 +257,9 @@ function AppContent() {
         </ProtectedRoute>
       </main>
       
+      {/* Temporary Items Bar */}
+      <TemporaryItemsBar />
+      
       <BottomNavigation 
         activeTab={activeTab}
         onTabChange={handleTabChange}
@@ -318,7 +323,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <CartProvider>
+        <AppContent />
+      </CartProvider>
     </AuthProvider>
   );
 }
