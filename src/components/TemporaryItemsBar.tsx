@@ -80,11 +80,10 @@ export const TemporaryItemsBar: React.FC = () => {
   return (
     <>
       <div 
-        className="fixed bottom-16 left-0 right-0 transition-transform duration-300 z-30"
+        className="fixed bottom-16 left-0 right-0 z-30"
         style={{ 
           transform: isVisible ? 'translateY(0)' : 'translateY(100%)',
-          maxHeight: isExpanded ? '60vh' : 'auto',
-          overflowY: isExpanded ? 'auto' : 'hidden'
+          transition: 'transform 0.3s ease'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -130,7 +129,13 @@ export const TemporaryItemsBar: React.FC = () => {
             
             {/* Expanded View */}
             {isExpanded && (
-              <div className="px-4 pb-4 divide-y divide-gray-100">
+              <div 
+                className="px-4 pb-4 divide-y divide-gray-100"
+                style={{
+                  maxHeight: '40vh',
+                  overflowY: 'auto'
+                }}
+              >
                 <div className="py-2 flex items-center justify-between text-sm text-gray-600">
                   <span>Total Estimated Price:</span>
                   <span className="font-bold text-gray-900">{formatCurrency(totalPrice)}</span>
