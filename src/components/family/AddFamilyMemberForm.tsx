@@ -1,31 +1,34 @@
 import React, { useState } from 'react';
 import { Mail, User, UserPlus, Shield, Crown, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { z } from 'zod';
+import { FamilyService } from '../../services/familyService';
 
 // Form validation schema
 const memberSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   relationship: z.string().min(1, 'Please select a relationship'),
-  accessLevel: z.enum(['viewer', 'editor']),
+  role: z.enum(['admin', 'member']),
 });
 
 type MemberFormData = z.infer<typeof memberSchema>;
 
 interface AddFamilyMemberFormProps {
-  onSubmit: (data: MemberFormData) => Promise<{ success: boolean; error: string | null }>;
+  familyId: string;
+  onSuccess: () => void;
   onCancel: () => void;
 }
 
 export const AddFamilyMemberForm: React.FC<AddFamilyMemberFormProps> = ({
-  onSubmit,
+  familyId,
+  onSuccess,
   onCancel
 }) => {
   const [formData, setFormData] = useState<MemberFormData>({
     fullName: '',
     email: '',
     relationship: '',
-    accessLevel: 'viewer',
+    role: 'member',
   });
   
   const [errors, setErrors] = useState<Partial<Record<keyof MemberFormData, string>>>({});
@@ -43,7 +46,7 @@ export const AddFamilyMemberForm: React.FC<AddFamilyMemberFormProps> = ({
     { value: 'friend', label: 'Friend' },
   ];
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
@@ -91,7 +94,12 @@ export const AddFamilyMemberForm: React.FC<AddFamilyMemberFormProps> = ({
     setGeneralError(null);
     
     try {
-      const { success, error } = await onSubmit(formData);
+      const { success, error } = await FamilyService.inviteToFamily(
+        familyId,
+        formData.email,
+        formData.role,
+        `${formData.fullName} has been invited to join your family group as a ${formData.relationship}.`
+      );
       
       if (!success) {
         setGeneralError(error);
@@ -104,14 +112,7 @@ export const AddFamilyMemberForm: React.FC<AddFamilyMemberFormProps> = ({
       
       // Reset form after a delay
       setTimeout(() => {
-        setFormData({
-          fullName: '',
-          email: '',
-          relationship: '',
-          accessLevel: 'viewer',
-        });
-        setSuccess(false);
-        onCancel();
+        onSuccess();
       }, 2000);
       
     } catch (error) {
@@ -130,7 +131,7 @@ export const AddFamilyMemberForm: React.FC<AddFamilyMemberFormProps> = ({
           An invitation has been sent to {formData.email}. They'll receive instructions on how to join your family group.
         </p>
         <button
-          onClick={onCancel}
+          onClick={onSuccess}
           className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
         >
           Continue
@@ -234,34 +235,34 @@ export const AddFamilyMemberForm: React.FC<AddFamilyMemberFormProps> = ({
           <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
             <input
               type="radio"
-              name="accessLevel"
-              value="viewer"
-              checked={formData.accessLevel === 'viewer'}
+              name="role"
+              value="member"
+              checked={formData.role === 'member'}
               onChange={handleInputChange}
               className="h-4 w-4 text-green-600 focus:ring-green-500"
               disabled={isSubmitting}
             />
             <Shield className="h-5 w-5 text-blue-600" />
             <div className="flex-1">
-              <p className="font-medium text-gray-900">Viewer</p>
-              <p className="text-sm text-gray-600">Can view shared lists and budgets, but cannot edit them</p>
+              <p className="font-medium text-gray-900">Member</p>
+              <p className="text-sm text-gray-600">Can view shared lists and budgets, with limited editing permissions</p>
             </div>
           </label>
           
           <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
             <input
               type="radio"
-              name="accessLevel"
-              value="editor"
-              checked={formData.accessLevel === 'editor'}
+              name="role"
+              value="admin"
+              checked={formData.role === 'admin'}
               onChange={handleInputChange}
               className="h-4 w-4 text-green-600 focus:ring-green-500"
               disabled={isSubmitting}
             />
             <Crown className="h-5 w-5 text-yellow-600" />
             <div className="flex-1">
-              <p className="font-medium text-gray-900">Editor</p>
-              <p className="text-sm text-gray-600">Can create, view, and edit shared lists and budgets</p>
+              <p className="font-medium text-gray-900">Admin</p>
+              <p className="text-sm text-gray-600">Can create, view, and edit shared lists and budgets, plus manage family members</p>
             </div>
           </label>
         </div>

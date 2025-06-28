@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Users, Mail, Clock, Plus } from 'lucide-react';
-import { FamilyManagementPanel } from '../components/family/FamilyManagementPanel';
+import { FamilySharingComponent } from '../components/family/FamilySharingComponent';
 import { FamilyInvitationsList } from '../components/family/FamilyInvitationsList';
 import { useFamily } from '../hooks/useFamily';
 import { FamilyService } from '../services/familyService';
@@ -57,7 +57,7 @@ export const FamilyManagementPage: React.FC = () => {
       
       {/* Content */}
       {activeTab === 'members' ? (
-        <FamilyManagementPanel />
+        <FamilySharingComponent />
       ) : (
         <div className="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-sm">
           <div className="flex items-center justify-between mb-6">

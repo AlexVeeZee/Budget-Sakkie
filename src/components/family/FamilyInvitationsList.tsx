@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Clock, CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react';
 import { FamilyInvitation } from '../../types/family';
-import { FamilyService } from '../../services/familyService';
 
 interface FamilyInvitationsListProps {
   invitations: FamilyInvitation[];

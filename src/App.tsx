@@ -14,6 +14,7 @@ import { useAuthStore } from './store/authStore';
 import { GuestBanner } from './components/auth/GuestBanner';
 import { CartProvider } from './context/CartContext';
 import { TemporaryItemsBar } from './components/TemporaryItemsBar';
+import { FamilySharingComponent } from './components/family/FamilySharingComponent';
 
 // Lazy load heavy modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -23,7 +24,7 @@ const RewardsModal = lazy(() => import('./components/modals/RewardsModal').then(
 const FamilySharingModal = lazy(() => import('./components/modals/FamilySharingModal').then(module => ({ default: module.FamilySharingModal })));
 const HelpSupportModal = lazy(() => import('./components/modals/HelpSupportModal').then(module => ({ default: module.HelpSupportModal })));
 
-type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile';
+type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile' | 'family';
 
 // Interface for product selection in compare tab
 interface SelectedProductInfo {
@@ -148,6 +149,8 @@ function AppContent() {
         return <ListsTab />;
       case 'deals':
         return <DealsTab />;
+      case 'family':
+        return <FamilySharingComponent />;
       case 'profile':
         return (
           <ProfileTab 
@@ -233,7 +236,7 @@ function AppContent() {
       
       <main className={`pb-20 pt-4 transition-all duration-300 ${sidebarOpen ? 'ml-80' : ''}`}>
         <ProtectedRoute 
-          allowGuest={activeTab !== 'lists' && activeTab !== 'profile'}
+          allowGuest={activeTab !== 'lists' && activeTab !== 'profile' && activeTab !== 'family'}
           fallback={
             <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-xl shadow-md">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Budget Sakkie</h2>

@@ -1,8 +1,8 @@
 import React from 'react';
-import { Search, BarChart3, List, Tag, User } from 'lucide-react';
+import { Search, BarChart3, List, Tag, User, Users } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 
-type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile';
+type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile' | 'family';
 
 interface BottomNavigationProps {
   activeTab: TabType;
@@ -17,6 +17,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, o
     { id: 'compare' as const, icon: BarChart3, label: t('nav.compare') },
     { id: 'lists' as const, icon: List, label: t('nav.lists') },
     { id: 'deals' as const, icon: Tag, label: t('nav.deals') },
+    { id: 'family' as const, icon: Users, label: 'Family' },
     { id: 'profile' as const, icon: User, label: t('nav.profile') }
   ];
 
