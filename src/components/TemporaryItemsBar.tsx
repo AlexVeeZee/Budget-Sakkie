@@ -89,7 +89,7 @@ export const TemporaryItemsBar: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white border-t border-gray-200 shadow-lg rounded-t-lg">
             {/* Collapsed View */}
-            <div className="py-4 px-4 flex items-center justify-between">
+            <div className="custom-bottom-padding py-4 px-4 flex items-center justify-between">
               <button 
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="flex items-center space-x-2 text-gray-700"
@@ -226,6 +226,9 @@ export const TemporaryItemsBar: React.FC = () => {
         }
         .animate-fade-in-up {
           animation: fade-in-up 0.3s ease-out forwards;
+        }
+        .custom-bottom-padding {
+          padding-bottom: 1.45rem;
         }
       `}</style>
     </>
