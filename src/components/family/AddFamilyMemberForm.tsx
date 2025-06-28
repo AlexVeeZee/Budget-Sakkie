@@ -94,11 +94,15 @@ export const AddFamilyMemberForm: React.FC<AddFamilyMemberFormProps> = ({
     setGeneralError(null);
     
     try {
+      // Create a personalized message that includes the relationship
+      const message = `${formData.fullName} has been invited to join your family group as a ${formData.relationship}.`;
+      
       const { success, error } = await FamilyService.inviteToFamily(
         familyId,
         formData.email,
         formData.role,
-        `${formData.fullName} has been invited to join your family group as a ${formData.relationship}.`
+        message,
+        formData.relationship // Pass relationship to the service
       );
       
       if (!success) {

@@ -49,12 +49,13 @@ export const useFamily = () => {
           const members: FamilyMember[] = family.family_members.map(member => ({
             id: member.user_id || '',
             name: member.user_profiles?.display_name || 'Unknown User',
-            email: '', // Email not available from Supabase query
+            email: member.user_profiles?.alternative_email || '', // Now using alternative_email
             role: member.role as 'admin' | 'member',
             avatar: member.user_profiles?.profile_image_url || '',
             joinedDate: member.joined_at || '',
             status: 'active', // Assuming all members in the DB are active
             lastActive: new Date().toISOString(),
+            relationship: member.relationship || undefined, // Include relationship field
             permissions: {
               viewLists: true,
               editLists: member.role === 'admin',
@@ -145,12 +146,13 @@ export const useFamily = () => {
         const members: FamilyMember[] = newFamily.family_members.map(member => ({
           id: member.user_id || '',
           name: member.user_profiles?.display_name || 'Unknown User',
-          email: '', // Email not available from Supabase query
+          email: member.user_profiles?.alternative_email || '', // Now using alternative_email
           role: member.role as 'admin' | 'member',
           avatar: member.user_profiles?.profile_image_url || '',
           joinedDate: member.joined_at || '',
           status: 'active',
           lastActive: new Date().toISOString(),
+          relationship: member.relationship || undefined, // Include relationship field
           permissions: {
             viewLists: true,
             editLists: member.role === 'admin',
@@ -212,7 +214,7 @@ export const useFamily = () => {
     }
   }, []);
 
-  const inviteMember = useCallback(async (email: string, role: 'admin' | 'member', message?: string) => {
+  const inviteMember = useCallback(async (email: string, role: 'admin' | 'member', relationship?: string, message?: string) => {
     try {
       setState(prev => ({ ...prev, loading: true }));
       
@@ -224,7 +226,9 @@ export const useFamily = () => {
       const { success, error } = await FamilyService.inviteToFamily(
         state.currentFamily.id,
         email,
-        role
+        role,
+        message,
+        relationship
       );
       
       if (!success) {
@@ -318,6 +322,60 @@ export const useFamily = () => {
     }
   }, [state.currentFamily]);
 
+  const updateMemberRelationship = useCallback(async (memberId: string, relationship: string) => {
+    try {
+      setState(prev => ({ ...prev, loading: true }));
+      
+      if (!state.currentFamily) {
+        setState(prev => ({ ...prev, loading: false, error: 'No family selected' }));
+        return { success: false, error: 'No family selected' };
+      }
+      
+      const { success, error } = await FamilyService.updateMemberRelationship(
+        state.currentFamily.id,
+        memberId,
+        relationship
+      );
+      
+      if (!success) {
+        setState(prev => ({ ...prev, loading: false, error }));
+        return { success: false, error };
+      }
+      
+      // Update the member relationship in the state
+      setState(prev => {
+        if (!prev.currentFamily) return prev;
+        
+        const updatedMembers = prev.currentFamily.members.map(member =>
+          member.id === memberId ? { ...member, relationship } : member
+        );
+        
+        const updatedFamily = {
+          ...prev.currentFamily,
+          members: updatedMembers
+        };
+        
+        return {
+          ...prev,
+          currentFamily: updatedFamily,
+          families: prev.families.map(f => 
+            f.id === updatedFamily.id ? updatedFamily : f
+          ),
+          loading: false
+        };
+      });
+      
+      return { success: true };
+    } catch (error) {
+      setState(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: error instanceof Error ? error.message : 'Failed to update member relationship' 
+      }));
+      return { success: false, error: 'Failed to update member relationship' };
+    }
+  }, [state.currentFamily]);
+
   const removeMember = useCallback(async (memberId: string) => {
     try {
       setState(prev => ({ ...prev, loading: true }));
@@ -380,6 +438,7 @@ export const useFamily = () => {
     createFamily,
     inviteMember,
     updateMemberRole,
+    updateMemberRelationship,
     removeMember
   };
 };

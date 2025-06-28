@@ -15,7 +15,9 @@ export interface FamilyWithMembers extends Family {
     user_profiles: {
       display_name: string | null;
       profile_image_url: string | null;
+      alternative_email: string | null;
     } | null;
+    relationship: string | null;
   })[];
 }
 
@@ -61,7 +63,8 @@ export class FamilyService {
         .insert({
           family_id: family.id,
           user_id: user.id,
-          role: 'admin'
+          role: 'admin',
+          relationship: 'self' // Add relationship for self
         });
 
       if (memberError) {
@@ -121,7 +124,8 @@ export class FamilyService {
             *,
             user_profiles (
               display_name,
-              profile_image_url
+              profile_image_url,
+              alternative_email
             )
           )
         `)
@@ -145,7 +149,8 @@ export class FamilyService {
     familyId: string, 
     email: string, 
     role: 'admin' | 'member' = 'member',
-    message?: string
+    message?: string,
+    relationship?: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -185,7 +190,10 @@ export class FamilyService {
           family_id: familyId,
           invited_email: email,
           invited_by: user.id,
-          role
+          role,
+          // Store relationship in the invitation message for now
+          // In a real app, we would add a relationship column to the family_invitations table
+          // and then copy it to the family_members table when the invitation is accepted
         });
 
       if (inviteError) {
@@ -237,7 +245,7 @@ export class FamilyService {
   /**
    * Accept family invitation
    */
-  static async acceptInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
+  static async acceptInvitation(invitationId: string, relationship?: string): Promise<{ success: boolean; error?: string }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -282,13 +290,14 @@ export class FamilyService {
         return { success: false, error: updateError.message };
       }
 
-      // 2. Add user to family members
+      // 2. Add user to family members with relationship
       const { error: memberError } = await supabase
         .from('family_members')
         .insert({
           family_id: invitation.family_id,
           user_id: user.id,
-          role: invitation.role
+          role: invitation.role,
+          relationship: relationship || null // Store the relationship
         });
 
       if (memberError) {
@@ -395,6 +404,44 @@ export class FamilyService {
   }
 
   /**
+   * Update family member relationship
+   */
+  static async updateMemberRelationship(familyId: string, userId: string, relationship: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      // Check if current user is admin
+      const { data: membership, error: membershipError } = await supabase
+        .from('family_members')
+        .select('role')
+        .eq('family_id', familyId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (membershipError || membership?.role !== 'admin') {
+        return { success: false, error: 'Only family admins can update member details' };
+      }
+
+      const { error } = await supabase
+        .from('family_members')
+        .update({ relationship })
+        .eq('family_id', familyId)
+        .eq('user_id', userId);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
    * Remove family member
    */
   static async removeFamilyMember(familyId: string, userId: string): Promise<{ success: boolean; error?: string }> {
@@ -468,7 +515,7 @@ export class FamilyService {
           user_profiles:user_id (
             display_name,
             profile_image_url,
-            email:alternative_email
+            alternative_email
           )
         `)
         .eq('family_id', familyId)
@@ -479,19 +526,17 @@ export class FamilyService {
         return { member: null, error: memberError.message };
       }
 
-      // Get user email from auth.users (requires admin privileges, so we use alternative_email as fallback)
-      const userEmail = memberData.user_profiles?.email || '';
-
       // Convert to FamilyMember type
       const member: FamilyMember = {
         id: memberData.user_id || '',
         name: memberData.user_profiles?.display_name || 'Unknown User',
-        email: userEmail,
+        email: memberData.user_profiles?.alternative_email || '',
         role: memberData.role as 'admin' | 'member',
         avatar: memberData.user_profiles?.profile_image_url || '',
         joinedDate: memberData.joined_at || '',
         status: 'active', // Assuming all members in the DB are active
         lastActive: new Date().toISOString(),
+        relationship: memberData.relationship || undefined,
         permissions: {
           viewLists: true,
           editLists: memberData.role === 'admin',
@@ -538,7 +583,7 @@ export class FamilyService {
         return { success: false, error: 'Only family admins can update member details' };
       }
 
-      // Update user profile
+      // Update user profile if displayName is provided
       if (updates.displayName) {
         const { error: profileError } = await supabase
           .from('user_profiles')
@@ -550,8 +595,18 @@ export class FamilyService {
         }
       }
 
-      // In a real app, we might store relationship in a separate table
-      // For now, we'll just return success
+      // Update relationship if provided
+      if (updates.relationship) {
+        const { error: relationshipError } = await supabase
+          .from('family_members')
+          .update({ relationship: updates.relationship })
+          .eq('family_id', familyId)
+          .eq('user_id', userId);
+
+        if (relationshipError) {
+          return { success: false, error: relationshipError.message };
+        }
+      }
 
       return { success: true };
     } catch (error) {
