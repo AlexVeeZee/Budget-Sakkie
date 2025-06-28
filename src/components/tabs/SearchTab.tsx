@@ -121,7 +121,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       category: product.category?.name || 'General',
       image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
       unit: 'each',
-      unitSize: 'each',
+      unitSize: getUnitSize(product),
       price: product.price
     });
   };
@@ -136,6 +136,18 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       'spar': 'SPAR'
     };
     return storeNames[storeId] || storeId;
+  }
+
+  // Helper function to determine unit size based on product data
+  function getUnitSize(product: ProductWithCategory): string {
+    if (product.sku?.includes('kg')) return 'per kg';
+    if (product.sku?.includes('g')) return product.sku.match(/\d+g/) ? product.sku.match(/\d+g/)?.[0] || 'pack' : 'pack';
+    if (product.sku?.includes('L') || product.sku?.includes('l')) return product.sku.match(/\d+[Ll]/) ? product.sku.match(/\d+[Ll]/)?.[0] || 'bottle' : 'bottle';
+    if (product.category?.name === 'Dairy & Eggs') return 'pack';
+    if (product.category?.name === 'Fresh Produce') return 'per kg';
+    if (product.category?.name === 'Meat & Poultry') return 'per kg';
+    if (product.category?.name === 'Bakery') return 'loaf';
+    return 'each';
   }
 
   if (error) {
@@ -291,7 +303,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 category: product.category?.name || 'General',
                 image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
                 unit: 'each',
-                unitSize: product.sku?.includes('kg') ? 'per kg' : 'each',
+                unitSize: getUnitSize(product),
                 price: product.price
               }))}
               onProductSelect={onProductSelect}
