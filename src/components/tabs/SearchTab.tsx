@@ -290,6 +290,9 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [showAddToListModal, setShowAddToListModal] = useState(false);
   const [listAction, setListAction] = useState<'create' | 'existing' | null>(null);
 
+  // Use the cart context
+  const { items, addItem, removeItem, isInCart } = useCart();
+
   // Debounced search effect
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -383,27 +386,24 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   };
 
   const handleAddToList = (product: ProductWithCategory) => {
-    const existingItem = temporaryItems.find(item => item.product.id === product.id);
-    
-    if (existingItem) {
-      // Remove from temporary list if already selected
-      setTemporaryItems(prev => prev.filter(item => item.product.id !== product.id));
-    } else {
-      // Add to temporary list
-      setTemporaryItems(prev => [...prev, {
-        id: product.id,
-        product,
-        quantity: 1
-      }]);
-    }
+    addItem({
+      id: product.id,
+      name: product.name,
+      brand: product.category?.name || 'Generic',
+      category: product.category?.name || 'General',
+      image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+      unit: 'each',
+      unitSize: 'each',
+      price: product.price
+    });
   };
 
   const handleRemoveFromTemporary = (productId: string) => {
-    setTemporaryItems(prev => prev.filter(item => item.product.id !== productId));
+    removeItem(productId);
   };
 
   const handleClearAll = () => {
-    setTemporaryItems([]);
+    items.forEach(item => removeItem(item.product.id));
   };
 
   const handleCreateNewList = () => {
@@ -417,7 +417,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   };
 
   const isProductSelected = (productId: string) => {
-    return temporaryItems.some(item => item.product.id === productId);
+    return isInCart(productId);
   };
 
   if (error) {
@@ -580,15 +580,6 @@ export const SearchTab: React.FC<SearchTabProps> = ({
         </>
       )}
 
-      {/* Temporary Items Bar */}
-      <TemporaryItemsBar
-        items={temporaryItems}
-        onRemoveItem={handleRemoveFromTemporary}
-        onClearAll={handleClearAll}
-        onCreateNewList={handleCreateNewList}
-        onAddToExistingList={handleAddToExistingList}
-      />
-
       {/* Lazy loaded Filter Modal */}
       <Suspense fallback={<div>Loading...</div>}>
         {showFilterModal && (
@@ -600,31 +591,31 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       </Suspense>
 
       {/* Add to List Modal */}
-      {showAddToListModal && temporaryItems.length > 0 && (
+      {showAddToListModal && items.length > 0 && (
         <AddToListModal
           isOpen={showAddToListModal}
           onClose={() => setShowAddToListModal(false)}
           product={{
-            id: temporaryItems[0].product.id,
-            name: `${temporaryItems.length} selected items`,
+            id: items[0].product.id,
+            name: `${items.length} selected items`,
             brand: 'Multiple',
             category: 'Multiple',
-            image: temporaryItems[0].product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+            image: items[0].product.image,
             unit: 'items',
-            unitSize: `${temporaryItems.length}`,
+            unitSize: `${items.length}`,
             barcode: 'MULTIPLE'
           }}
-          quantity={temporaryItems.length}
+          quantity={items.length}
           onAddToList={(listId, quantity) => {
-            console.log('Adding items to list:', listId, 'items:', temporaryItems.length);
-            alert(`Added ${temporaryItems.length} items to shopping list!`);
-            setTemporaryItems([]);
+            console.log('Adding items to list:', listId, 'items:', items.length);
+            alert(`Added ${items.length} items to shopping list!`);
+            handleClearAll();
             setShowAddToListModal(false);
           }}
           onCreateNewList={() => {
-            console.log('Creating new list with items:', temporaryItems.length);
-            alert(`Created new list with ${temporaryItems.length} items!`);
-            setTemporaryItems([]);
+            console.log('Creating new list with items:', items.length);
+            alert(`Created new list with ${items.length} items!`);
+            handleClearAll();
             setShowAddToListModal(false);
           }}
         />
