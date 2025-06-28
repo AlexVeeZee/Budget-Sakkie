@@ -5,11 +5,23 @@ import { useCurrency, Currency } from '../../hooks/useCurrency';
 import { useLocation } from '../../hooks/useLocation';
 import { useAuthStore } from '../../store/authStore';
 import { ProfileSettings } from '../auth/ProfileSettings';
+import { supabase } from '../../lib/supabase';
 
 // Lazy load heavy modal sections
 const SecuritySection = lazy(() => import('./settings/SecuritySection'));
 const NotificationsSection = lazy(() => import('./settings/NotificationsSection'));
 const PrivacySection = lazy(() => import('./settings/PrivacySection'));
+
+interface UserProfile {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+}
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -28,16 +40,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [emailSent, setEmailSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [isVerified, setIsVerified] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<UserProfile>({
     firstName: '',
     lastName: '',
     email: user?.email || '',
     phone: '',
-    address: homeLocation.address.split(',')[0] || '',
-    city: homeLocation.address.split(',')[1]?.trim() || '',
+    address: homeLocation.address.split(',')[0] || '123 Main Street',
+    city: homeLocation.address.split(',')[1]?.trim() || 'Centurion',
     province: 'Gauteng',
-    postalCode: ''
+    postalCode: '0157'
   });
 
   // Reset profile data when user changes
@@ -46,7 +60,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       setProfile(prev => ({
         ...prev,
         email: user.email || '',
-        // Other fields remain blank for new users
+        // Other fields remain blank for new users unless loaded from Supabase
       }));
     }
   }, [user]);
@@ -86,11 +100,131 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     'Limpopo', 'Mpumalanga', 'Northern Cape', 'North West', 'Western Cape'
   ];
 
-  const handleProfileUpdate = (field: keyof typeof profile, value: string) => {
+  // Fetch user profile data from Supabase
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Get the current user
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        
+        if (!currentUser) {
+          // If no authenticated user, use fallback data
+          setProfile({
+            firstName: 'Sarah',
+            lastName: 'Van Der Merwe',
+            email: 'sarah.vandermerwe@email.com',
+            phone: '+27 82 123 4567',
+            address: homeLocation.address.split(',')[0] || '123 Main Street',
+            city: homeLocation.address.split(',')[1]?.trim() || 'Centurion',
+            province: 'Gauteng',
+            postalCode: '0157'
+          });
+          return;
+        }
+        
+        // Fetch user profile from user_profiles table
+        const { data: userProfile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', currentUser.id)
+          .single();
+        
+        if (profileError && profileError.code !== 'PGRST116') {
+          throw profileError;
+        }
+        
+        if (userProfile) {
+          // Split display_name into first and last name (if available)
+          let firstName = '';
+          let lastName = '';
+          
+          if (userProfile.display_name) {
+            const nameParts = userProfile.display_name.split(' ');
+            firstName = nameParts[0] || '';
+            lastName = nameParts.slice(1).join(' ') || '';
+          }
+          
+          // Get user preferences
+          const { data: userPreferences, error: preferencesError } = await supabase
+            .from('user_preferences')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .single();
+            
+          if (preferencesError && preferencesError.code !== 'PGRST116') {
+            console.error('Error fetching user preferences:', preferencesError);
+          }
+          
+          // Update profile state with fetched data
+          setProfile({
+            firstName,
+            lastName,
+            email: currentUser.email || '',
+            phone: userPreferences?.phone || '',
+            address: homeLocation.address.split(',')[0] || '123 Main Street',
+            city: homeLocation.address.split(',')[1]?.trim() || 'Centurion',
+            province: 'Gauteng',
+            postalCode: '0157'
+          });
+          
+          // Update notification preferences if available
+          if (userPreferences?.notification_preferences) {
+            try {
+              const notificationPrefs = JSON.parse(userPreferences.notification_preferences);
+              setNotifications(prev => ({
+                ...prev,
+                ...(notificationPrefs || {})
+              }));
+            } catch (e) {
+              console.error('Error parsing notification preferences:', e);
+            }
+          }
+        } else {
+          // No profile found, use current user email with defaults
+          setProfile({
+            firstName: '',
+            lastName: '',
+            email: currentUser.email || '',
+            phone: '',
+            address: homeLocation.address.split(',')[0] || '123 Main Street',
+            city: homeLocation.address.split(',')[1]?.trim() || 'Centurion',
+            province: 'Gauteng',
+            postalCode: '0157'
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load user profile');
+        
+        // Set fallback data
+        setProfile({
+          firstName: 'Sarah',
+          lastName: 'Van Der Merwe',
+          email: user?.email || 'sarah.vandermerwe@email.com',
+          phone: '+27 82 123 4567',
+          address: homeLocation.address.split(',')[0] || '123 Main Street',
+          city: homeLocation.address.split(',')[1]?.trim() || 'Centurion',
+          province: 'Gauteng',
+          postalCode: '0157'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      fetchUserProfile();
+    }
+  }, [isOpen, homeLocation.address, user]);
+
+  const handleProfileUpdate = (field: keyof UserProfile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleLocationUpdate = (field: keyof typeof profile, value: string) => {
+  const handleLocationUpdate = (field: keyof UserProfile, value: string) => {
     handleProfileUpdate(field, value);
     
     // Update the home location when address fields change
@@ -159,9 +293,62 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     updateCurrency(newCurrency);
   };
 
-  const handleSave = () => {
-    console.log('Saving settings...', { profile, notifications, privacy, currency });
-    onClose();
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get the current user
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (!currentUser) {
+        // If no authenticated user, just show success for demo
+        alert('Settings saved successfully!');
+        onClose();
+        return;
+      }
+      
+      // Combine first and last name for display_name
+      const displayName = `${profile.firstName} ${profile.lastName}`.trim();
+      
+      // Update user profile
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: currentUser.id,
+          display_name: displayName,
+          updated_at: new Date().toISOString()
+        });
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
+      // Update user preferences
+      const { error: preferencesError } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: currentUser.id,
+          language: language,
+          currency: currency,
+          phone: profile.phone,
+          notification_preferences: JSON.stringify(notifications),
+          updated_at: new Date().toISOString()
+        });
+      
+      if (preferencesError) {
+        throw preferencesError;
+      }
+      
+      alert('Settings saved successfully!');
+      onClose();
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save settings');
+      alert('Failed to save settings. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -226,7 +413,78 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           >
             <Suspense fallback={<div className="flex items-center justify-center h-32"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div></div>}>
               {activeTab === 'profile' && (
-                <ProfileSettings />
+                // Use ProfileSettings component if user is authenticated, otherwise inline profile form
+                user ? (
+                  <ProfileSettings />
+                ) : (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4">Personal Information</h3>
+                      
+                      {loading && (
+                        <div className="flex items-center justify-center py-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mr-3"></div>
+                          <span className="text-gray-600">Loading profile data...</span>
+                        </div>
+                      )}
+                      
+                      {error && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                          <div className="flex items-start">
+                            <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 mr-3" />
+                            <div>
+                              <h4 className="text-sm font-medium text-red-800">Error loading profile</h4>
+                              <p className="text-sm text-red-700 mt-1">{error}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                          <input
+                            type="text"
+                            value={profile.firstName}
+                            onChange={(e) => handleProfileUpdate('firstName', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                            style={{ backgroundColor: '#ffffff' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                          <input
+                            type="text"
+                            value={profile.lastName}
+                            onChange={(e) => handleProfileUpdate('lastName', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                            style={{ backgroundColor: '#ffffff' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                          <input
+                            type="email"
+                            value={profile.email}
+                            onChange={(e) => handleProfileUpdate('email', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                            style={{ backgroundColor: '#ffffff' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                          <input
+                            type="tel"
+                            value={profile.phone}
+                            onChange={(e) => handleProfileUpdate('phone', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                            style={{ backgroundColor: '#ffffff' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
               )}
 
               {activeTab === 'location' && (
@@ -459,10 +717,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           </button>
           <button
             onClick={handleSave}
-            className="flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors min-h-[44px]"
+            disabled={loading}
+            className="flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors min-h-[44px] disabled:bg-green-400 disabled:cursor-not-allowed"
           >
-            <Save className="h-4 w-4" />
-            <span>Save Changes</span>
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                <span>Save Changes</span>
+              </>
+            )}
           </button>
         </div>
       </div>

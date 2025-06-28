@@ -1,8 +1,9 @@
 import React, { memo } from 'react';
-import { ShoppingCart, TrendingDown, TrendingUp, MapPin, Clock, HelpCircle } from 'lucide-react';
+import { ShoppingCart, TrendingDown, TrendingUp, MapPin, Clock, HelpCircle, Check, Plus } from 'lucide-react';
 import { Product, Price } from '../types';
 import { useLanguage } from '../hooks/useLanguage';
 import { useCurrency } from '../hooks/useCurrency';
+import { useCart } from '../context/CartContext';
 
 interface ProductCardProps {
   product: Product;
@@ -19,6 +20,7 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
 }) => {
   const { t } = useLanguage();
   const { formatCurrency } = useCurrency();
+  const { addItem, isInCart } = useCart();
   
   const sortedPrices = [...prices].sort((a, b) => a.price - b.price);
   const bestPrice = sortedPrices[0];
@@ -43,9 +45,25 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
     }
   };
 
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    addItem(product);
+    
+    if (onAddToList) {
+      onAddToList();
+    }
+  };
+
+  const productInCart = isInCart(product.id);
+
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
-      <div className="relative">
+      <div 
+        className="relative cursor-pointer"
+        onClick={onCompare}
+      >
         <img 
           src={product.image} 
           alt={product.name}
@@ -65,12 +83,12 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
       </div>
       
       <div className="p-4">
-        <div className="mb-3">
+        <div className="mb-3 cursor-pointer" onClick={onCompare}>
           <h3 className="font-semibold text-gray-900 text-lg leading-tight">{product.name}</h3>
           <p className="text-gray-600 text-sm">{product.brand} • {product.unitSize}</p>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 cursor-pointer" onClick={onCompare}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">{t('product.best_price')}</span>
             <div className="flex items-center space-x-1 group relative">
@@ -125,11 +143,24 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
           </button>
           
           <button
-            onClick={onAddToList}
-            className="flex items-center justify-center space-x-2 bg-green-50 hover:bg-green-100 text-green-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
+            onClick={handleAddToCart}
+            className={`flex items-center justify-center space-x-2 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px] ${
+              productInCart 
+                ? 'bg-green-600 text-white hover:bg-green-700' 
+                : 'bg-green-50 text-green-700 hover:bg-green-100'
+            }`}
           >
-            <ShoppingCart className="h-4 w-4" />
-            <span className="text-sm">{t('product.add_to_list')}</span>
+            {productInCart ? (
+              <>
+                <Check className="h-4 w-4" />
+                <span className="text-sm">Added to List</span>
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                <span className="text-sm">{t('product.add_to_list')}</span>
+              </>
+            )}
           </button>
         </div>
 

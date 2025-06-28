@@ -12,6 +12,8 @@ import { AuthModal } from './components/auth/AuthModal';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { useAuthStore } from './store/authStore';
 import { GuestBanner } from './components/auth/GuestBanner';
+import { CartProvider } from './context/CartContext';
+import { TemporaryItemsBar } from './components/TemporaryItemsBar';
 
 // Lazy load heavy modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -22,6 +24,12 @@ const FamilySharingModal = lazy(() => import('./components/modals/FamilySharingM
 const HelpSupportModal = lazy(() => import('./components/modals/HelpSupportModal').then(module => ({ default: module.HelpSupportModal })));
 
 type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile';
+
+// Interface for product selection in compare tab
+interface SelectedProductInfo {
+  id: string;
+  name: string;
+}
 
 function AppContent() {
   const { isAuthenticated, isGuest } = useAuthStore();
@@ -36,6 +44,7 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+  const [selectedProduct, setSelectedProduct] = useState<SelectedProductInfo | null>(null);
 
   // Close all modals helper function
   const closeAllModals = () => {
@@ -100,6 +109,12 @@ function AppContent() {
     setShowAuthModal(true);
   };
 
+  // Function to handle product selection for comparison
+  const handleProductSelect = (productInfo: SelectedProductInfo) => {
+    setSelectedProduct(productInfo);
+    setActiveTab('compare');
+  };
+
   // Simple tab change handler with explicit logging
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
@@ -122,9 +137,13 @@ function AppContent() {
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'search':
-        return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
+        return <SearchTab 
+                searchQuery={searchQuery} 
+                onSearchChange={setSearchQuery} 
+                onProductSelect={handleProductSelect} 
+              />;
       case 'compare':
-        return <CompareTab />;
+        return <CompareTab selectedProductId={selectedProduct?.id} />;
       case 'lists':
         return <ListsTab />;
       case 'deals':
@@ -191,6 +210,9 @@ function AppContent() {
         </a>
       </div>
 
+      {/* Guest Banner - only show for guest users */}
+      {isGuest && <GuestBanner />}
+
       <Header 
         onMenuClick={() => setSidebarOpen(true)}
         onSearchClick={handleSearchClick}
@@ -247,6 +269,9 @@ function AppContent() {
           {renderActiveTab()}
         </ProtectedRoute>
       </main>
+      
+      {/* Temporary Items Bar */}
+      <TemporaryItemsBar />
       
       <BottomNavigation 
         activeTab={activeTab}
@@ -311,7 +336,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <CartProvider>
+        <AppContent />
+      </CartProvider>
     </AuthProvider>
   );
 }

@@ -1,9 +1,11 @@
 import React, { useState, useMemo, lazy, Suspense, useEffect } from 'react';
-import { Search, Filter, ScanLine, MapPin, TrendingDown, ShoppingCart } from 'lucide-react';
+import { Search, Filter, ScanLine, MapPin, TrendingDown, ShoppingCart, X, Plus } from 'lucide-react';
 import { useProducts } from '../../hooks/useProducts';
 import { useCurrency } from '../../hooks/useCurrency';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useCart } from '../../context/CartContext';
 import type { ProductWithCategory } from '../../services/productService';
+import { AddToListModal } from '../modals/AddToListModal';
 
 // Lazy load heavy components
 const FilterModal = lazy(() => import('../modals/FilterModal'));
@@ -23,15 +25,23 @@ const getStoreDisplayName = (storeId: string) => {
 interface SearchTabProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onProductSelect?: (productInfo: { id: string; name: string }) => void;
 }
 
 interface ProductCardProps {
   product: ProductWithCategory;
   onCompare: () => void;
   onAddToList: () => void;
+  isSelected: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToList }) => {
+interface TemporaryItem {
+  id: string;
+  product: ProductWithCategory;
+  quantity: number;
+}
+
+const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToList, isSelected }) => {
   const { formatCurrency } = useCurrency();
 
   const getStoreColor = (storeId: string) => {
@@ -53,9 +63,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
 
   const stockStatus = getStockStatus(product.stock_quantity);
 
+  const handleAddToList = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onAddToList();
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
-      <div className="relative">
+    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer" onClick={onCompare}>
+      <div className="relative cursor-pointer">
         <img 
           src={product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'}
           alt={product.name}
@@ -82,7 +98,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
       </div>
       
       <div className="p-4">
-        <div className="mb-3">
+        <div className="mb-3 cursor-pointer">
           <h3 className="font-semibold text-gray-900 text-lg leading-tight">{product.name}</h3>
           <p className="text-gray-600 text-sm">{product.description}</p>
           {product.category && (
@@ -90,7 +106,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
           )}
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 cursor-pointer">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Price</span>
             <span className="text-sm text-gray-500">SKU: {product.sku || 'N/A'}</span>
@@ -114,7 +130,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
         {/* Mobile-optimized buttons with minimum 44px touch targets */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <button
-            onClick={onCompare}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCompare();
+            }}
             className="flex items-center justify-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
           >
             <TrendingDown className="h-4 w-4" />
@@ -122,11 +141,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
           </button>
           
           <button
-            onClick={onAddToList}
-            className="flex items-center justify-center space-x-2 bg-green-50 hover:bg-green-100 text-green-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
+            onClick={handleAddToList}
+            className={`flex items-center justify-center space-x-2 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px] ${
+              isSelected 
+                ? 'bg-green-600 text-white hover:bg-green-700' 
+                : 'bg-green-50 text-green-700 hover:bg-green-100'
+            }`}
           >
-            <ShoppingCart className="h-4 w-4" />
-            <span className="text-sm">Add to List</span>
+            {isSelected ? (
+              <>
+                <ShoppingCart className="h-4 w-4" />
+                <span className="text-sm">Selected</span>
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                <span className="text-sm">Add to List</span>
+              </>
+            )}
           </button>
         </div>
 
@@ -142,7 +174,99 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
   );
 };
 
-export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChange }) => {
+// Temporary Items Bar Component
+const TemporaryItemsBar: React.FC<{
+  items: TemporaryItem[];
+  onRemoveItem: (productId: string) => void;
+  onClearAll: () => void;
+  onCreateNewList: () => void;
+  onAddToExistingList: () => void;
+}> = ({ items, onRemoveItem, onClearAll, onCreateNewList, onAddToExistingList }) => {
+  const { formatCurrency } = useCurrency();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 animate-slide-up">
+      {/* Collapsed View */}
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center space-x-2 text-gray-700 font-medium"
+          >
+            <ShoppingCart className="h-5 w-5 text-green-600" />
+            <span>{items.length} item{items.length > 1 ? 's' : ''} selected</span>
+          </button>
+          
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={onClearAll}
+              className="p-2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          <button
+            onClick={onCreateNewList}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+          >
+            Create New List
+          </button>
+          <button
+            onClick={onAddToExistingList}
+            className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+          >
+            Add to Existing List
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded View */}
+      {isExpanded && (
+        <div className="border-t border-gray-200 bg-gray-50 max-h-40 overflow-y-auto">
+          <div className="px-4 py-2">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Items</h4>
+            <div className="space-y-2">
+              {items.map((item) => (
+                <div key={item.id} className="flex items-center justify-between bg-white rounded-lg p-2">
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={item.product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'}
+                      alt={item.product.name}
+                      className="w-8 h-8 rounded object-cover"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{item.product.name}</p>
+                      <p className="text-xs text-gray-500">{formatCurrency(item.product.price)}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onRemoveItem(item.product.id)}
+                    className="p-1 text-gray-400 hover:text-red-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const SearchTab: React.FC<SearchTabProps> = ({ 
+  searchQuery, 
+  onSearchChange,
+  onProductSelect 
+}) => {
   const { t } = useLanguage();
   const { formatCurrency } = useCurrency();
   const { 
@@ -160,6 +284,11 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
   const [selectedStore, setSelectedStore] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  
+  // Temporary items state
+  const [temporaryItems, setTemporaryItems] = useState<TemporaryItem[]>([]);
+  const [showAddToListModal, setShowAddToListModal] = useState(false);
+  const [listAction, setListAction] = useState<'create' | 'existing' | null>(null);
 
   // Debounced search effect
   useEffect(() => {
@@ -244,6 +373,53 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
     }
   };
 
+  const handleCompareProduct = (product: ProductWithCategory) => {
+    if (onProductSelect) {
+      onProductSelect({
+        id: product.id,
+        name: product.name
+      });
+    }
+  };
+
+  const handleAddToList = (product: ProductWithCategory) => {
+    const existingItem = temporaryItems.find(item => item.product.id === product.id);
+    
+    if (existingItem) {
+      // Remove from temporary list if already selected
+      setTemporaryItems(prev => prev.filter(item => item.product.id !== product.id));
+    } else {
+      // Add to temporary list
+      setTemporaryItems(prev => [...prev, {
+        id: product.id,
+        product,
+        quantity: 1
+      }]);
+    }
+  };
+
+  const handleRemoveFromTemporary = (productId: string) => {
+    setTemporaryItems(prev => prev.filter(item => item.product.id !== productId));
+  };
+
+  const handleClearAll = () => {
+    setTemporaryItems([]);
+  };
+
+  const handleCreateNewList = () => {
+    setListAction('create');
+    setShowAddToListModal(true);
+  };
+
+  const handleAddToExistingList = () => {
+    setListAction('existing');
+    setShowAddToListModal(true);
+  };
+
+  const isProductSelected = (productId: string) => {
+    return temporaryItems.some(item => item.product.id === productId);
+  };
+
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -262,7 +438,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
       {/* Search Header */}
       <div className="mb-6">
         <div className="relative mb-4">
@@ -394,14 +570,24 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
                 <ProductCard
                   key={product.id}
                   product={product}
-                  onCompare={() => console.log('Compare', product.name)}
-                  onAddToList={() => console.log('Add to list', product.name)}
+                  onCompare={() => handleCompareProduct(product)}
+                  onAddToList={() => handleAddToList(product)}
+                  isSelected={isProductSelected(product.id)}
                 />
               ))}
             </div>
           )}
         </>
       )}
+
+      {/* Temporary Items Bar */}
+      <TemporaryItemsBar
+        items={temporaryItems}
+        onRemoveItem={handleRemoveFromTemporary}
+        onClearAll={handleClearAll}
+        onCreateNewList={handleCreateNewList}
+        onAddToExistingList={handleAddToExistingList}
+      />
 
       {/* Lazy loaded Filter Modal */}
       <Suspense fallback={<div>Loading...</div>}>
@@ -412,6 +598,54 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
           />
         )}
       </Suspense>
+
+      {/* Add to List Modal */}
+      {showAddToListModal && temporaryItems.length > 0 && (
+        <AddToListModal
+          isOpen={showAddToListModal}
+          onClose={() => setShowAddToListModal(false)}
+          product={{
+            id: temporaryItems[0].product.id,
+            name: `${temporaryItems.length} selected items`,
+            brand: 'Multiple',
+            category: 'Multiple',
+            image: temporaryItems[0].product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+            unit: 'items',
+            unitSize: `${temporaryItems.length}`,
+            barcode: 'MULTIPLE'
+          }}
+          quantity={temporaryItems.length}
+          onAddToList={(listId, quantity) => {
+            console.log('Adding items to list:', listId, 'items:', temporaryItems.length);
+            alert(`Added ${temporaryItems.length} items to shopping list!`);
+            setTemporaryItems([]);
+            setShowAddToListModal(false);
+          }}
+          onCreateNewList={() => {
+            console.log('Creating new list with items:', temporaryItems.length);
+            alert(`Created new list with ${temporaryItems.length} items!`);
+            setTemporaryItems([]);
+            setShowAddToListModal(false);
+          }}
+        />
+      )}
+
+      {/* Add animation styles */}
+      <style jsx>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 };

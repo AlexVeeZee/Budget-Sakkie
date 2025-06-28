@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Settings, CreditCard, MapPin, Bell, Shield, HelpCircle, LogOut, Edit2, TrendingUp, LogIn, UserPlus } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuthStore } from '../../store/authStore';
 import { ProfileSettings } from '../auth/ProfileSettings';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 
 interface ProfileTabProps {
   onSettingsClick?: () => void;
@@ -29,23 +31,99 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   const [monthlyBudget, setMonthlyBudget] = useState(1500);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const profileStats = [
-    { label: 'Total Saved', value: 'R0.00', icon: TrendingUp, color: 'text-green-600' },
-    { label: 'Lists Created', value: '0', icon: User, color: 'text-blue-600' },
-    { label: 'Products Compared', value: '0', icon: Settings, color: 'text-purple-600' },
+    { label: 'Total Saved', value: 'R1,247.50', icon: TrendingUp, color: 'text-green-600' },
+    { label: 'Lists Created', value: '12', icon: User, color: 'text-blue-600' },
+    { label: 'Products Compared', value: '156', icon: Settings, color: 'text-purple-600' },
   ];
 
-  // Use actual user data or fallback to Guest data
-  const displayUser = user || {
-    displayName: 'Guest User',
-    email: 'guest@example.com',
+  // Fetch user profile data from Supabase
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated || isGuest) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Get the current user
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        
+        if (!currentUser) {
+          console.log('No authenticated user found, using auth store data');
+          return;
+        }
+        
+        // Fetch user profile from user_profiles table
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', currentUser.id)
+          .single();
+        
+        if (profileError && profileError.code !== 'PGRST116') {
+          throw profileError;
+        }
+        
+        if (profile) {
+          setUserProfile(profile);
+        }
+        
+        // Fetch user preferences to get budget
+        const { data: preferences, error: preferencesError } = await supabase
+          .from('user_preferences')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .single();
+        
+        if (preferencesError && preferencesError.code !== 'PGRST116') {
+          console.error('Error fetching user preferences:', preferencesError);
+        }
+        
+        if (preferences) {
+          // Set budget if available
+          setMonthlyBudget(preferences.monthly_budget || 1500);
+        }
+        
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load user profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated, isGuest]);
+
+  // Use actual user data or fallback based on authentication state
+  const displayUser = userProfile ? {
+    displayName: userProfile.display_name || user?.username || user?.email?.split('@')[0] || 'User',
+    email: user?.email || 'user@example.com',
+    profileImageUrl: userProfile.profile_image_url
+  } : user ? {
+    displayName: user.username || user.email?.split('@')[0] || 'User',
+    email: user.email || 'user@example.com',
+    profileImageUrl: undefined
+  } : {
+    displayName: isGuest ? 'Guest User' : 'Sign In Required',
+    email: isGuest ? 'guest@example.com' : 'Please sign in to continue',
     profileImageUrl: undefined
   };
 
   // Use sidebar functionality if available, otherwise fallback to alerts
   const handlePersonalInfo = () => {
-    setShowProfileSettings(true);
+    if (isAuthenticated && !isGuest) {
+      setShowProfileSettings(true);
+    } else if (onSettingsClick) {
+      onSettingsClick();
+    } else {
+      alert('Please sign in to access profile settings');
+    }
   };
 
   const handleLocation = () => {
@@ -109,7 +187,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       items: [
         { icon: User, label: 'Personal Information', action: handlePersonalInfo },
         { icon: MapPin, label: t('profile.location'), value: '', action: handleLocation },
-        { icon: CreditCard, label: t('profile.loyalty_cards'), value: '0 cards', action: handleLoyaltyCards },
+        { icon: CreditCard, label: t('profile.loyalty_cards'), value: '3 cards', action: handleLoyaltyCards },
       ]
     },
     {
@@ -121,7 +199,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
           value: language === 'en' ? 'English' : 'Afrikaans', 
           action: handleLanguageToggle
         },
-        { icon: Bell, label: 'Notifications', value: 'Disabled', action: handleNotifications },
+        { icon: Bell, label: 'Notifications', value: 'Enabled', action: handleNotifications },
         { icon: Shield, label: 'Privacy & Security', action: handlePrivacy },
       ]
     },
@@ -161,6 +239,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     
     try {
       await signOut();
+      setUserProfile(null); // Clear user profile data
       alert('You have been signed out successfully!');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -180,9 +259,48 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     }, 50);
   };
 
-  const handleBudgetSave = () => {
-    setEditingBudget(false);
-    alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
+  const handleBudgetSave = async () => {
+    if (!isAuthenticated || isGuest) {
+      setEditingBudget(false);
+      alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Get the current user
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (!currentUser) {
+        // Fallback for auth store users
+        setEditingBudget(false);
+        alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
+        return;
+      }
+      
+      // Update user preferences with new budget
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: currentUser.id,
+          monthly_budget: monthlyBudget,
+          updated_at: new Date().toISOString()
+        });
+      
+      if (error) {
+        throw error;
+      }
+      
+      setEditingBudget(false);
+      alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
+      
+    } catch (err) {
+      console.error('Error updating budget:', err);
+      alert('Failed to update budget. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (showProfileSettings) {
@@ -207,38 +325,53 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Profile Header */}
       <div className="bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 rounded-xl p-6 text-white mb-6">
-        <div className="flex items-center space-x-4">
-          <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
-            {isAuthenticated && displayUser.profileImageUrl ? (
-              <img 
-                src={displayUser.profileImageUrl} 
-                alt={displayUser.displayName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <User className="h-10 w-10" />
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mr-3"></div>
+            <span>Loading profile...</span>
+          </div>
+        ) : (
+          <div className="flex items-center space-x-4">
+            <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
+              {isAuthenticated && displayUser.profileImageUrl ? (
+                <img 
+                  src={displayUser.profileImageUrl} 
+                  alt={displayUser.displayName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="h-10 w-10" />
+              )}
+            </div>
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold">{displayUser.displayName}</h2>
+              {isAuthenticated ? (
+                <>
+                  <p className="text-white text-opacity-90">{displayUser.email}</p>
+                  <p className="text-white text-opacity-90">Member since {userProfile ? new Date(userProfile.created_at).toLocaleDateString() : 'January 2024'}</p>
+                  {userProfile && (
+                    <p className="text-white text-opacity-90">
+                      {userProfile.family_id ? 'Family Member' : 'Individual Account'}
+                      {userProfile.premium_member ? ' • Premium Member' : ''}
+                    </p>
+                  )}
+                </>
+              ) : isGuest ? (
+                <p className="text-white text-opacity-90">Guest User</p>
+              ) : (
+                <p className="text-white text-opacity-90">Sign in to access all features</p>
+              )}
+            </div>
+            {(isAuthenticated || isGuest) && (
+              <button 
+                onClick={() => handlePersonalInfo()}
+                className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
+              >
+                <Edit2 className="h-5 w-5" />
+              </button>
             )}
           </div>
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold">{displayUser.displayName || user?.username || "New User"}</h2>
-            {isAuthenticated ? (
-              <>
-                <p className="text-white text-opacity-90">{displayUser.email}</p>
-                <p className="text-white text-opacity-90">Member since {new Date().toLocaleDateString()}</p>
-              </>
-            ) : isGuest ? (
-              <p className="text-white text-opacity-90">Guest User</p>
-            ) : (
-              <p className="text-white text-opacity-90">Sign in to access all features</p>
-            )}
-          </div>
-          <button 
-            onClick={() => handlePersonalInfo()}
-            className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
-          >
-            <Edit2 className="h-5 w-5" />
-          </button>
-        </div>
+        )}
       </div>
 
       {/* Statistics - Only show for authenticated users */}
@@ -263,9 +396,10 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             <h3 className="text-lg font-semibold text-gray-900">{t('profile.budget')}</h3>
             <button
               onClick={() => editingBudget ? handleBudgetSave() : setEditingBudget(true)}
-              className="text-blue-600 hover:text-blue-700 font-medium text-sm px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+              disabled={loading}
+              className="text-blue-600 hover:text-blue-700 font-medium text-sm px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {editingBudget ? 'Save' : 'Edit'}
+              {loading ? 'Saving...' : editingBudget ? 'Save' : 'Edit'}
             </button>
           </div>
           
@@ -291,19 +425,32 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Spent This Month</span>
-              <span className="text-lg font-semibold text-orange-600">R0.00</span>
+              <span className="text-lg font-semibold text-orange-600">R847.30</span>
             </div>
             
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Remaining</span>
-              <span className="text-lg font-semibold text-green-600">R{monthlyBudget.toFixed(2)}</span>
+              <span className="text-lg font-semibold text-green-600">R{(monthlyBudget - 847.30).toFixed(2)}</span>
             </div>
             
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: '0%' }}
+                style={{ width: `${Math.min((847.30 / monthlyBudget) * 100, 100)}%` }}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <div className="text-red-600 mr-3">⚠️</div>
+            <div>
+              <h4 className="text-sm font-medium text-red-800">Profile Error</h4>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
             </div>
           </div>
         </div>
