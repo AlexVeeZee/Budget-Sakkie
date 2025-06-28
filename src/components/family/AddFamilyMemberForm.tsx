@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, User, UserPlus, Shield, Crown, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { z } from 'zod';
-import { FamilyService } from '../../services/familyService';
 
 // Form validation schema
 const memberSchema = z.object({
@@ -14,14 +13,12 @@ const memberSchema = z.object({
 type MemberFormData = z.infer<typeof memberSchema>;
 
 interface AddFamilyMemberFormProps {
-  familyId: string;
-  onSuccess: () => void;
+  onSubmit: (data: MemberFormData) => Promise<{ success: boolean; error: string | null }>;
   onCancel: () => void;
 }
 
 export const AddFamilyMemberForm: React.FC<AddFamilyMemberFormProps> = ({
-  familyId,
-  onSuccess,
+  onSubmit,
   onCancel
 }) => {
   const [formData, setFormData] = useState<MemberFormData>({
@@ -94,22 +91,12 @@ export const AddFamilyMemberForm: React.FC<AddFamilyMemberFormProps> = ({
     setGeneralError(null);
     
     try {
-      // Map viewer/editor to member/admin roles
-      const role = formData.accessLevel === 'editor' ? 'admin' : 'member';
-      
-      // Create a personalized message
-      const message = `${formData.fullName} has been invited to join your family group as a ${formData.relationship}.`;
-      
-      // Send invitation via Supabase
-      const { success, error } = await FamilyService.inviteToFamily(
-        familyId,
-        formData.email,
-        role,
-        message
-      );
+      const { success, error } = await onSubmit(formData);
       
       if (!success) {
-        throw new Error(error || 'Failed to send invitation');
+        setGeneralError(error);
+        setIsSubmitting(false);
+        return;
       }
       
       // Show success message
@@ -123,13 +110,13 @@ export const AddFamilyMemberForm: React.FC<AddFamilyMemberFormProps> = ({
           relationship: '',
           accessLevel: 'viewer',
         });
-        onSuccess();
+        setSuccess(false);
+        onCancel();
       }, 2000);
       
     } catch (error) {
       console.error('Error adding family member:', error);
       setGeneralError(error instanceof Error ? error.message : 'Failed to add family member');
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -143,7 +130,7 @@ export const AddFamilyMemberForm: React.FC<AddFamilyMemberFormProps> = ({
           An invitation has been sent to {formData.email}. They'll receive instructions on how to join your family group.
         </p>
         <button
-          onClick={onSuccess}
+          onClick={onCancel}
           className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
         >
           Continue

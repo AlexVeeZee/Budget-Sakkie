@@ -21,7 +21,6 @@ export const FamilyMembersList: React.FC<FamilyMembersListProps> = ({
 }) => {
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [deletingMember, setDeletingMember] = useState<FamilyMember | null>(null);
-  const [actionMemberId, setActionMemberId] = useState<string | null>(null);
   const [showActionsFor, setShowActionsFor] = useState<string | null>(null);
   const [processingAction, setProcessingAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -132,6 +131,11 @@ export const FamilyMembersList: React.FC<FamilyMembersListProps> = ({
                 <p className="text-sm text-gray-500">
                   Joined: {new Date(member.joinedDate).toLocaleDateString()}
                 </p>
+                {member.relationship && (
+                  <p className="text-sm text-blue-600 mt-1">
+                    Relationship: {member.relationship}
+                  </p>
+                )}
               </div>
             </div>
             
