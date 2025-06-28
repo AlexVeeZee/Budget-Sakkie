@@ -91,7 +91,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           </p>
           <p className="text-xs text-white/80">
             {isAuthenticated 
-              ? 'Julius' 
+              ? 'Account' 
               : isGuest 
                 ? 'Guest User' 
                 : 'Create'
