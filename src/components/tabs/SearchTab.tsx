@@ -65,6 +65,21 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     }));
   }, [products]);
 
+  // Get unique categories to prevent duplicates
+  const uniqueCategories = useMemo(() => {
+    // Create a map to deduplicate categories by ID
+    const categoryMap = new Map();
+    
+    categories.forEach(category => {
+      if (!categoryMap.has(category.id)) {
+        categoryMap.set(category.id, category);
+      }
+    });
+    
+    // Convert map back to array
+    return Array.from(categoryMap.values());
+  }, [categories]);
+
   // Filter products based on current selections
   const filteredProducts = useMemo(() => {
     let filtered = products;
@@ -145,10 +160,16 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     if (product.sku?.includes('kg')) return 'per kg';
     if (product.sku?.includes('g')) return product.sku.match(/\d+g/) ? product.sku.match(/\d+g/)?.[0] || 'pack' : 'pack';
     if (product.sku?.includes('L') || product.sku?.includes('l')) return product.sku.match(/\d+[Ll]/) ? product.sku.match(/\d+[Ll]/)?.[0] || 'bottle' : 'bottle';
-    if (product.category?.name === 'Dairy & Eggs') return 'pack';
-    if (product.category?.name === 'Fresh Produce') return 'per kg';
-    if (product.category?.name === 'Meat & Poultry') return 'per kg';
-    if (product.category?.name === 'Bakery') return 'loaf';
+    
+    // Determine by category
+    const categoryName = product.category?.name?.toLowerCase() || '';
+    
+    if (categoryName.includes('bakery')) return 'loaf';
+    if (categoryName.includes('dairy') && product.name.toLowerCase().includes('milk')) return 'bottle';
+    if (categoryName.includes('dairy') && product.name.toLowerCase().includes('egg')) return 'dozen';
+    if (categoryName.includes('produce')) return 'per kg';
+    if (categoryName.includes('meat')) return 'per kg';
+    
     return 'each';
   }
 
@@ -233,7 +254,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
               >
                 <option value="all">All Categories</option>
-                {categories.map((category) => (
+                {uniqueCategories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
@@ -309,9 +330,12 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 price: product.price
               }))}
               onProductSelect={onProductSelect}
-              onAddToList={(product) => handleAddToList(
-                filteredProducts.find(p => p.id === product.id) as ProductWithCategory
-              )}
+              onAddToList={(product) => {
+                const sourceProduct = filteredProducts.find(p => p.id === product.id);
+                if (sourceProduct) {
+                  handleAddToList(sourceProduct);
+                }
+              }}
             />
           )}
         </>
