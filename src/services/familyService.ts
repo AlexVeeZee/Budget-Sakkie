@@ -80,62 +80,69 @@ export interface FamilyBudgetWithExpenses {
 }
 
 export class FamilyService {
-  /**
-   * Get the current user's family
-   */
-  static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?: string }> {
-    try {
-      const authState = useAuthStore.getState();
-      const { user } = authState;
-      
-      if (!user || !user.id) {
-        return { family: null, error: 'Not authenticated' };
-      }
-      
-      // Get user's family using the RPC function
-      const { data, error } = await supabase
-        .rpc('get_user_families');
-      
-      if (error) {
-        throw new Error(`Failed to get user family: ${error.message}`);
-      }
-      
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        return { family: null };
-      }
-      
-      // Get the first family's members
-      const familyData = data[0];
-      if (!familyData || !familyData.id) {
-        return { family: null };
-      }
-      
-      const { members, error: membersError } = await this.getFamilyMembers(familyData.id);
-      
-      if (membersError) {
-        console.warn('Error fetching family members:', membersError);
-      }
-      
-      // Return the family with members
-      return { 
-        family: {
-          id: familyData.id,
-          name: familyData.name || 'Unnamed Family',
-          description: familyData.description,
-          createdBy: familyData.created_by,
-          createdAt: familyData.created_at,
-          updatedAt: familyData.updated_at,
-          members: members || []
-        }
-      };
-    } catch (error) {
-      console.error('Error getting user family:', error);
-      return { 
-        family: null, 
-        error: error instanceof Error ? error.message : 'Failed to get user family' 
-      };
+ /**
+ * Get the current user's family
+ */
+static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?: string }> {
+  try {
+    const authState = useAuthStore.getState();
+    const { user } = authState;
+    
+    if (!user || !user.id) {
+      return { family: null, error: 'Not authenticated' };
     }
+    
+    // Get user's family using the RPC function
+    const { data, error } = await supabase
+      .rpc('get_user_families');
+    
+    if (error) {
+      throw new Error(`Failed to get user family: ${error.message}`);
+    }
+    
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return { family: null };
+    }
+    
+    // Get the first family's members
+    const familyData = data[0];
+    if (!familyData || !familyData.id) {
+      return { family: null };
+    }
+    
+    // Add additional safety check for familyData.id
+    let members = [];
+    try {
+      const membersResult = await this.getFamilyMembers(familyData.id);
+      if (membersResult && !membersResult.error) {
+        members = membersResult.members || [];
+      } else {
+        console.warn('Error fetching family members:', membersResult?.error);
+      }
+    } catch (membersError) {
+      console.warn('Error fetching family members:', membersError);
+    }
+    
+    // Return the family with members
+    return { 
+      family: {
+        id: familyData.id,
+        name: familyData.name || 'Unnamed Family',
+        description: familyData.description,
+        createdBy: familyData.created_by,
+        createdAt: familyData.created_at,
+        updatedAt: familyData.updated_at,
+        members: members
+      }
+    };
+  } catch (error) {
+    console.error('Error getting user family:', error);
+    return { 
+      family: null, 
+      error: error instanceof Error ? error.message : 'Failed to get user family' 
+    };
   }
+}
   
   /**
    * Get all families the user belongs to
