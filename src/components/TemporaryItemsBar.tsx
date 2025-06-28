@@ -107,7 +107,7 @@ export const TemporaryItemsBar: React.FC = () => {
           transition: 'transform 0.3s ease'
         }}
       >
-        <div className="bg-white border-t border-gray-200 shadow-lg rounded-t-lg">
+        <div className="bg-white border-t border-gray-200 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Collapsed View */}
             <div className="custom-bottom-padding py-4 px-4 flex items-center justify-between">
