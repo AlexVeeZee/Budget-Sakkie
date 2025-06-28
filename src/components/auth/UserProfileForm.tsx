@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Save, Loader2, AlertCircle, CheckCircle, MapPin, Phone, Home, Building, Map, Globe } from 'lucide-react';
+import { User, Mail, Save, Loader2, AlertCircle, CheckCircle, MapPin, Phone, Home, Building, Map } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-import { ProfileService, UserProfileData } from '../../services/profileService';
+import { useProfileStore } from '../../store/profileStore';
 import { z } from 'zod';
 
 // Form validation schema
@@ -12,62 +12,62 @@ const profileSchema = z.object({
   address: z.string().min(1, 'Address is required'),
   city: z.string().min(1, 'City is required'),
   province: z.string().min(1, 'Province is required'),
-  postalCode: z.string().regex(/^\d{4}$/, 'South African postal codes must be 4 digits'),
-  alternativeEmail: z.string().email('Please enter a valid email address').optional().or(z.literal(''))
+  postalCode: z.string().regex(/^\d{4}$/, 'South African postal codes must be 4 digits')
 });
 
-export const ProfileSettings: React.FC = () => {
+export const UserProfileForm: React.FC = () => {
   const { user } = useAuthStore();
+  const { profile, isLoading, error: storeError, updateProfile, fetchProfile } = useProfileStore();
   
-  const [formData, setFormData] = useState<Partial<UserProfileData>>({
+  const [formData, setFormData] = useState({
     displayName: '',
     avatarUrl: '',
     phone: '',
     address: '',
     city: '',
     province: '',
-    postalCode: '',
-    country: 'South Africa',
-    alternativeEmail: '',
-    language: 'en',
-    currency: 'ZAR',
-    distanceUnit: 'km',
-    notificationPreferences: {
-      email: true,
-      push: false,
-      sms: false
-    }
+    postalCode: ''
   });
   
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{
+    displayName?: string;
+    avatarUrl?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+    general?: string;
+  }>({});
+  
   const [success, setSuccess] = useState(false);
   
   // Fetch profile data on component mount
   useEffect(() => {
-    const fetchProfile = async () => {
-      setIsLoading(true);
-      
-      try {
-        const { data, error } = await ProfileService.fetchUserProfile();
-        
-        if (error) {
-          setErrors(prev => ({ ...prev, general: error }));
-        } else if (data) {
-          setFormData(data);
-        }
-      } catch (error) {
-        setErrors(prev => ({ 
-          ...prev, 
-          general: 'Failed to load profile data. Please try again.' 
-        }));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
+  
+  // Update form data when profile changes
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        displayName: profile.displayName || '',
+        avatarUrl: profile.avatarUrl || '',
+        phone: profile.phone || '',
+        address: profile.address || '',
+        city: profile.city || '',
+        province: profile.province || '',
+        postalCode: profile.postalCode || ''
+      });
+    }
+  }, [profile]);
+  
+  // Update error state when store error changes
+  useEffect(() => {
+    if (storeError) {
+      setErrors(prev => ({ ...prev, general: storeError }));
+    }
+  }, [storeError]);
   
   const validateForm = () => {
     try {
@@ -76,9 +76,9 @@ export const ProfileSettings: React.FC = () => {
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const newErrors: Record<string, string> = {};
+        const newErrors: typeof errors = {};
         error.errors.forEach(err => {
-          const path = err.path[0] as string;
+          const path = err.path[0] as keyof typeof formData;
           newErrors[path] = err.message;
         });
         setErrors(newErrors);
@@ -87,7 +87,7 @@ export const ProfileSettings: React.FC = () => {
     }
   };
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
     setFormData(prev => ({
@@ -96,28 +96,10 @@ export const ProfileSettings: React.FC = () => {
     }));
     
     // Clear error for this field
-    if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-  };
-  
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    
-    // Handle notification preferences
-    if (name.startsWith('notification_')) {
-      const preference = name.replace('notification_', '');
-      
-      setFormData(prev => ({
+    if (errors[name as keyof typeof errors]) {
+      setErrors(prev => ({
         ...prev,
-        notificationPreferences: {
-          ...prev.notificationPreferences,
-          [preference]: checked
-        }
+        [name]: undefined
       }));
     }
   };
@@ -129,10 +111,8 @@ export const ProfileSettings: React.FC = () => {
       return;
     }
     
-    setIsLoading(true);
-    
     try {
-      const { success, error } = await ProfileService.updateUserProfile(formData);
+      const { success, error } = await updateProfile(formData);
       
       if (success) {
         setSuccess(true);
@@ -147,8 +127,6 @@ export const ProfileSettings: React.FC = () => {
         ...prev, 
         general: 'An unexpected error occurred. Please try again.' 
       }));
-    } finally {
-      setIsLoading(false);
     }
   };
   
@@ -160,8 +138,8 @@ export const ProfileSettings: React.FC = () => {
   ];
   
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow-sm">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Complete Your Profile</h2>
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-sm">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Profile Settings</h2>
       
       {/* Success Message */}
       {success && (
@@ -179,9 +157,9 @@ export const ProfileSettings: React.FC = () => {
         </div>
       )}
       
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Account Information */}
-        <div className="bg-gray-50 p-5 rounded-lg">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* User Info Section */}
+        <div className="bg-gray-50 p-4 rounded-lg">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Account Information</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -231,7 +209,7 @@ export const ProfileSettings: React.FC = () => {
         <div>
           <h3 className="text-lg font-medium text-gray-900 mb-4">Personal Information</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
             {/* Display Name */}
             <div>
               <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -241,7 +219,7 @@ export const ProfileSettings: React.FC = () => {
                 id="displayName"
                 name="displayName"
                 type="text"
-                value={formData.displayName || ''}
+                value={formData.displayName}
                 onChange={handleInputChange}
                 className={`block w-full px-3 py-2 border ${
                   errors.displayName ? 'border-red-300' : 'border-gray-300'
@@ -265,7 +243,7 @@ export const ProfileSettings: React.FC = () => {
                 id="avatarUrl"
                 name="avatarUrl"
                 type="text"
-                value={formData.avatarUrl || ''}
+                value={formData.avatarUrl}
                 onChange={handleInputChange}
                 className={`block w-full px-3 py-2 border ${
                   errors.avatarUrl ? 'border-red-300' : 'border-gray-300'
@@ -293,7 +271,7 @@ export const ProfileSettings: React.FC = () => {
                   id="phone"
                   name="phone"
                   type="tel"
-                  value={formData.phone || ''}
+                  value={formData.phone}
                   onChange={handleInputChange}
                   className={`block w-full pl-10 pr-3 py-2 border ${
                     errors.phone ? 'border-red-300' : 'border-gray-300'
@@ -304,35 +282,6 @@ export const ProfileSettings: React.FC = () => {
               {errors.phone && (
                 <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
               )}
-            </div>
-            
-            {/* Alternative Email */}
-            <div>
-              <label htmlFor="alternativeEmail" className="block text-sm font-medium text-gray-700 mb-1">
-                Alternative Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="alternativeEmail"
-                  name="alternativeEmail"
-                  type="email"
-                  value={formData.alternativeEmail || ''}
-                  onChange={handleInputChange}
-                  className={`block w-full pl-10 pr-3 py-2 border ${
-                    errors.alternativeEmail ? 'border-red-300' : 'border-gray-300'
-                  } rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500`}
-                  placeholder="alternative@example.com"
-                />
-              </div>
-              {errors.alternativeEmail && (
-                <p className="mt-1 text-sm text-red-600">{errors.alternativeEmail}</p>
-              )}
-              <p className="mt-1 text-xs text-gray-500">
-                Used for account recovery and notifications
-              </p>
             </div>
           </div>
         </div>
@@ -355,7 +304,7 @@ export const ProfileSettings: React.FC = () => {
                   id="address"
                   name="address"
                   type="text"
-                  value={formData.address || ''}
+                  value={formData.address}
                   onChange={handleInputChange}
                   className={`block w-full pl-10 pr-3 py-2 border ${
                     errors.address ? 'border-red-300' : 'border-gray-300'
@@ -369,54 +318,31 @@ export const ProfileSettings: React.FC = () => {
               )}
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* City */}
-              <div>
-                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                  City <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Building className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="city"
-                    name="city"
-                    type="text"
-                    value={formData.city || ''}
-                    onChange={handleInputChange}
-                    className={`block w-full pl-10 pr-3 py-2 border ${
-                      errors.city ? 'border-red-300' : 'border-gray-300'
-                    } rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500`}
-                    placeholder="Centurion"
-                    required
-                  />
+            {/* City */}
+            <div>
+              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                City <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Building className="h-5 w-5 text-gray-400" />
                 </div>
-                {errors.city && (
-                  <p className="mt-1 text-sm text-red-600">{errors.city}</p>
-                )}
+                <input
+                  id="city"
+                  name="city"
+                  type="text"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  className={`block w-full pl-10 pr-3 py-2 border ${
+                    errors.city ? 'border-red-300' : 'border-gray-300'
+                  } rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500`}
+                  placeholder="Centurion"
+                  required
+                />
               </div>
-              
-              {/* Country */}
-              <div>
-                <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
-                  Country
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Globe className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="country"
-                    name="country"
-                    type="text"
-                    value={formData.country || 'South Africa'}
-                    onChange={handleInputChange}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
-                    disabled
-                  />
-                </div>
-              </div>
+              {errors.city && (
+                <p className="mt-1 text-sm text-red-600">{errors.city}</p>
+              )}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -432,7 +358,7 @@ export const ProfileSettings: React.FC = () => {
                   <select
                     id="province"
                     name="province"
-                    value={formData.province || ''}
+                    value={formData.province}
                     onChange={handleInputChange}
                     className={`block w-full pl-10 pr-3 py-2 border ${
                       errors.province ? 'border-red-300' : 'border-gray-300'
@@ -463,7 +389,7 @@ export const ProfileSettings: React.FC = () => {
                     id="postalCode"
                     name="postalCode"
                     type="text"
-                    value={formData.postalCode || ''}
+                    value={formData.postalCode}
                     onChange={handleInputChange}
                     className={`block w-full pl-10 pr-3 py-2 border ${
                       errors.postalCode ? 'border-red-300' : 'border-gray-300'
@@ -476,55 +402,6 @@ export const ProfileSettings: React.FC = () => {
                   <p className="mt-1 text-sm text-red-600">{errors.postalCode}</p>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Notification Preferences */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Notification Preferences</h3>
-          
-          <div className="space-y-3">
-            <div className="flex items-center">
-              <input
-                id="notification_email"
-                name="notification_email"
-                type="checkbox"
-                checked={formData.notificationPreferences?.email || false}
-                onChange={handleCheckboxChange}
-                className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-              />
-              <label htmlFor="notification_email" className="ml-3 block text-sm font-medium text-gray-700">
-                Email Notifications
-              </label>
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                id="notification_push"
-                name="notification_push"
-                type="checkbox"
-                checked={formData.notificationPreferences?.push || false}
-                onChange={handleCheckboxChange}
-                className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-              />
-              <label htmlFor="notification_push" className="ml-3 block text-sm font-medium text-gray-700">
-                Push Notifications
-              </label>
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                id="notification_sms"
-                name="notification_sms"
-                type="checkbox"
-                checked={formData.notificationPreferences?.sms || false}
-                onChange={handleCheckboxChange}
-                className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-              />
-              <label htmlFor="notification_sms" className="ml-3 block text-sm font-medium text-gray-700">
-                SMS Notifications
-              </label>
             </div>
           </div>
         </div>

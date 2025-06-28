@@ -16,7 +16,7 @@ const profileSchema = z.object({
   alternativeEmail: z.string().email('Please enter a valid email address').optional().or(z.literal(''))
 });
 
-export const ProfileSettings: React.FC = () => {
+export const ExtendedProfileForm: React.FC = () => {
   const { user } = useAuthStore();
   
   const [formData, setFormData] = useState<Partial<UserProfileData>>({
