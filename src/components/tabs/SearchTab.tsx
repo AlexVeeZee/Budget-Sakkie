@@ -24,6 +24,7 @@ const getStoreDisplayName = (storeId: string) => {
 interface SearchTabProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onProductSelect?: (productInfo: { id: string; name: string }) => void;
 }
 
 interface ProductCardProps {
@@ -55,10 +56,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
   const stockStatus = getStockStatus(product.stock_quantity);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
+    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer" onClick={onCompare}>
       <div 
         className="relative cursor-pointer"
-        onClick={onCompare}
       >
         <img 
           src={product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'}
@@ -86,7 +86,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
       </div>
       
       <div className="p-4">
-        <div className="mb-3 cursor-pointer" onClick={onCompare}>
+        <div className="mb-3 cursor-pointer">
           <h3 className="font-semibold text-gray-900 text-lg leading-tight">{product.name}</h3>
           <p className="text-gray-600 text-sm">{product.description}</p>
           {product.category && (
@@ -94,7 +94,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
           )}
         </div>
 
-        <div className="mb-4 cursor-pointer" onClick={onCompare}>
+        <div className="mb-4 cursor-pointer">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Price</span>
             <span className="text-sm text-gray-500">SKU: {product.sku || 'N/A'}</span>
@@ -118,7 +118,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
         {/* Mobile-optimized buttons with minimum 44px touch targets */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <button
-            onClick={onCompare}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent triggering the parent onClick
+              onCompare();
+            }}
             className="flex items-center justify-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
           >
             <TrendingDown className="h-4 w-4" />
@@ -126,7 +129,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
           </button>
           
           <button
-            onClick={onAddToList}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent triggering the parent onClick
+              onAddToList();
+            }}
             className="flex items-center justify-center space-x-2 bg-green-50 hover:bg-green-100 text-green-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
           >
             <ShoppingCart className="h-4 w-4" />
@@ -146,7 +152,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
   );
 };
 
-export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChange }) => {
+export const SearchTab: React.FC<SearchTabProps> = ({ 
+  searchQuery, 
+  onSearchChange,
+  onProductSelect 
+}) => {
   const { t } = useLanguage();
   const { formatCurrency } = useCurrency();
   const { 
@@ -251,17 +261,13 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
   };
 
   const handleCompareProduct = (product: ProductWithCategory) => {
-    // Navigate to the Compare tab and set the selected product
-    // This would typically be handled by a router or state management
-    console.log('Navigating to compare tab with product:', product.name, product.id);
-    
-    // In a real implementation, you would:
-    // 1. Set the active tab to 'compare'
-    // 2. Pass the selected product to the compare tab
-    // For now, we'll just log it
-    
-    // Simulate navigation by alerting
-    alert(`Navigating to compare prices for: ${product.name}`);
+    // Use the onProductSelect callback to navigate to the compare tab
+    if (onProductSelect) {
+      onProductSelect({
+        id: product.id,
+        name: product.name
+      });
+    }
   };
 
   const handleAddToList = (product: ProductWithCategory) => {

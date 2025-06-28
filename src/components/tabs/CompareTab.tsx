@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { BarChart3, TrendingDown, MapPin, Clock, Star, ChevronDown, ChevronUp, Filter, Search, Zap, Award, Eye, Share2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { useProducts } from '../../hooks/useProducts';
@@ -44,6 +44,7 @@ export const CompareTab: React.FC<CompareTabProps> = ({ selectedProductId }) => 
   });
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('compact');
   const [sortBy, setSortBy] = useState<'price' | 'distance' | 'availability'>('price');
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Filter products based on search and category
   const filteredProducts = useMemo(() => {
@@ -63,34 +64,44 @@ export const CompareTab: React.FC<CompareTabProps> = ({ selectedProductId }) => 
     return filtered;
   }, [products, searchQuery, selectedCategory]);
 
-  // Set initial selected product based on selectedProductId prop
+  // Load the selected product by ID when the component mounts or selectedProductId changes
   useEffect(() => {
-    const findAndSetProduct = async () => {
+    const loadSelectedProduct = async () => {
       if (selectedProductId) {
-        // Try to find the product in the current products list
-        const foundProduct = products.find(p => p.id === selectedProductId);
+        // First check if the product is in our current list
+        const productInList = products.find(p => p.id === selectedProductId);
         
-        if (foundProduct) {
-          setSelectedProduct(foundProduct);
+        if (productInList) {
+          setSelectedProduct(productInList);
         } else {
-          // If not found in current list, try to fetch it directly
+          // If not in the list, fetch it directly
           try {
+            setLoadingComparison(true);
             const product = await ProductService.getProductById(selectedProductId);
             if (product) {
               setSelectedProduct(product);
             }
           } catch (error) {
             console.error('Error fetching selected product:', error);
+          } finally {
+            setLoadingComparison(false);
           }
         }
-      } else if (filteredProducts.length > 0 && !selectedProduct) {
-        // Default behavior - select first product if none selected
+      } else if (filteredProducts.length > 0 && !selectedProduct && initialLoadComplete) {
+        // Only set default product if we don't have a selected product and initial load is complete
         setSelectedProduct(filteredProducts[0]);
       }
     };
-    
-    findAndSetProduct();
-  }, [selectedProductId, filteredProducts, products, selectedProduct]);
+
+    loadSelectedProduct();
+  }, [selectedProductId, products, filteredProducts, selectedProduct, initialLoadComplete]);
+
+  // Mark initial load as complete after products are loaded
+  useEffect(() => {
+    if (products.length > 0 && !initialLoadComplete) {
+      setInitialLoadComplete(true);
+    }
+  }, [products, initialLoadComplete]);
 
   // Generate price comparison data when product changes
   useEffect(() => {

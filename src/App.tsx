@@ -132,7 +132,11 @@ function AppContent() {
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'search':
-        return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
+        return <SearchTab 
+                searchQuery={searchQuery} 
+                onSearchChange={setSearchQuery} 
+                onProductSelect={handleProductSelect} 
+              />;
       case 'compare':
         return <CompareTab selectedProductId={selectedProduct?.id} />;
       case 'lists':
