@@ -65,24 +65,6 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     }));
   }, [products]);
 
-  // Get unique categories to prevent duplicates
-  const uniqueCategories = useMemo(() => {
-    // Create a map to deduplicate categories by name (not ID)
-    const categoryMap = new Map();
-    
-    categories.forEach(category => {
-      // Use name as the key to prevent duplicates with the same name
-      if (!categoryMap.has(category.name)) {
-        categoryMap.set(category.name, category);
-      }
-    });
-    
-    // Convert map back to array and sort by name
-    return Array.from(categoryMap.values()).sort((a, b) => 
-      a.name.localeCompare(b.name)
-    );
-  }, [categories]);
-
   // Filter products based on current selections
   const filteredProducts = useMemo(() => {
     let filtered = products;
@@ -257,7 +239,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
               >
                 <option value="all">All Categories</option>
-                {uniqueCategories.map((category) => (
+                {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
