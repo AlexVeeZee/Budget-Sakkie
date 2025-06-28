@@ -89,14 +89,25 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         // Check for guest session in localStorage
         const guestUser = localStorage.getItem('guestUser');
         if (guestUser) {
-          const parsedUser = JSON.parse(guestUser) as UserProfile;
-          set({ 
-            user: parsedUser, 
-            session: null, 
-            isAuthenticated: false, 
-            isGuest: true, 
-            isLoading: false 
-          });
+          try {
+            const parsedUser = JSON.parse(guestUser) as UserProfile;
+            set({ 
+              user: parsedUser, 
+              session: null, 
+              isAuthenticated: false, 
+              isGuest: true, 
+              isLoading: false 
+            });
+          } catch (error) {
+            console.error('Error parsing guest user:', error);
+            set({ 
+              user: null, 
+              session: null, 
+              isAuthenticated: false, 
+              isGuest: false, 
+              isLoading: false 
+            });
+          }
         } else {
           set({ 
             user: null, 
@@ -257,6 +268,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         
         // Clear any guest user data
         localStorage.removeItem('guestUser');
+        localStorage.removeItem('guestUserProfile');
       }
       
       return { success: true };
@@ -279,6 +291,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       
       // Clear any guest user data
       localStorage.removeItem('guestUser');
+      localStorage.removeItem('guestUserProfile');
       
       set({ 
         user: null, 
@@ -393,6 +406,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       
       set({ isLoading: true, error: null });
       
+      // Get guest profile data to transfer
+      const guestProfile = localStorage.getItem('guestUserProfile');
+      let profileData = {};
+      
+      if (guestProfile) {
+        try {
+          profileData = JSON.parse(guestProfile);
+        } catch (e) {
+          console.error('Error parsing guest profile:', e);
+        }
+      }
+      
       // Create new user account
       const { success, error } = await get().signUp({
         email,
@@ -408,6 +433,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       
       // Clear guest session
       localStorage.removeItem('guestUser');
+      localStorage.removeItem('guestUserProfile');
       
       return { success: true };
     } catch (error) {
