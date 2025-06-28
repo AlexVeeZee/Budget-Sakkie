@@ -18,7 +18,7 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
 }) => {
   const { t } = useLanguage();
   const { formatCurrency } = useCurrency();
-  const { addItem, isInCart } = useCart();
+  const { isInCart } = useCart();
   
   const productInCart = isInCart(product.id);
 
@@ -42,8 +42,7 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
     e.preventDefault();
     e.stopPropagation();
     
-    addItem(product);
-    
+    // Only call the parent handler, don't add to cart directly here
     if (onAddToList) {
       onAddToList();
     }
