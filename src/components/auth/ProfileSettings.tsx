@@ -60,7 +60,11 @@ export const ProfileSettings: React.FC = () => {
   // Fetch profile data on component mount
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!user || isGuest) {
+      if (!user) {
+        return;
+      }
+      
+      if (isGuest) {
         // For guest users, try to load from localStorage
         const savedProfile = localStorage.getItem('guestUserProfile');
         if (savedProfile) {
@@ -232,11 +236,11 @@ export const ProfileSettings: React.FC = () => {
         // Update user preferences
         const { error: preferencesError } = await supabase
           .from('user_preferences')
-          .update({
+          .upsert({
+            user_id: user.id,
             notification_preferences: formData.notificationPreferences,
             updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id);
+          });
         
         if (preferencesError) {
           console.warn('Preferences update failed:', preferencesError);
