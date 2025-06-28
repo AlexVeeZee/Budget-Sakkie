@@ -81,6 +81,8 @@ export const TemporaryItemsBar: React.FC = () => {
 
   // Handle adding to existing list
   const handleAddToExistingList = (listId: string) => {
+    if (!items.length) return;
+    
     // In a real app, this would update the list with the API
     
     // Show success message
@@ -136,15 +138,20 @@ export const TemporaryItemsBar: React.FC = () => {
                 <button
                   onClick={() => setShowAddToExistingModal(true)}
                   className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                  style={{ 
+                    fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                    fontSize: '14px',
+                    color: 'rgb(255, 255, 255)',
+                    background: 'rgb(29, 78, 216)'
+                  }}
                 >
-                  Add to Existing
+                  Add to List
                 </button>
                 <button
                   onClick={clearItems}
-                  className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  aria-label="Clear all items"
+                  className="p-2 text-gray-400 hover:text-gray-600"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
               
@@ -179,7 +186,7 @@ export const TemporaryItemsBar: React.FC = () => {
                         className="w-full flex items-center space-x-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-100"
                       >
                         <List className="h-4 w-4 text-blue-600" />
-                        <span>Add to Existing List</span>
+                        <span>Add to List</span>
                       </button>
                       <button
                         onClick={() => {
