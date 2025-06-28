@@ -4,6 +4,7 @@ import { useProducts } from '../../hooks/useProducts';
 import { useCurrency } from '../../hooks/useCurrency';
 import { useLanguage } from '../../hooks/useLanguage';
 import type { ProductWithCategory } from '../../services/productService';
+import { AddToListModal } from '../modals/AddToListModal';
 
 // Lazy load heavy components
 const FilterModal = lazy(() => import('../modals/FilterModal'));
@@ -55,7 +56,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
 
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
-      <div className="relative">
+      <div 
+        className="relative cursor-pointer"
+        onClick={onCompare}
+      >
         <img 
           src={product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'}
           alt={product.name}
@@ -82,7 +86,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
       </div>
       
       <div className="p-4">
-        <div className="mb-3">
+        <div className="mb-3 cursor-pointer" onClick={onCompare}>
           <h3 className="font-semibold text-gray-900 text-lg leading-tight">{product.name}</h3>
           <p className="text-gray-600 text-sm">{product.description}</p>
           {product.category && (
@@ -90,7 +94,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToLi
           )}
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 cursor-pointer" onClick={onCompare}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Price</span>
             <span className="text-sm text-gray-500">SKU: {product.sku || 'N/A'}</span>
@@ -160,6 +164,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
   const [selectedStore, setSelectedStore] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const [showAddToListModal, setShowAddToListModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductWithCategory | null>(null);
 
   // Debounced search effect
   useEffect(() => {
@@ -242,6 +248,25 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
     } else {
       refreshProducts();
     }
+  };
+
+  const handleCompareProduct = (product: ProductWithCategory) => {
+    // Navigate to the Compare tab and set the selected product
+    // This would typically be handled by a router or state management
+    console.log('Navigating to compare tab with product:', product.name, product.id);
+    
+    // In a real implementation, you would:
+    // 1. Set the active tab to 'compare'
+    // 2. Pass the selected product to the compare tab
+    // For now, we'll just log it
+    
+    // Simulate navigation by alerting
+    alert(`Navigating to compare prices for: ${product.name}`);
+  };
+
+  const handleAddToList = (product: ProductWithCategory) => {
+    setSelectedProduct(product);
+    setShowAddToListModal(true);
   };
 
   if (error) {
@@ -394,8 +419,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
                 <ProductCard
                   key={product.id}
                   product={product}
-                  onCompare={() => console.log('Compare', product.name)}
-                  onAddToList={() => console.log('Add to list', product.name)}
+                  onCompare={() => handleCompareProduct(product)}
+                  onAddToList={() => handleAddToList(product)}
                 />
               ))}
             </div>
@@ -412,6 +437,35 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
           />
         )}
       </Suspense>
+
+      {/* Add to List Modal */}
+      {showAddToListModal && selectedProduct && (
+        <AddToListModal
+          isOpen={showAddToListModal}
+          onClose={() => setShowAddToListModal(false)}
+          product={{
+            id: selectedProduct.id,
+            name: selectedProduct.name,
+            brand: 'Generic',
+            category: selectedProduct.category?.name || 'General',
+            image: selectedProduct.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+            unit: 'each',
+            unitSize: 'each',
+            barcode: selectedProduct.sku
+          }}
+          quantity={1}
+          onAddToList={(listId, quantity) => {
+            console.log('Adding to list:', listId, 'product:', selectedProduct.name, 'quantity:', quantity);
+            alert(`Added ${selectedProduct.name} to shopping list!`);
+            setShowAddToListModal(false);
+          }}
+          onCreateNewList={() => {
+            console.log('Creating new list with product:', selectedProduct.name);
+            alert(`Created new list with ${selectedProduct.name}!`);
+            setShowAddToListModal(false);
+          }}
+        />
+      )}
     </div>
   );
 };

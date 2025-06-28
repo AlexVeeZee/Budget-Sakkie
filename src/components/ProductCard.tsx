@@ -45,7 +45,10 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
 
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
-      <div className="relative">
+      <div 
+        className="relative cursor-pointer"
+        onClick={onCompare}
+      >
         <img 
           src={product.image} 
           alt={product.name}
@@ -65,12 +68,12 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
       </div>
       
       <div className="p-4">
-        <div className="mb-3">
+        <div className="mb-3 cursor-pointer" onClick={onCompare}>
           <h3 className="font-semibold text-gray-900 text-lg leading-tight">{product.name}</h3>
           <p className="text-gray-600 text-sm">{product.brand} • {product.unitSize}</p>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 cursor-pointer" onClick={onCompare}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">{t('product.best_price')}</span>
             <div className="flex items-center space-x-1 group relative">

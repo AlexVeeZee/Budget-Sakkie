@@ -22,7 +22,11 @@ interface PriceHistoryData {
   retailer: string;
 }
 
-export const CompareTab: React.FC = () => {
+interface CompareTabProps {
+  selectedProductId?: string;
+}
+
+export const CompareTab: React.FC<CompareTabProps> = ({ selectedProductId }) => {
   const { t } = useLanguage();
   const { formatCurrency } = useCurrency();
   const { products, categories, loading, error } = useProducts();
@@ -59,12 +63,34 @@ export const CompareTab: React.FC = () => {
     return filtered;
   }, [products, searchQuery, selectedCategory]);
 
-  // Set initial selected product
+  // Set initial selected product based on selectedProductId prop
   useEffect(() => {
-    if (filteredProducts.length > 0 && !selectedProduct) {
-      setSelectedProduct(filteredProducts[0]);
-    }
-  }, [filteredProducts, selectedProduct]);
+    const findAndSetProduct = async () => {
+      if (selectedProductId) {
+        // Try to find the product in the current products list
+        const foundProduct = products.find(p => p.id === selectedProductId);
+        
+        if (foundProduct) {
+          setSelectedProduct(foundProduct);
+        } else {
+          // If not found in current list, try to fetch it directly
+          try {
+            const product = await ProductService.getProductById(selectedProductId);
+            if (product) {
+              setSelectedProduct(product);
+            }
+          } catch (error) {
+            console.error('Error fetching selected product:', error);
+          }
+        }
+      } else if (filteredProducts.length > 0 && !selectedProduct) {
+        // Default behavior - select first product if none selected
+        setSelectedProduct(filteredProducts[0]);
+      }
+    };
+    
+    findAndSetProduct();
+  }, [selectedProductId, filteredProducts, products, selectedProduct]);
 
   // Generate price comparison data when product changes
   useEffect(() => {
