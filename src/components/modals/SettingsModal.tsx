@@ -173,7 +173,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           // Update notification preferences if available
           if (userPreferences?.notification_preferences) {
             try {
-              const notificationPrefs = JSON.parse(userPreferences.notification_preferences);
+              // Check if notification_preferences is already an object or a string
+              const notificationPrefs = typeof userPreferences.notification_preferences === 'string' 
+                ? JSON.parse(userPreferences.notification_preferences)
+                : userPreferences.notification_preferences;
+              
               setNotifications(prev => ({
                 ...prev,
                 ...(notificationPrefs || {})

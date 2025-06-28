@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, Settings, HelpCircle, Star, Gift, Users, MapPin, LogIn, UserPlus } from 'lucide-react';
+import { X, Settings, HelpCircle, Star, Gift, Users, MapPin, LogIn, UserPlus, Home, Briefcase, Map } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { useAuthStore } from '../store/authStore';
+import { useLocation } from '../hooks/useLocation';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -28,6 +29,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { t } = useLanguage();
   const { isAuthenticated, isGuest, user } = useAuthStore();
+  
+  // Show location section if user has saved locations or is authenticated
+  const showLocationSection = isAuthenticated || isGuest;
 
   const authenticatedMenuItems = [
     { 
@@ -37,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     { 
       icon: MapPin, 
-      label: t('profile.location'), 
+      label: 'Manage Locations', 
       action: onLocationClick
     },
     { 
@@ -86,10 +90,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
+      {/* Overlay - only visible on mobile/tablet */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        onClick={onClose}
+      ></div>
+      
       {/* Sidebar */}
       <div 
-        className="fixed left-0 top-0 h-full w-80 z-50 transform transition-transform duration-300 shadow-xl border-r border-gray-200"
-        style={{ backgroundColor: '#ffffff' }}
+        className="fixed inset-y-0 left-0 w-80 z-50 shadow-xl border-r border-gray-200 overflow-y-auto transform transition-transform duration-300"
+        style={{ 
+          backgroundColor: '#ffffff',
+          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)'
+        }}
       >
         {/* Header */}
         <div 
