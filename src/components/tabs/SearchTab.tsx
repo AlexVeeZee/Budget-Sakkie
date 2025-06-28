@@ -78,6 +78,23 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     return filtered;
   }, [products, selectedCategory, selectedStore]);
 
+  // Calculate stats
+  const stats = useMemo(() => {
+    const totalProducts = filteredProducts.length;
+    const inStockProducts = filteredProducts.filter(p => (p.stock_quantity || 0) > 0).length;
+    const avgPrice = totalProducts > 0 
+      ? filteredProducts.reduce((sum, p) => sum + p.price, 0) / totalProducts 
+      : 0;
+    const uniqueStoresCount = new Set(filteredProducts.map(p => p.store_id)).size;
+
+    return {
+      totalProducts,
+      inStockProducts,
+      avgPrice,
+      uniqueStoresCount
+    };
+  }, [filteredProducts]);
+
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
     if (categoryId !== 'all') {
@@ -100,7 +117,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     addItem({
       id: product.id,
       name: product.name,
-      brand: product.category?.name || 'Generic',
+      brand: getStoreDisplayName(product.store_id),
       category: product.category?.name || 'General',
       image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
       unit: 'each',
@@ -109,7 +126,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     });
   };
 
-  // Move getStoreDisplayName to top level to avoid hoisting issues
+  // Helper function to get store display name
   function getStoreDisplayName(storeId: string) {
     const storeNames: { [key: string]: string } = {
       'pick-n-pay': 'Pick n Pay',
@@ -170,8 +187,28 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           </div>
         </div>
 
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+            <p className="text-2xl font-bold text-green-600">{stats.totalProducts}</p>
+            <p className="text-xs text-gray-600">Products Found</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+            <p className="text-2xl font-bold text-blue-600">{stats.inStockProducts}</p>
+            <p className="text-xs text-gray-600">In Stock</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+            <p className="text-2xl font-bold text-orange-600">{t('currency.zar')}{stats.avgPrice.toFixed(2)}</p>
+            <p className="text-xs text-gray-600">Avg Price</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+            <p className="text-2xl font-bold text-purple-600">{stats.uniqueStoresCount}</p>
+            <p className="text-xs text-gray-600">Stores</p>
+          </div>
+        </div>
+
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Category Filter */}
             <div>
@@ -250,15 +287,17 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               products={filteredProducts.map(product => ({
                 id: product.id,
                 name: product.name,
-                brand: product.category?.name || 'Generic',
+                brand: getStoreDisplayName(product.store_id),
                 category: product.category?.name || 'General',
                 image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
                 unit: 'each',
-                unitSize: 'each',
+                unitSize: product.sku?.includes('kg') ? 'per kg' : 'each',
                 price: product.price
               }))}
               onProductSelect={onProductSelect}
-              onAddToList={handleAddToList}
+              onAddToList={(product) => handleAddToList(
+                filteredProducts.find(p => p.id === product.id) as ProductWithCategory
+              )}
             />
           )}
         </>
