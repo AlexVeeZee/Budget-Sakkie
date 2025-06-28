@@ -217,6 +217,7 @@ function AppContent() {
         onMenuClick={() => setSidebarOpen(true)}
         onSearchClick={handleSearchClick}
         onSettingsClick={handleSettingsClick}
+        onLocationClick={handleLocationClick}
       />
       
       <Sidebar 

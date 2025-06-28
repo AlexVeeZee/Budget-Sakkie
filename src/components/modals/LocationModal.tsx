@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, MapPin, Home, Navigation, Search, Save, Trash2, Clock } from 'lucide-react';
 import { useLocation } from '../../hooks/useLocation';
+import { useAuthStore } from '../../store/authStore';
+import { ProfileService } from '../../services/profileService';
 
 interface LocationModalProps {
   isOpen: boolean;
@@ -17,6 +19,8 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
     removeRecentLocation,
     clearRecentLocations 
   } = useLocation();
+  
+  const { user, updateProfile } = useAuthStore();
 
   const [homeAddress, setHomeAddress] = useState({
     street: homeLocation.address.split(',')[0] || '',
@@ -25,21 +29,60 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
   });
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const provinces = [
     'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
     'Limpopo', 'Mpumalanga', 'Northern Cape', 'North West', 'Western Cape'
   ];
 
-  const handleSaveHomeLocation = () => {
-    const newAddress = `${homeAddress.street}, ${homeAddress.city}, ${homeAddress.province}`;
-    updateHomeLocation({
-      id: 'home',
-      name: 'Home',
-      address: newAddress,
-      type: 'home'
-    });
-    alert('Home location updated successfully!');
+  // Update home address state when homeLocation changes
+  useEffect(() => {
+    if (isOpen) {
+      setHomeAddress({
+        street: homeLocation.address.split(',')[0] || '',
+        city: homeLocation.address.split(',')[1]?.trim() || '',
+        province: homeLocation.address.split(',')[2]?.trim() || 'Gauteng'
+      });
+    }
+  }, [isOpen, homeLocation]);
+
+  const handleSaveHomeLocation = async () => {
+    setIsSaving(true);
+    
+    try {
+      const newAddress = `${homeAddress.street}, ${homeAddress.city}, ${homeAddress.province}`;
+      
+      // Update location in the location hook
+      updateHomeLocation({
+        id: 'home',
+        name: 'Home',
+        address: newAddress,
+        type: 'home'
+      });
+      
+      // If user is authenticated, also update their profile in the database
+      if (user && !user.isGuest) {
+        await ProfileService.updateUserProfile({
+          address: homeAddress.street,
+          city: homeAddress.city,
+          province: homeAddress.province
+        });
+        
+        // Update user in auth store
+        await updateProfile({
+          address: homeAddress.street
+        });
+      }
+      
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error('Error saving home location:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleUseCurrentLocation = () => {
@@ -53,7 +96,6 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
           coordinates: [position.coords.latitude, position.coords.longitude] as [number, number]
         };
         setCurrentLocation(newLocation);
-        alert('Using your current location for this shopping session.');
       },
       (error) => {
         console.error('Error getting location:', error);
@@ -64,7 +106,6 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
 
   const handleSelectRecentLocation = (location: any) => {
     setCurrentLocation(location);
-    alert(`Now using ${location.name} for this shopping session.`);
   };
 
   if (!isOpen) return null;
@@ -184,11 +225,27 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
               
               <button
                 onClick={handleSaveHomeLocation}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+                disabled={isSaving}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:bg-green-400 disabled:cursor-not-allowed"
               >
-                <Save className="h-4 w-4" />
-                <span>Save Home Location</span>
+                {isSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>Save Home Location</span>
+                  </>
+                )}
               </button>
+              
+              {saveSuccess && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-700">Home location saved successfully!</p>
+                </div>
+              )}
             </div>
           </div>
 

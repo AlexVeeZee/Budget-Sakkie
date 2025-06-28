@@ -2,19 +2,28 @@ import React from 'react';
 import { ShoppingCart, Search, Menu, Globe, MapPin } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { UserProfileDropdown } from './auth/UserProfileDropdown';
+import { useLocation } from '../hooks/useLocation';
+import { useAuthStore } from '../store/authStore';
 
 interface HeaderProps {
   onMenuClick: () => void;
   onSearchClick: () => void;
   onSettingsClick?: () => void;
+  onLocationClick?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
   onMenuClick, 
   onSearchClick,
-  onSettingsClick
+  onSettingsClick,
+  onLocationClick
 }) => {
   const { language, toggleLanguage, t } = useLanguage();
+  const { currentLocation } = useLocation();
+  const { user } = useAuthStore();
+  
+  // Check if user has an address set in their profile
+  const hasAddress = user && user.address;
 
   return (
     <header 
@@ -45,11 +54,16 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Current Location Display */}
-            <div className="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium">
-              <MapPin className="h-4 w-4" />
-              <span className="hidden sm:inline">Centurion</span>
-            </div>
+            {/* Current Location Display - Only show if user has an address */}
+            {hasAddress && (
+              <button
+                onClick={onLocationClick}
+                className="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium hover:bg-black/10 transition-colors"
+              >
+                <MapPin className="h-4 w-4" />
+                <span className="hidden sm:inline">{currentLocation.name}</span>
+              </button>
+            )}
 
             <button
               onClick={onSearchClick}

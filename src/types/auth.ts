@@ -4,6 +4,10 @@ export interface UserProfile {
   username: string;
   displayName?: string;
   avatarUrl?: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
   isGuest: boolean;
   createdAt: string;
   preferences?: UserPreferences;
