@@ -91,17 +91,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Overlay - only visible on mobile/tablet */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={onClose}
-        ></div>
-      )}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        onClick={onClose}
+      ></div>
       
       {/* Sidebar */}
       <div 
-        className="fixed inset-y-0 left-0 w-80 z-50 shadow-xl border-r border-gray-200 overflow-y-auto"
-        style={{ backgroundColor: '#ffffff' }}
+        className="fixed inset-y-0 left-0 w-80 z-50 shadow-xl border-r border-gray-200 overflow-y-auto transform transition-transform duration-300"
+        style={{ 
+          backgroundColor: '#ffffff',
+          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)'
+        }}
       >
         {/* Header */}
         <div 

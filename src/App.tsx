@@ -120,6 +120,37 @@ function AppContent() {
     };
   }, []);
 
+  const renderActiveTab = () => {
+    switch (activeTab) {
+      case 'search':
+        return <SearchTab 
+                searchQuery={searchQuery} 
+                onSearchChange={setSearchQuery} 
+                onProductSelect={handleProductSelect} 
+              />;
+      case 'compare':
+        return <CompareTab selectedProductId={selectedProduct?.id} />;
+      case 'lists':
+        return <ListsTab />;
+      case 'deals':
+        return <DealsTab />;
+      case 'profile':
+        return (
+          <ProfileTab 
+            onSettingsClick={handleSettingsClick}
+            onLocationClick={handleLocationClick}
+            onLoyaltyCardsClick={handleLoyaltyCardsClick}
+            onRewardsClick={handleRewardsClick}
+            onFamilySharingClick={handleFamilySharingClick}
+            onHelpSupportClick={handleHelpSupportClick}
+            onSignInClick={handleSignInClick}
+          />
+        );
+      default:
+        return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Bolt.new Badge */}
@@ -175,56 +206,60 @@ function AppContent() {
         onLocationClick={handleLocationClick}
       />
       
-      <Sidebar 
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onSettingsClick={handleSettingsClick}
-        onLocationClick={handleLocationClick}
-        onLoyaltyCardsClick={handleLoyaltyCardsClick}
-        onRewardsClick={handleRewardsClick}
-        onFamilySharingClick={handleFamilySharingClick}
-        onHelpSupportClick={handleHelpSupportClick}
-        onSignInClick={handleSignInClick}
-      />
-      
-      <main className="pt-4">
-        <ProtectedRoute 
-          allowGuest={activeTab !== 'lists' && activeTab !== 'profile'}
-          fallback={
-            <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-xl shadow-md">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Budget Sakkie</h2>
-              <p className="text-gray-600 mb-6">
-                Sign in to access all features and start saving on your grocery shopping.
-              </p>
-              <div className="space-y-4">
-                <button
-                  onClick={handleSignInClick}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={handleSignUpClick}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-                >
-                  Create Account
-                </button>
-                <button
-                  onClick={() => {
-                    setAuthModalMode('guest');
-                    setShowAuthModal(true);
-                  }}
-                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
-                >
-                  Continue as Guest
-                </button>
+      <div className="flex">
+        {/* Sidebar */}
+        <Sidebar 
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onSettingsClick={handleSettingsClick}
+          onLocationClick={handleLocationClick}
+          onLoyaltyCardsClick={handleLoyaltyCardsClick}
+          onRewardsClick={handleRewardsClick}
+          onFamilySharingClick={handleFamilySharingClick}
+          onHelpSupportClick={handleHelpSupportClick}
+          onSignInClick={handleSignInClick}
+        />
+        
+        {/* Main Content */}
+        <main className="flex-1 pb-20 pt-4">
+          <ProtectedRoute 
+            allowGuest={activeTab !== 'lists' && activeTab !== 'profile'}
+            fallback={
+              <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-xl shadow-md">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Budget Sakkie</h2>
+                <p className="text-gray-600 mb-6">
+                  Sign in to access all features and start saving on your grocery shopping.
+                </p>
+                <div className="space-y-4">
+                  <button
+                    onClick={handleSignInClick}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={handleSignUpClick}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Create Account
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthModalMode('guest');
+                      setShowAuthModal(true);
+                    }}
+                    className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Continue as Guest
+                  </button>
+                </div>
               </div>
-            </div>
-          }
-        >
-          {renderActiveTab()}
-        </ProtectedRoute>
-      </main>
+            }
+          >
+            {renderActiveTab()}
+          </ProtectedRoute>
+        </main>
+      </div>
       
       {/* Temporary Items Bar */}
       <TemporaryItemsBar />
@@ -253,37 +288,6 @@ function AppContent() {
       />
     </div>
   );
-
-  function renderActiveTab() {
-    switch (activeTab) {
-      case 'search':
-        return <SearchTab 
-                searchQuery={searchQuery} 
-                onSearchChange={setSearchQuery} 
-                onProductSelect={handleProductSelect} 
-              />;
-      case 'compare':
-        return <CompareTab selectedProductId={selectedProduct?.id} />;
-      case 'lists':
-        return <ListsTab />;
-      case 'deals':
-        return <DealsTab />;
-      case 'profile':
-        return (
-          <ProfileTab 
-            onSettingsClick={handleSettingsClick}
-            onLocationClick={handleLocationClick}
-            onLoyaltyCardsClick={handleLoyaltyCardsClick}
-            onRewardsClick={handleRewardsClick}
-            onFamilySharingClick={handleFamilySharingClick}
-            onHelpSupportClick={handleHelpSupportClick}
-            onSignInClick={handleSignInClick}
-          />
-        );
-      default:
-        return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
-    }
-  }
 }
 
 function App() {

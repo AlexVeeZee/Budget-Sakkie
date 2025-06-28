@@ -214,6 +214,24 @@ export const SettingsSection: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Navigation Tabs */}
+      <div className="flex overflow-x-auto space-x-2 py-4 border-b border-gray-200 mb-6">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center space-x-2 px-4 py-2 whitespace-nowrap rounded-lg transition-colors ${
+              activeTab === tab.id
+                ? 'bg-green-100 text-green-700 font-medium'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <tab.icon className="h-4 w-4" />
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
       {activeTab === 'profile' && (
         <div className="space-y-6">
           <div>
@@ -460,24 +478,6 @@ export const SettingsSection: React.FC = () => {
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="flex overflow-x-auto space-x-2 py-4 border-b border-gray-200 mb-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center space-x-2 px-4 py-2 whitespace-nowrap rounded-lg transition-colors ${
-              activeTab === tab.id
-                ? 'bg-green-100 text-green-700 font-medium'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <tab.icon className="h-4 w-4" />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
       {/* Save Button */}
       <div className="flex justify-end">
         <button
@@ -501,3 +501,5 @@ export const SettingsSection: React.FC = () => {
     </div>
   );
 };
+
+export default SettingsSection;
