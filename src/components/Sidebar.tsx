@@ -1,7 +1,8 @@
-import React from 'react';
-import { X, Settings, HelpCircle, Star, Gift, Users, MapPin, LogIn, UserPlus } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Settings, HelpCircle, Star, Gift, Users, MapPin, LogIn, UserPlus, Home, Briefcase, Map } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { useAuthStore } from '../store/authStore';
+import { useLocation } from '../hooks/useLocation';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -28,17 +29,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { t } = useLanguage();
   const { isAuthenticated, isGuest, user } = useAuthStore();
+  const { currentLocation, homeLocation, savedLocations, setCurrentLocation } = useLocation();
+  
+  // Show location section if user has saved locations or is authenticated
+  const showLocationSection = isAuthenticated || isGuest || savedLocations.length > 0;
+  
+  // Get all available locations
+  const allLocations = [
+    homeLocation,
+    ...savedLocations.filter(loc => loc.id !== 'home')
+  ];
 
   const authenticatedMenuItems = [
     { 
       icon: Settings, 
       label: t('profile.settings'), 
       action: onSettingsClick
-    },
-    { 
-      icon: MapPin, 
-      label: t('profile.location'), 
-      action: onLocationClick
     },
     { 
       icon: Star, 
@@ -125,6 +131,72 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <p className="text-sm opacity-90">15% saved this month</p>
                 </>
               )}
+            </div>
+          )}
+
+          {/* Locations Section */}
+          {showLocationSection && (
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                My Locations
+              </h4>
+              <div className="space-y-2">
+                {/* Main Location Management Button */}
+                <button
+                  onClick={onLocationClick}
+                  className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors border border-gray-200"
+                  style={{ backgroundColor: '#ffffff' }}
+                >
+                  <MapPin className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 font-medium">Manage Locations</span>
+                </button>
+                
+                {/* Individual Locations */}
+                {allLocations.map((location) => {
+                  // Determine icon based on location type
+                  let Icon = MapPin;
+                  let iconColor = "text-gray-600";
+                  
+                  if (location.type === 'home') {
+                    Icon = Home;
+                    iconColor = "text-green-600";
+                  } else if (location.type === 'work') {
+                    Icon = Briefcase;
+                    iconColor = "text-blue-600";
+                  } else if (location.type === 'travel') {
+                    Icon = Map;
+                    iconColor = "text-purple-600";
+                  }
+                  
+                  return (
+                    <button
+                      key={location.id}
+                      onClick={() => {
+                        setCurrentLocation(location);
+                        onClose(); // Close sidebar after selection
+                      }}
+                      className={`w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors border ${
+                        currentLocation.id === location.id
+                          ? 'border-green-200 bg-green-50'
+                          : 'border-gray-200'
+                      }`}
+                    >
+                      <Icon className={`h-5 w-5 ${iconColor}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-medium truncate ${
+                          currentLocation.id === location.id ? 'text-green-700' : 'text-gray-900'
+                        }`}>
+                          {location.name}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">{location.address}</p>
+                      </div>
+                      {currentLocation.id === location.id && (
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 

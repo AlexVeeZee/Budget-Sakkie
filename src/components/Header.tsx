@@ -1,5 +1,5 @@
-import React from 'react';
-import { ShoppingCart, Search, Menu, Globe, MapPin } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ShoppingCart, Search, Menu, Globe, MapPin, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { UserProfileDropdown } from './auth/UserProfileDropdown';
 import { useLocation } from '../hooks/useLocation';
@@ -19,11 +19,33 @@ export const Header: React.FC<HeaderProps> = ({
   onLocationClick
 }) => {
   const { language, toggleLanguage, t } = useLanguage();
-  const { currentLocation } = useLocation();
+  const { currentLocation, savedLocations, setCurrentLocation } = useLocation();
   const { user } = useAuthStore();
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Check if user has an address set in their profile
   const hasAddress = user && user.address;
+  
+  // Get all available locations
+  const allLocations = [
+    ...savedLocations,
+    // Don't include recent locations in the dropdown to keep it clean
+  ];
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowLocationDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <header 
@@ -56,13 +78,67 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-2">
             {/* Current Location Display - Only show if user has an address */}
             {hasAddress && (
-              <button
-                onClick={onLocationClick}
-                className="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium hover:bg-black/10 transition-colors"
-              >
-                <MapPin className="h-4 w-4" />
-                <span className="hidden sm:inline">{currentLocation.name}</span>
-              </button>
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => {
+                    if (onLocationClick) {
+                      // If clicking when dropdown is open, just close the dropdown
+                      if (showLocationDropdown) {
+                        setShowLocationDropdown(false);
+                      } else {
+                        // If location modal handler is provided, use it
+                        onLocationClick();
+                      }
+                    } else {
+                      // Otherwise toggle the dropdown
+                      setShowLocationDropdown(!showLocationDropdown);
+                    }
+                  }}
+                  className="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium hover:bg-black/10 transition-colors"
+                >
+                  <MapPin className="h-4 w-4" />
+                  <span className="hidden sm:inline">{currentLocation.name}</span>
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+                
+                {/* Location Dropdown */}
+                {showLocationDropdown && (
+                  <div className="absolute right-0 mt-1 w-56 bg-white rounded-md shadow-lg overflow-hidden z-10">
+                    <div className="py-1">
+                      {allLocations.map((location) => (
+                        <button
+                          key={location.id}
+                          onClick={() => {
+                            setCurrentLocation(location);
+                            setShowLocationDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-sm ${
+                            currentLocation.id === location.id
+                              ? 'bg-green-50 text-green-700'
+                              : 'text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {location.name}
+                        </button>
+                      ))}
+                      
+                      <div className="border-t border-gray-100 mt-1 pt-1">
+                        <button
+                          onClick={() => {
+                            if (onLocationClick) {
+                              onLocationClick();
+                              setShowLocationDropdown(false);
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50"
+                        >
+                          Manage Locations
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             <button
