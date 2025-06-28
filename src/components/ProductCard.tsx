@@ -60,13 +60,23 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
 
   // Get appropriate unit label based on product
   const getUnitLabel = () => {
-    if (product.unitSize.includes('kg')) return 'Per kg';
-    if (product.unitSize.includes('g')) return 'Per pack';
-    if (product.unitSize.includes('L') || product.unitSize.includes('l')) return 'Per bottle';
-    if (product.unitSize.includes('dozen')) return 'Per dozen';
-    if (product.category === 'Fresh Produce') return 'Per item';
-    if (product.category === 'Meat') return 'Per pack';
-    if (product.category === 'Bakery') return 'Per loaf';
+    const name = product.name.toLowerCase();
+    const category = product.category.toLowerCase();
+    const unitSize = product.unitSize.toLowerCase();
+    
+    // Check for bread products first
+    if (name.includes('bread') || category.includes('bakery')) {
+      return 'Per loaf';
+    }
+    
+    // Then check other product types
+    if (unitSize.includes('kg')) return 'Per kg';
+    if (unitSize.includes('g')) return 'Per pack';
+    if (unitSize.includes('l') || unitSize.includes('litre')) return 'Per bottle';
+    if (unitSize.includes('dozen') || unitSize.includes('eggs')) return 'Per dozen';
+    if (category.includes('produce')) return 'Per item';
+    if (category.includes('meat')) return 'Per pack';
+    
     return 'Per item';
   };
 
