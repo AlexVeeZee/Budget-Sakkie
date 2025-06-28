@@ -74,6 +74,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           username: profile?.display_name || session.user.email?.split('@')[0] || '',
           displayName: profile?.display_name || undefined,
           avatarUrl: profile?.profile_image_url || undefined,
+          address: profile?.address || undefined,
+          city: profile?.city || undefined,
+          province: profile?.province || undefined,
+          postalCode: profile?.postal_code || undefined,
           isGuest: false,
           createdAt: session.user.created_at || new Date().toISOString()
         };
@@ -167,6 +171,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         username: profile?.display_name || data.user.email?.split('@')[0] || '',
         displayName: profile?.display_name || undefined,
         avatarUrl: profile?.profile_image_url || undefined,
+        address: profile?.address || undefined,
+        city: profile?.city || undefined,
+        province: profile?.province || undefined,
+        postalCode: profile?.postal_code || undefined,
         isGuest: false,
         createdAt: data.user.created_at || new Date().toISOString()
       };
@@ -346,14 +354,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         return { success: true };
       } else {
         // Update database for authenticated users
+        const updateData: any = {
+          id: user.id,
+          updated_at: new Date().toISOString()
+        };
+        
+        if (updates.displayName !== undefined) updateData.display_name = updates.displayName;
+        if (updates.avatarUrl !== undefined) updateData.profile_image_url = updates.avatarUrl;
+        if (updates.address !== undefined) updateData.address = updates.address;
+        if (updates.city !== undefined) updateData.city = updates.city;
+        if (updates.province !== undefined) updateData.province = updates.province;
+        if (updates.postalCode !== undefined) updateData.postal_code = updates.postalCode;
+        
         const { error } = await supabase
           .from('user_profiles')
-          .upsert({
-            id: user.id,
-            display_name: updates.displayName || user.displayName,
-            profile_image_url: updates.avatarUrl || user.avatarUrl,
-            updated_at: new Date().toISOString()
-          });
+          .upsert(updateData);
         
         if (error) {
           set({ isLoading: false, error: error.message });

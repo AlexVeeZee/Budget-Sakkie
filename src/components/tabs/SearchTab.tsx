@@ -1,266 +1,20 @@
 import React, { useState, useMemo, lazy, Suspense, useEffect } from 'react';
-import { Search, Filter, ScanLine, MapPin, TrendingDown, ShoppingCart, X, Plus } from 'lucide-react';
+import { Search, Filter, ScanLine, MapPin } from 'lucide-react';
 import { useProducts } from '../../hooks/useProducts';
-import { useCurrency } from '../../hooks/useCurrency';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useCurrency } from '../../hooks/useCurrency';
 import { useCart } from '../../context/CartContext';
+import { ProductGrid } from '../ProductGrid';
 import type { ProductWithCategory } from '../../services/productService';
-import { AddToListModal } from '../modals/AddToListModal';
 
 // Lazy load heavy components
 const FilterModal = lazy(() => import('../modals/FilterModal'));
-
-// Move getStoreDisplayName to top level to avoid hoisting issues
-const getStoreDisplayName = (storeId: string) => {
-  const storeNames: { [key: string]: string } = {
-    'pick-n-pay': 'Pick n Pay',
-    'shoprite': 'Shoprite',
-    'checkers': 'Checkers',
-    'woolworths': 'Woolworths',
-    'spar': 'SPAR'
-  };
-  return storeNames[storeId] || storeId;
-};
 
 interface SearchTabProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onProductSelect?: (productInfo: { id: string; name: string }) => void;
 }
-
-interface ProductCardProps {
-  product: ProductWithCategory;
-  onCompare: () => void;
-  onAddToList: () => void;
-  isSelected: boolean;
-}
-
-interface TemporaryItem {
-  id: string;
-  product: ProductWithCategory;
-  quantity: number;
-}
-
-const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToList, isSelected }) => {
-  const { formatCurrency } = useCurrency();
-
-  const getStoreColor = (storeId: string) => {
-    const storeColors: { [key: string]: string } = {
-      'pick-n-pay': '#E31837',
-      'shoprite': '#FF6B35',
-      'checkers': '#00A651',
-      'woolworths': '#00A86B',
-      'spar': '#006B3F'
-    };
-    return storeColors[storeId] || '#6B7280';
-  };
-
-  const getStockStatus = (quantity: number | null) => {
-    if (!quantity || quantity === 0) return { text: 'Out of Stock', color: 'text-red-600' };
-    if (quantity < 10) return { text: 'Low Stock', color: 'text-orange-600' };
-    return { text: 'In Stock', color: 'text-green-600' };
-  };
-
-  const stockStatus = getStockStatus(product.stock_quantity);
-
-  const handleAddToList = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onAddToList();
-  };
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer" onClick={onCompare}>
-      <div className="relative cursor-pointer">
-        <img 
-          src={product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'}
-          alt={product.name}
-          loading="lazy"
-          className="w-full h-48 object-cover"
-        />
-        
-        {/* Store Badge */}
-        <div 
-          className="absolute top-3 left-3 text-white px-3 py-1 rounded-full text-sm font-bold"
-          style={{ backgroundColor: getStoreColor(product.store_id) }}
-        >
-          {getStoreDisplayName(product.store_id)}
-        </div>
-        
-        {/* Stock Status Badge */}
-        <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium ${
-          stockStatus.color === 'text-green-600' ? 'bg-green-100 text-green-800' :
-          stockStatus.color === 'text-orange-600' ? 'bg-orange-100 text-orange-800' :
-          'bg-red-100 text-red-800'
-        }`}>
-          {stockStatus.text}
-        </div>
-      </div>
-      
-      <div className="p-4">
-        <div className="mb-3 cursor-pointer">
-          <h3 className="font-semibold text-gray-900 text-lg leading-tight">{product.name}</h3>
-          <p className="text-gray-600 text-sm">{product.description}</p>
-          {product.category && (
-            <p className="text-blue-600 text-sm font-medium">{product.category.name}</p>
-          )}
-        </div>
-
-        <div className="mb-4 cursor-pointer">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Price</span>
-            <span className="text-sm text-gray-500">SKU: {product.sku || 'N/A'}</span>
-          </div>
-          
-          <div className="bg-green-50 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(product.price)}
-                </p>
-                <p className="text-sm text-gray-600">{getStoreDisplayName(product.store_id)}</p>
-              </div>
-              <span className={`text-sm font-medium ${stockStatus.color}`}>
-                {stockStatus.text}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile-optimized buttons with minimum 44px touch targets */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCompare();
-            }}
-            className="flex items-center justify-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
-          >
-            <TrendingDown className="h-4 w-4" />
-            <span className="text-sm">Compare Prices</span>
-          </button>
-          
-          <button
-            onClick={handleAddToList}
-            className={`flex items-center justify-center space-x-2 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px] ${
-              isSelected 
-                ? 'bg-green-600 text-white hover:bg-green-700' 
-                : 'bg-green-50 text-green-700 hover:bg-green-100'
-            }`}
-          >
-            {isSelected ? (
-              <>
-                <ShoppingCart className="h-4 w-4" />
-                <span className="text-sm">Selected</span>
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4" />
-                <span className="text-sm">Add to List</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Additional Product Info */}
-        <div className="mt-3 pt-3 border-t border-gray-100">
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>Stock: {product.stock_quantity || 0} units</span>
-            <span>Updated: {new Date(product.updated_at || '').toLocaleDateString()}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Temporary Items Bar Component
-const TemporaryItemsBar: React.FC<{
-  items: TemporaryItem[];
-  onRemoveItem: (productId: string) => void;
-  onClearAll: () => void;
-  onCreateNewList: () => void;
-  onAddToExistingList: () => void;
-}> = ({ items, onRemoveItem, onClearAll, onCreateNewList, onAddToExistingList }) => {
-  const { formatCurrency } = useCurrency();
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  if (items.length === 0) return null;
-
-  return (
-    <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40 animate-slide-up">
-      {/* Collapsed View */}
-      <div className="px-4 py-3">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center space-x-2 text-gray-700 font-medium"
-          >
-            <ShoppingCart className="h-5 w-5 text-green-600" />
-            <span>{items.length} item{items.length > 1 ? 's' : ''} selected</span>
-          </button>
-          
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={onClearAll}
-              className="p-2 text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          <button
-            onClick={onCreateNewList}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
-          >
-            Create New List
-          </button>
-          <button
-            onClick={onAddToExistingList}
-            className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
-          >
-            Add to Existing List
-          </button>
-        </div>
-      </div>
-
-      {/* Expanded View */}
-      {isExpanded && (
-        <div className="border-t border-gray-200 bg-gray-50 max-h-40 overflow-y-auto">
-          <div className="px-4 py-2">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Items</h4>
-            <div className="space-y-2">
-              {items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between bg-white rounded-lg p-2">
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={item.product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'}
-                      alt={item.product.name}
-                      className="w-8 h-8 rounded object-cover"
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{item.product.name}</p>
-                      <p className="text-xs text-gray-500">{formatCurrency(item.product.price)}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => onRemoveItem(item.product.id)}
-                    className="p-1 text-gray-400 hover:text-red-600"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 export const SearchTab: React.FC<SearchTabProps> = ({ 
   searchQuery, 
@@ -269,26 +23,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 }) => {
   const { t } = useLanguage();
   const { formatCurrency } = useCurrency();
-  const { 
-    products, 
-    categories, 
-    loading, 
-    error, 
-    searchProducts, 
-    getProductsByCategory, 
-    getProductsByStore,
-    refreshProducts 
-  } = useProducts();
-  
+  const { products, categories, loading, error, searchProducts, getProductsByCategory, getProductsByStore, refreshProducts } = useProducts();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStore, setSelectedStore] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
-  
-  // Temporary items state
-  const [temporaryItems, setTemporaryItems] = useState<TemporaryItem[]>([]);
-  const [showAddToListModal, setShowAddToListModal] = useState(false);
-  const [listAction, setListAction] = useState<'create' | 'existing' | null>(null);
+
+  // Use the cart context
+  const { addItem } = useCart();
 
   // Debounced search effect
   useEffect(() => {
@@ -373,52 +115,48 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     }
   };
 
-  const handleCompareProduct = (product: ProductWithCategory) => {
-    if (onProductSelect) {
-      onProductSelect({
-        id: product.id,
-        name: product.name
-      });
-    }
-  };
-
   const handleAddToList = (product: ProductWithCategory) => {
-    const existingItem = temporaryItems.find(item => item.product.id === product.id);
+    addItem({
+      id: product.id,
+      name: product.name,
+      brand: getStoreDisplayName(product.store_id),
+      category: product.category?.name || 'General',
+      image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+      unit: 'each',
+      unitSize: getUnitSize(product),
+      price: product.price
+    });
+  };
+
+  // Helper function to get store display name
+  function getStoreDisplayName(storeId: string) {
+    const storeNames: { [key: string]: string } = {
+      'pick-n-pay': 'Pick n Pay',
+      'shoprite': 'Shoprite',
+      'checkers': 'Checkers',
+      'woolworths': 'Woolworths',
+      'spar': 'SPAR'
+    };
+    return storeNames[storeId] || storeId;
+  }
+
+  // Helper function to determine unit size based on product data
+  function getUnitSize(product: ProductWithCategory): string {
+    if (product.sku?.includes('kg')) return 'per kg';
+    if (product.sku?.includes('g')) return product.sku.match(/\d+g/) ? product.sku.match(/\d+g/)?.[0] || 'pack' : 'pack';
+    if (product.sku?.includes('L') || product.sku?.includes('l')) return product.sku.match(/\d+[Ll]/) ? product.sku.match(/\d+[Ll]/)?.[0] || 'bottle' : 'bottle';
     
-    if (existingItem) {
-      // Remove from temporary list if already selected
-      setTemporaryItems(prev => prev.filter(item => item.product.id !== product.id));
-    } else {
-      // Add to temporary list
-      setTemporaryItems(prev => [...prev, {
-        id: product.id,
-        product,
-        quantity: 1
-      }]);
-    }
-  };
-
-  const handleRemoveFromTemporary = (productId: string) => {
-    setTemporaryItems(prev => prev.filter(item => item.product.id !== productId));
-  };
-
-  const handleClearAll = () => {
-    setTemporaryItems([]);
-  };
-
-  const handleCreateNewList = () => {
-    setListAction('create');
-    setShowAddToListModal(true);
-  };
-
-  const handleAddToExistingList = () => {
-    setListAction('existing');
-    setShowAddToListModal(true);
-  };
-
-  const isProductSelected = (productId: string) => {
-    return temporaryItems.some(item => item.product.id === productId);
-  };
+    // Determine by category
+    const categoryName = product.category?.name?.toLowerCase() || '';
+    
+    if (categoryName.includes('bakery')) return 'loaf';
+    if (categoryName.includes('dairy') && product.name.toLowerCase().includes('milk')) return 'bottle';
+    if (categoryName.includes('dairy') && product.name.toLowerCase().includes('egg')) return 'dozen';
+    if (categoryName.includes('produce')) return 'per kg';
+    if (categoryName.includes('meat')) return 'per kg';
+    
+    return 'each';
+  }
 
   if (error) {
     return (
@@ -452,7 +190,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             placeholder="Search products by name, description, or store..."
             className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
           />
-          <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-3">
+          {/* Icons are hidden but we keep the div for layout consistency */}
+          <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-3" style={{ display: 'none' }}>
             <button 
               className="p-2 text-gray-400 hover:text-gray-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Scan barcode"
@@ -498,7 +237,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               <select
                 value={selectedCategory}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none"
+                style={{ 
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem'
+                }}
               >
                 <option value="all">All Categories</option>
                 {categories.map((category) => (
@@ -515,7 +261,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               <select
                 value={selectedStore}
                 onChange={(e) => handleStoreChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none"
+                style={{ 
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem'
+                }}
               >
                 <option value="all">All Stores</option>
                 {uniqueStores.map((store) => (
@@ -565,29 +318,29 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onCompare={() => handleCompareProduct(product)}
-                  onAddToList={() => handleAddToList(product)}
-                  isSelected={isProductSelected(product.id)}
-                />
-              ))}
-            </div>
+            <ProductGrid
+              products={filteredProducts.map(product => ({
+                id: product.id,
+                name: product.name,
+                brand: getStoreDisplayName(product.store_id),
+                category: product.category?.name || 'General',
+                image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+                unit: 'each',
+                unitSize: getUnitSize(product),
+                price: product.price
+              }))}
+              onProductSelect={onProductSelect}
+              onAddToList={(product) => {
+                // Find the source product and add it to the list
+                const sourceProduct = filteredProducts.find(p => p.id === product.id);
+                if (sourceProduct) {
+                  handleAddToList(sourceProduct);
+                }
+              }}
+            />
           )}
         </>
       )}
-
-      {/* Temporary Items Bar */}
-      <TemporaryItemsBar
-        items={temporaryItems}
-        onRemoveItem={handleRemoveFromTemporary}
-        onClearAll={handleClearAll}
-        onCreateNewList={handleCreateNewList}
-        onAddToExistingList={handleAddToExistingList}
-      />
 
       {/* Lazy loaded Filter Modal */}
       <Suspense fallback={<div>Loading...</div>}>
@@ -598,54 +351,6 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           />
         )}
       </Suspense>
-
-      {/* Add to List Modal */}
-      {showAddToListModal && temporaryItems.length > 0 && (
-        <AddToListModal
-          isOpen={showAddToListModal}
-          onClose={() => setShowAddToListModal(false)}
-          product={{
-            id: temporaryItems[0].product.id,
-            name: `${temporaryItems.length} selected items`,
-            brand: 'Multiple',
-            category: 'Multiple',
-            image: temporaryItems[0].product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
-            unit: 'items',
-            unitSize: `${temporaryItems.length}`,
-            barcode: 'MULTIPLE'
-          }}
-          quantity={temporaryItems.length}
-          onAddToList={(listId, quantity) => {
-            console.log('Adding items to list:', listId, 'items:', temporaryItems.length);
-            alert(`Added ${temporaryItems.length} items to shopping list!`);
-            setTemporaryItems([]);
-            setShowAddToListModal(false);
-          }}
-          onCreateNewList={() => {
-            console.log('Creating new list with items:', temporaryItems.length);
-            alert(`Created new list with ${temporaryItems.length} items!`);
-            setTemporaryItems([]);
-            setShowAddToListModal(false);
-          }}
-        />
-      )}
-
-      {/* Add animation styles */}
-      <style jsx>{`
-        @keyframes slide-up {
-          from {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out forwards;
-        }
-      `}</style>
     </div>
   );
 };
