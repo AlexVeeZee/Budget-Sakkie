@@ -85,14 +85,6 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             {isAuthenticated 
               ? (user?.displayName || user?.username) 
               : isGuest 
-                ? user?.username 
-                : 'Sign In'
-            }
-          </p>
-          <p className="text-xs text-white/80">
-            {isAuthenticated 
-              ? 'Account' 
-              : isGuest 
                 ? 'Guest User' 
                 : 'Create'
             }
