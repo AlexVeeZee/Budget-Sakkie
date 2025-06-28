@@ -1,21 +1,26 @@
 import React, { useState } from 'react';
 import { Crown, Shield, MoreVertical, Edit2, Trash2, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { FamilyMember } from '../../types/family';
-import { DeleteFamilyMemberModal } from '../modals/DeleteFamilyMemberModal';
-import { EditFamilyMemberModal } from '../modals/EditFamilyMemberModal';
+import { EditMemberModal } from './EditMemberModal';
+import { DeleteMemberModal } from './DeleteMemberModal';
 
 interface FamilyMembersListProps {
   members: FamilyMember[];
-  currentUserId: string;
-  onUpdateRole: (memberId: string, newRole: 'admin' | 'member') => Promise<{ success: boolean; error?: string }>;
-  onRemoveMember: (memberId: string) => Promise<{ success: boolean; error?: string }>;
+  onUpdateMember: (
+    memberId: string,
+    updates: {
+      role?: 'parent' | 'child' | 'guardian' | 'spouse' | 'sibling' | 'other';
+      isAdmin?: boolean;
+      status?: 'active' | 'pending' | 'inactive';
+    }
+  ) => Promise<void>;
+  onRemoveMember: (memberId: string) => Promise<void>;
   isLoading?: boolean;
 }
 
 export const FamilyMembersList: React.FC<FamilyMembersListProps> = ({
   members,
-  currentUserId,
-  onUpdateRole,
+  onUpdateMember,
   onRemoveMember,
   isLoading = false
 }) => {
@@ -34,20 +39,16 @@ export const FamilyMembersList: React.FC<FamilyMembersListProps> = ({
     }
   };
 
-  const getRoleIcon = (role: string) => {
-    return role === 'admin' ? <Crown className="h-4 w-4 text-yellow-600" /> : <Shield className="h-4 w-4 text-blue-600" />;
+  const getRoleIcon = (role: string, isAdmin: boolean) => {
+    return isAdmin ? <Crown className="h-4 w-4 text-yellow-600" /> : <Shield className="h-4 w-4 text-blue-600" />;
   };
 
-  const handleRoleChange = async (memberId: string, newRole: 'admin' | 'member') => {
+  const handleRoleChange = async (memberId: string, isAdmin: boolean) => {
     setProcessingAction(memberId);
     setActionError(null);
     
     try {
-      const { success, error } = await onUpdateRole(memberId, newRole);
-      
-      if (!success) {
-        setActionError(error || 'Failed to update role');
-      }
+      await onUpdateMember(memberId, { isAdmin });
     } catch (error) {
       setActionError('An unexpected error occurred');
       console.error('Error updating role:', error);
@@ -63,14 +64,25 @@ export const FamilyMembersList: React.FC<FamilyMembersListProps> = ({
     setActionError(null);
     
     try {
-      const { success, error } = await onRemoveMember(memberId);
-      
-      if (!success) {
-        setActionError(error || 'Failed to remove member');
-      }
+      await onRemoveMember(memberId);
     } catch (error) {
       setActionError('An unexpected error occurred');
       console.error('Error removing member:', error);
+    } finally {
+      setProcessingAction(null);
+    }
+  };
+
+  const handleEditSave = async (member: FamilyMember, updates: any) => {
+    setProcessingAction(member.member_id);
+    setActionError(null);
+    
+    try {
+      await onUpdateMember(member.member_id, updates);
+      setEditingMember(null);
+    } catch (error) {
+      setActionError('An unexpected error occurred');
+      console.error('Error updating member:', error);
     } finally {
       setProcessingAction(null);
     }
@@ -103,24 +115,34 @@ export const FamilyMembersList: React.FC<FamilyMembersListProps> = ({
       
       {members.map((member) => (
         <div 
-          key={member.id}
+          key={member.member_id}
           className="p-4 rounded-xl border border-gray-200 hover:shadow-sm transition-shadow"
           style={{ backgroundColor: '#ffffff' }}
         >
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-4">
-              <img 
-                src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random`}
-                alt={member.name}
-                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-              />
+              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                {member.profile_image_url ? (
+                  <img 
+                    src={member.profile_image_url}
+                    alt={`${member.first_name} ${member.last_name}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-lg font-semibold text-gray-600">
+                    {member.first_name.charAt(0)}{member.last_name.charAt(0)}
+                  </span>
+                )}
+              </div>
               
               <div>
                 <div className="flex items-center space-x-3 mb-1">
-                  <h4 className="text-lg font-bold text-gray-900">{member.name}</h4>
+                  <h4 className="text-lg font-bold text-gray-900">{member.first_name} {member.last_name}</h4>
                   <div className="flex items-center space-x-1">
-                    {getRoleIcon(member.role)}
-                    <span className="text-sm font-medium text-gray-600 capitalize">{member.role}</span>
+                    {getRoleIcon(member.role, member.is_admin)}
+                    <span className="text-sm font-medium text-gray-600 capitalize">
+                      {member.is_admin ? 'Admin' : member.role}
+                    </span>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(member.status)}`}>
                     {member.status}
@@ -128,87 +150,59 @@ export const FamilyMembersList: React.FC<FamilyMembersListProps> = ({
                 </div>
                 
                 <p className="text-gray-600 mb-1">{member.email}</p>
-                <p className="text-sm text-gray-500">
-                  Joined: {new Date(member.joinedDate).toLocaleDateString()}
-                </p>
-                {member.relationship && (
-                  <p className="text-sm text-blue-600 mt-1">
-                    Relationship: {member.relationship}
-                  </p>
-                )}
               </div>
             </div>
             
-            {/* Only show actions for other members, not current user */}
-            {member.id !== currentUserId && (
-              <div className="relative">
-                <button 
-                  onClick={() => setShowActionsFor(showActionsFor === member.id ? null : member.id)}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                  disabled={!!processingAction}
-                >
-                  {processingAction === member.id ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-                  ) : (
-                    <MoreVertical className="h-5 w-5" />
-                  )}
-                </button>
-                
-                {showActionsFor === member.id && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
+            <div className="relative">
+              <button 
+                onClick={() => setShowActionsFor(showActionsFor === member.member_id ? null : member.member_id)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                disabled={!!processingAction}
+              >
+                {processingAction === member.member_id ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                ) : (
+                  <MoreVertical className="h-5 w-5" />
+                )}
+              </button>
+              
+              {showActionsFor === member.member_id && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
+                  <button
+                    onClick={() => setEditingMember(member)}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    <span>Edit Member</span>
+                  </button>
+                  
+                  {member.is_admin ? (
                     <button
-                      onClick={() => setEditingMember(member)}
+                      onClick={() => handleRoleChange(member.member_id, false)}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
                     >
-                      <Edit2 className="h-4 w-4" />
-                      <span>Edit Member</span>
+                      <Shield className="h-4 w-4 text-blue-600" />
+                      <span>Remove Admin Rights</span>
                     </button>
-                    
-                    {member.role === 'admin' ? (
-                      <button
-                        onClick={() => handleRoleChange(member.id, 'member')}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                      >
-                        <Shield className="h-4 w-4 text-blue-600" />
-                        <span>Change to Member</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleRoleChange(member.id, 'admin')}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                      >
-                        <Crown className="h-4 w-4 text-yellow-600" />
-                        <span>Make Admin</span>
-                      </button>
-                    )}
-                    
+                  ) : (
                     <button
-                      onClick={() => setDeletingMember(member)}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                      onClick={() => handleRoleChange(member.member_id, true)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
                     >
-                      <Trash2 className="h-4 w-4" />
-                      <span>Remove Member</span>
+                      <Crown className="h-4 w-4 text-yellow-600" />
+                      <span>Make Admin</span>
                     </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          
-          {/* Permissions */}
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <h5 className="text-sm font-medium text-gray-700 mb-2">Permissions</h5>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {Object.entries(member.permissions).map(([permission, allowed]) => (
-                <div 
-                  key={permission}
-                  className={`px-2 py-1 rounded text-xs font-medium ${
-                    allowed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {permission.replace(/([A-Z])/g, ' $1').toLowerCase()}
+                  )}
+                  
+                  <button
+                    onClick={() => setDeletingMember(member)}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Remove Member</span>
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -216,25 +210,21 @@ export const FamilyMembersList: React.FC<FamilyMembersListProps> = ({
       
       {/* Edit Member Modal */}
       {editingMember && (
-        <EditFamilyMemberModal
+        <EditMemberModal
           isOpen={!!editingMember}
           onClose={() => setEditingMember(null)}
           member={editingMember}
-          onSave={(updatedMember) => {
-            // This would be handled by the parent component through a callback
-            // that refreshes the member list from the database
-            setEditingMember(null);
-          }}
+          onSave={handleEditSave}
         />
       )}
       
       {/* Delete Member Modal */}
       {deletingMember && (
-        <DeleteFamilyMemberModal
+        <DeleteMemberModal
           isOpen={!!deletingMember}
           onClose={() => setDeletingMember(null)}
           member={deletingMember}
-          onConfirm={() => handleRemoveMember(deletingMember.id)}
+          onConfirm={() => handleRemoveMember(deletingMember.member_id)}
         />
       )}
     </div>

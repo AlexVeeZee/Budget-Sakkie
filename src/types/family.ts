@@ -1,74 +1,41 @@
 export interface FamilyMember {
-  id: string;
-  name: string;
+  member_id: string;
+  first_name: string;
+  last_name: string;
   email: string;
-  role: 'admin' | 'member';
-  avatar: string;
-  joinedDate: string;
+  profile_image_url: string | null;
+  role: 'parent' | 'child' | 'guardian' | 'spouse' | 'sibling' | 'other';
+  is_admin: boolean;
   status: 'active' | 'pending' | 'inactive';
-  lastActive: string;
-  permissions: {
-    viewLists: boolean;
-    editLists: boolean;
-    createLists: boolean;
-    viewBudget: boolean;
-    editBudget: boolean;
-    inviteMembers: boolean;
-    manageMembers: boolean;
-  };
-  relationship?: string;
+  date_of_birth?: string;
 }
 
-export interface FamilyGroup {
-  id: string;
-  name: string;
-  description?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-  members: FamilyMember[];
-  settings: {
-    allowMemberInvites: boolean;
-    requireApprovalForNewMembers: boolean;
-    defaultMemberPermissions: Partial<FamilyMember['permissions']>;
-  };
-  stats: {
-    totalLists: number;
-    totalSavings: number;
-    activeMembers: number;
-  };
-}
-
-export interface FamilyInvitation {
-  id: string;
-  familyId: string;
-  familyName: string;
-  invitedBy: string;
-  invitedByName: string;
-  email: string;
-  role: 'admin' | 'member';
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
-  createdAt: string;
-  expiresAt: string;
-  message?: string;
-}
-
-export interface FamilyActivity {
-  id: string;
-  familyId: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  type: 'list_created' | 'list_updated' | 'list_shared' | 'member_joined' | 'member_left' | 'item_added' | 'item_completed';
-  description: string;
-  metadata?: Record<string, any>;
-  timestamp: string;
+export interface Family {
+  family_id: string;
+  family_name: string;
+  created_at: string;
+  updated_at: string;
+  members?: FamilyMember[];
 }
 
 export interface FamilyRelationship {
-  id: string;
-  userId: string;
-  relatedUserId: string;
-  relationship: 'spouse' | 'parent' | 'child' | 'sibling' | 'grandparent' | 'other' | 'friend';
-  createdAt: string;
+  relationship_id: string;
+  family_id: string;
+  member_id: string;
+  role: 'parent' | 'child' | 'guardian' | 'spouse' | 'sibling' | 'other';
+  is_admin: boolean;
+  status: 'active' | 'pending' | 'inactive';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FamilyInvitation {
+  invitation_id: string;
+  family_id: string;
+  email: string;
+  role: 'parent' | 'child' | 'guardian' | 'spouse' | 'sibling' | 'other';
+  is_admin: boolean;
+  expires_at: string;
+  created_at: string;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
 }
