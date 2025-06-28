@@ -1,122 +1,58 @@
 import { supabase } from '../lib/supabase';
-import { Family, FamilyMember, FamilyRelationship } from '../types/family';
+import { useAuthStore } from '../store/authStore';
 
-export interface FamilyWithMembers extends Family {
-  members: FamilyMember[];
-}
-
-export interface SharedListWithItems {
+export interface FamilyGroup {
   id: string;
   name: string;
-  description: string | null;
-  budget: number | null;
-  status: string;
+  description?: string;
+  created_by: string;
   created_at: string;
   updated_at: string;
-  shared_list_items: Array<{
-    id: string;
-    product_name: string;
-    quantity: number;
-    estimated_price: number | null;
-    actual_price: number | null;
-    category: string | null;
-    notes: string | null;
-    priority: string;
-    completed: boolean;
-    completed_by: string | null;
-    completed_at: string | null;
-  }>;
 }
 
-export interface FamilyBudgetWithExpenses {
+export interface FamilyMember {
   id: string;
   name: string;
-  total_amount: number;
-  spent_amount: number;
-  currency: string;
-  period_type: string;
-  start_date: string;
-  end_date: string;
-  expenses: Array<{
-    id: string;
-    description: string;
-    amount: number;
-    category: string | null;
-    expense_date: string;
-    paid_by: string;
-  }>;
+  email: string;
+  role: 'admin' | 'member';
+  avatar?: string;
+  status: 'active' | 'pending' | 'inactive';
+}
+
+export interface FamilyInvitation {
+  id: string;
+  familyId: string;
+  familyName: string;
+  invitedByName: string;
+  email: string;
+  role: 'admin' | 'member';
+  status: 'pending' | 'accepted' | 'declined';
+  expiresAt: string;
+  message?: string;
 }
 
 export class FamilyService {
   /**
-   * Get all families the current user belongs to
+   * Create a new family group
    */
-  static async getUserFamilies(): Promise<{ families: Family[]; error?: string }> {
+  static async createFamily(
+    name: string,
+    description?: string
+  ): Promise<{ success: boolean; family?: FamilyGroup; error?: string }> {
     try {
-      const { data, error } = await supabase
-        .rpc('get_user_families');
+      const { user } = useAuthStore.getState();
       
-      if (error) {
-        throw new Error(error.message);
+      if (!user) {
+        return { success: false, error: 'You must be logged in to create a family' };
       }
       
-      return { families: data || [] };
-    } catch (error) {
-      console.error('Error fetching user families:', error);
-      return { 
-        families: [], 
-        error: error instanceof Error ? error.message : 'Failed to fetch families' 
-      };
-    }
-  }
-  
-  /**
-   * Get user's primary family
-   */
-  static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?: string }> {
-    try {
-      const { families, error } = await this.getUserFamilies();
-      
-      if (error) {
-        throw new Error(error);
-      }
-      
-      // Return the first family or null if none exists
-      const family = families.length > 0 ? families[0] : null;
-      
-      if (family) {
-        // Get family members
-        const { members } = await this.getFamilyMembers(family.family_id);
-        
-        return { 
-          family: {
-            ...family,
-            members
-          }
-        };
-      }
-      
-      return { family: null };
-    } catch (error) {
-      console.error('Error fetching user family:', error);
-      return { 
-        family: null, 
-        error: error instanceof Error ? error.message : 'Failed to fetch family' 
-      };
-    }
-  }
-  
-  /**
-   * Create a new family
-   */
-  static async createFamily(familyName: string): Promise<{ family: Family | null; error?: string }> {
-    try {
-      // Create family
+      // Create the family
       const { data: family, error: familyError } = await supabase
         .from('families')
         .insert({
-          name: familyName,
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          name,
+          description,
+          created_by: user.id
         })
         .select()
         .single();
@@ -125,25 +61,89 @@ export class FamilyService {
         throw new Error(`Failed to create family: ${familyError.message}`);
       }
       
-      // Add creator as admin member
+      // Add current user as admin
       const { error: memberError } = await supabase
         .from('family_members')
         .insert({
           family_id: family.id,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: user.id,
           role: 'admin'
         });
       
       if (memberError) {
-        throw new Error(`Failed to add member to family: ${memberError.message}`);
+        throw new Error(`Failed to add you as admin: ${memberError.message}`);
       }
       
-      return { family };
+      // Update user's profile with family_id
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({ family_id: family.id })
+        .eq('id', user.id);
+      
+      if (profileError) {
+        console.warn(`Failed to update profile: ${profileError.message}`);
+        // Non-critical error, continue
+      }
+      
+      return { 
+        success: true, 
+        family: {
+          id: family.id,
+          name: family.name,
+          description: family.description,
+          created_by: family.created_by,
+          created_at: family.created_at,
+          updated_at: family.updated_at
+        }
+      };
     } catch (error) {
       console.error('Error creating family:', error);
       return { 
-        family: null, 
+        success: false, 
         error: error instanceof Error ? error.message : 'Failed to create family' 
+      };
+    }
+  }
+  
+  /**
+   * Get the current user's family
+   */
+  static async getUserFamily(): Promise<{ family: FamilyGroup | null; error?: string }> {
+    try {
+      const { user } = useAuthStore.getState();
+      
+      if (!user) {
+        return { family: null, error: 'Not authenticated' };
+      }
+      
+      // Get user's family using the RPC function
+      const { data, error } = await supabase
+        .rpc('get_user_families');
+      
+      if (error) {
+        throw new Error(`Failed to get user family: ${error.message}`);
+      }
+      
+      if (!data || data.length === 0) {
+        return { family: null };
+      }
+      
+      // Return the first family (users typically belong to only one family)
+      return { 
+        family: {
+          id: data[0].id,
+          name: data[0].name,
+          description: data[0].description,
+          created_by: data[0].created_by,
+          created_at: data[0].created_at,
+          updated_at: data[0].updated_at
+        }
+      };
+    } catch (error) {
+      console.error('Error getting user family:', error);
+      return { 
+        family: null, 
+        error: error instanceof Error ? error.message : 'Failed to get user family' 
       };
     }
   }
@@ -151,175 +151,75 @@ export class FamilyService {
   /**
    * Get all members of a family
    */
-  static async getFamilyMembers(familyId: string): Promise<{ members: FamilyMember[]; error?: string }> {
+  static async getFamilyMembers(
+    familyId: string
+  ): Promise<{ members: FamilyMember[]; error?: string }> {
     try {
-      // Get the current user's ID
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { members: [], error: 'User not authenticated' };
-      }
-      
-      // Check if user is a member of this family
-      const { data: membership, error: membershipError } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('family_id', familyId)
-        .eq('user_id', user.id)
-        .single();
-      
-      if (membershipError) {
-        return { members: [], error: 'You are not a member of this family' };
-      }
-      
-      // Get all members of the family
+      // Get family members using the RPC function
       const { data, error } = await supabase
-        .from('family_members')
-        .select(`
-          user_id,
-          role,
-          relationship,
-          joined_at,
-          user:user_id (
-            email,
-            user_profiles:user_profiles (
-              display_name,
-              profile_image_url
-            )
-          )
-        `)
-        .eq('family_id', familyId);
+        .rpc('get_family_members', { p_family_id: familyId });
       
       if (error) {
-        throw new Error(error.message);
+        throw new Error(`Failed to get family members: ${error.message}`);
       }
       
       // Transform the data to match our FamilyMember type
-      const members: FamilyMember[] = data.map(member => {
-        const userProfile = member.user?.user_profiles?.[0] || {};
-        return {
-          id: member.user_id,
-          name: userProfile.display_name || member.user?.email?.split('@')[0] || 'Unknown',
-          email: member.user?.email || '',
-          role: member.role,
-          relationship: member.relationship || '',
-          avatar: userProfile.profile_image_url || '',
-          joinedDate: member.joined_at,
-          status: 'active',
-          lastActive: new Date().toISOString(),
-          permissions: {
-            viewLists: true,
-            editLists: member.role === 'admin',
-            createLists: true,
-            viewBudget: true,
-            editBudget: member.role === 'admin',
-            inviteMembers: member.role === 'admin',
-            manageMembers: member.role === 'admin'
-          }
-        };
-      });
+      const members: FamilyMember[] = (data || []).map((member: any) => ({
+        id: member.member_id,
+        name: `${member.first_name} ${member.last_name}`,
+        email: member.email,
+        role: member.is_admin ? 'admin' : 'member',
+        avatar: member.profile_image_url,
+        status: member.status
+      }));
       
       return { members };
     } catch (error) {
-      console.error('Error fetching family members:', error);
+      console.error('Error getting family members:', error);
       return { 
         members: [], 
-        error: error instanceof Error ? error.message : 'Failed to fetch family members' 
+        error: error instanceof Error ? error.message : 'Failed to get family members' 
       };
     }
   }
   
   /**
-   * Update a family member's role
+   * Invite a user to join a family
    */
-  static async updateMemberRole(
+  static async inviteToFamily(
     familyId: string,
-    memberId: string,
-    newRole: 'admin' | 'member'
+    email: string,
+    role: 'admin' | 'member',
+    message?: string,
+    relationship?: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
-      }
-      
-      // Check if user is admin of this family
-      const { data: membership, error: membershipError } = await supabase
-        .from('family_members')
-        .select('role')
-        .eq('family_id', familyId)
-        .eq('user_id', user.id)
-        .single();
-      
-      if (membershipError || membership.role !== 'admin') {
-        return { success: false, error: 'Only family admins can update member roles' };
-      }
-      
-      // Update member role
-      const { error } = await supabase
-        .from('family_members')
-        .update({ role: newRole })
-        .eq('family_id', familyId)
-        .eq('user_id', memberId);
+      // Use the RPC function to invite a user
+      const { data, error } = await supabase
+        .rpc('invite_to_family', {
+          p_family_id: familyId,
+          p_email: email,
+          p_role: role,
+          p_is_admin: role === 'admin'
+        });
       
       if (error) {
-        throw new Error(error.message);
+        throw new Error(`Failed to invite user: ${error.message}`);
+      }
+      
+      // Check the result
+      const result = data as { success: boolean; message: string; invitation_id?: string };
+      
+      if (!result.success) {
+        return { success: false, error: result.message };
       }
       
       return { success: true };
     } catch (error) {
-      console.error('Error updating member role:', error);
+      console.error('Error inviting to family:', error);
       return { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Failed to update member role' 
-      };
-    }
-  }
-  
-  /**
-   * Remove a member from a family
-   */
-  static async removeMember(
-    familyId: string,
-    memberId: string
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
-      }
-      
-      // Check if user is admin of this family
-      const { data: membership, error: membershipError } = await supabase
-        .from('family_members')
-        .select('role')
-        .eq('family_id', familyId)
-        .eq('user_id', user.id)
-        .single();
-      
-      if (membershipError || membership.role !== 'admin') {
-        return { success: false, error: 'Only family admins can remove members' };
-      }
-      
-      // Remove member
-      const { error } = await supabase
-        .from('family_members')
-        .delete()
-        .eq('family_id', familyId)
-        .eq('user_id', memberId);
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Error removing member:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to remove member' 
+        error: error instanceof Error ? error.message : 'Failed to invite user' 
       };
     }
   }
@@ -327,106 +227,59 @@ export class FamilyService {
   /**
    * Get pending invitations for the current user
    */
-  static async getPendingInvitations(): Promise<{ invitations: any[]; error?: string }> {
+  static async getPendingInvitations(): Promise<{ invitations: FamilyInvitation[]; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { invitations: [], error: 'User not authenticated' };
-      }
-      
+      // Get pending invitations using the RPC function
       const { data, error } = await supabase
-        .from('family_invitations')
-        .select(`
-          id,
-          family_id,
-          family:family_id (name),
-          invited_by,
-          inviter:invited_by (email, user_profiles:user_profiles(display_name)),
-          role,
-          status,
-          created_at,
-          expires_at
-        `)
-        .eq('invited_email', user.email)
-        .eq('status', 'pending')
-        .lt('expires_at', new Date().toISOString());
+        .rpc('get_pending_invitations');
       
       if (error) {
-        throw new Error(error.message);
+        throw new Error(`Failed to get invitations: ${error.message}`);
       }
       
-      // Transform the data
-      const invitations = data.map(invitation => ({
-        id: invitation.id,
+      // Transform the data to match our FamilyInvitation type
+      const invitations: FamilyInvitation[] = (data || []).map((invitation: any) => ({
+        id: invitation.invitation_id,
         familyId: invitation.family_id,
-        familyName: invitation.family?.name || 'Unknown Family',
-        invitedBy: invitation.invited_by,
-        invitedByName: invitation.inviter?.user_profiles?.[0]?.display_name || 
-                      invitation.inviter?.email?.split('@')[0] || 'Unknown',
-        role: invitation.role,
+        familyName: invitation.family_name,
+        invitedByName: invitation.invited_by_name,
+        email: invitation.email,
+        role: invitation.is_admin ? 'admin' : 'member',
         status: invitation.status,
-        createdAt: invitation.created_at,
         expiresAt: invitation.expires_at,
-        message: '' // No message field in our schema, but included for API compatibility
+        message: ''
       }));
       
       return { invitations };
     } catch (error) {
-      console.error('Error fetching invitations:', error);
+      console.error('Error getting invitations:', error);
       return { 
         invitations: [], 
-        error: error instanceof Error ? error.message : 'Failed to fetch invitations' 
+        error: error instanceof Error ? error.message : 'Failed to get invitations' 
       };
     }
   }
   
   /**
-   * Accept an invitation
+   * Accept an invitation to join a family
    */
-  static async acceptInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
+  static async acceptInvitation(
+    invitationId: string
+  ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use the RPC function to accept an invitation
+      const { data, error } = await supabase
+        .rpc('accept_invitation', { p_invitation_id: invitationId });
       
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
+      if (error) {
+        throw new Error(`Failed to accept invitation: ${error.message}`);
       }
       
-      // Get the invitation
-      const { data: invitation, error: invitationError } = await supabase
-        .from('family_invitations')
-        .select('*')
-        .eq('id', invitationId)
-        .eq('invited_email', user.email)
-        .eq('status', 'pending')
-        .lt('expires_at', new Date().toISOString())
-        .single();
+      // Check the result
+      const result = data as { success: boolean; message: string };
       
-      if (invitationError) {
-        return { success: false, error: 'Invalid or expired invitation' };
-      }
-      
-      // Add user to family
-      const { error: memberError } = await supabase
-        .from('family_members')
-        .insert({
-          family_id: invitation.family_id,
-          user_id: user.id,
-          role: invitation.role
-        });
-      
-      if (memberError) {
-        throw new Error(memberError.message);
-      }
-      
-      // Update invitation status
-      const { error: updateError } = await supabase
-        .from('family_invitations')
-        .update({ status: 'accepted' })
-        .eq('id', invitationId);
-      
-      if (updateError) {
-        throw new Error(updateError.message);
+      if (!result.success) {
+        return { success: false, error: result.message };
       }
       
       return { success: true };
@@ -440,25 +293,25 @@ export class FamilyService {
   }
   
   /**
-   * Decline an invitation
+   * Decline an invitation to join a family
    */
-  static async declineInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
+  static async declineInvitation(
+    invitationId: string
+  ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
-      }
-      
-      // Update invitation status
-      const { error } = await supabase
-        .from('family_invitations')
-        .update({ status: 'declined' })
-        .eq('id', invitationId)
-        .eq('invited_email', user.email);
+      // Use the RPC function to decline an invitation
+      const { data, error } = await supabase
+        .rpc('decline_invitation', { p_invitation_id: invitationId });
       
       if (error) {
-        throw new Error(error.message);
+        throw new Error(`Failed to decline invitation: ${error.message}`);
+      }
+      
+      // Check the result
+      const result = data as { success: boolean; message: string };
+      
+      if (!result.success) {
+        return { success: false, error: result.message };
       }
       
       return { success: true };
@@ -472,226 +325,125 @@ export class FamilyService {
   }
   
   /**
-   * Invite to family by email
+   * Update a family member's role
    */
-  static async inviteToFamily(
+  static async updateFamilyMember(
     familyId: string,
-    email: string,
-    role: 'admin' | 'member',
-    message?: string,
-    relationship?: string
+    memberId: string,
+    updates: {
+      role?: 'parent' | 'child' | 'guardian' | 'spouse' | 'sibling' | 'other';
+      isAdmin?: boolean;
+      status?: 'active' | 'pending' | 'inactive';
+    }
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
-      }
-      
-      // Check if user is admin of this family
-      const { data: membership, error: membershipError } = await supabase
-        .from('family_members')
-        .select('role')
-        .eq('family_id', familyId)
-        .eq('user_id', user.id)
-        .single();
-      
-      if (membershipError || membership.role !== 'admin') {
-        return { success: false, error: 'Only family admins can send invitations' };
-      }
-      
-      // Check if invitation already exists
-      const { data: existingInvitation, error: invitationError } = await supabase
-        .from('family_invitations')
-        .select('id')
-        .eq('family_id', familyId)
-        .eq('invited_email', email)
-        .eq('status', 'pending')
-        .maybeSingle();
-      
-      if (existingInvitation) {
-        return { success: false, error: 'An invitation has already been sent to this email' };
-      }
-      
-      // Create invitation
-      const { error } = await supabase
-        .from('family_invitations')
-        .insert({
-          family_id: familyId,
-          invited_email: email,
-          invited_by: user.id,
-          role: role
+      // Use the RPC function to update a family member
+      const { data, error } = await supabase
+        .rpc('update_family_member', {
+          p_family_id: familyId,
+          p_member_id: memberId,
+          p_role: updates.role,
+          p_is_admin: updates.isAdmin,
+          p_status: updates.status
         });
       
       if (error) {
-        throw new Error(error.message);
+        throw new Error(`Failed to update member: ${error.message}`);
       }
       
-      // In a real app, we would send an email here
+      // Check the result
+      const result = data as { success: boolean; message: string };
+      
+      if (!result.success) {
+        return { success: false, error: result.message };
+      }
       
       return { success: true };
     } catch (error) {
-      console.error('Error inviting to family:', error);
+      console.error('Error updating family member:', error);
       return { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Failed to send invitation' 
+        error: error instanceof Error ? error.message : 'Failed to update member' 
       };
     }
   }
   
   /**
-   * Get shared shopping lists for a family
+   * Remove a member from a family
    */
-  static async getFamilyShoppingLists(familyId: string): Promise<{ lists: SharedListWithItems[]; error?: string }> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { lists: [], error: 'User not authenticated' };
-      }
-      
-      // Check if user is a member of this family
-      const { data: membership, error: membershipError } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('family_id', familyId)
-        .eq('user_id', user.id)
-        .single();
-      
-      if (membershipError) {
-        return { lists: [], error: 'You are not a member of this family' };
-      }
-      
-      // Get all shared lists for this family
-      const { data, error } = await supabase
-        .from('shared_shopping_lists')
-        .select(`
-          *,
-          shared_list_items (*)
-        `)
-        .eq('family_id', familyId);
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      return { lists: data || [] };
-    } catch (error) {
-      console.error('Error fetching family shopping lists:', error);
-      return { 
-        lists: [], 
-        error: error instanceof Error ? error.message : 'Failed to fetch shopping lists' 
-      };
-    }
-  }
-  
-  /**
-   * Get family budgets
-   */
-  static async getFamilyBudgets(familyId: string): Promise<{ budgets: FamilyBudgetWithExpenses[]; error?: string }> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { budgets: [], error: 'User not authenticated' };
-      }
-      
-      // Check if user is a member of this family
-      const { data: membership, error: membershipError } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('family_id', familyId)
-        .eq('user_id', user.id)
-        .single();
-      
-      if (membershipError) {
-        return { budgets: [], error: 'You are not a member of this family' };
-      }
-      
-      // Get all budgets for this family
-      const { data, error } = await supabase
-        .from('family_budgets')
-        .select(`
-          *,
-          expenses:family_expenses (
-            id,
-            description,
-            amount,
-            category,
-            expense_date,
-            paid_by
-          )
-        `)
-        .eq('family_id', familyId);
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      return { budgets: data || [] };
-    } catch (error) {
-      console.error('Error fetching family budgets:', error);
-      return { 
-        budgets: [], 
-        error: error instanceof Error ? error.message : 'Failed to fetch budgets' 
-      };
-    }
-  }
-  
-  /**
-   * Create a shared shopping list
-   */
-  static async createSharedList(
+  static async removeFamilyMember(
     familyId: string,
-    name: string,
-    description?: string,
-    budget?: number
-  ): Promise<{ list: SharedListWithItems | null; error?: string }> {
+    memberId: string
+  ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { list: null, error: 'User not authenticated' };
-      }
-      
-      // Check if user is a member of this family
-      const { data: membership, error: membershipError } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('family_id', familyId)
-        .eq('user_id', user.id)
-        .single();
-      
-      if (membershipError) {
-        return { list: null, error: 'You are not a member of this family' };
-      }
-      
-      // Create the list
+      // Use the RPC function to remove a family member
       const { data, error } = await supabase
-        .from('shared_shopping_lists')
-        .insert({
-          family_id: familyId,
-          name,
-          description,
-          budget_amount: budget,
-          created_by: user.id
-        })
-        .select(`
-          *,
-          shared_list_items (*)
-        `)
-        .single();
+        .rpc('remove_family_member', {
+          p_family_id: familyId,
+          p_member_id: memberId
+        });
       
       if (error) {
-        throw new Error(error.message);
+        throw new Error(`Failed to remove member: ${error.message}`);
       }
       
-      return { list: data };
+      // Check the result
+      const result = data as { success: boolean; message: string };
+      
+      if (!result.success) {
+        return { success: false, error: result.message };
+      }
+      
+      return { success: true };
     } catch (error) {
-      console.error('Error creating shared list:', error);
+      console.error('Error removing family member:', error);
       return { 
-        list: null, 
-        error: error instanceof Error ? error.message : 'Failed to create shared list' 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to remove member' 
+      };
+    }
+  }
+  
+  /**
+   * Add a new family member
+   */
+  static async addFamilyMember(
+    familyId: string,
+    firstName: string,
+    lastName: string,
+    email: string,
+    role: 'parent' | 'child' | 'guardian' | 'spouse' | 'sibling' | 'other',
+    isAdmin: boolean
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Use the RPC function to add a family member
+      const { data, error } = await supabase
+        .rpc('add_family_member', {
+          p_family_id: familyId,
+          p_first_name: firstName,
+          p_last_name: lastName,
+          p_email: email,
+          p_role: role,
+          p_is_admin: isAdmin
+        });
+      
+      if (error) {
+        throw new Error(`Failed to add member: ${error.message}`);
+      }
+      
+      // Check the result
+      const result = data as { success: boolean; message: string; member_id?: string };
+      
+      if (!result.success) {
+        return { success: false, error: result.message };
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error adding family member:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to add member' 
       };
     }
   }

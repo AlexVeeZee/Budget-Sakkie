@@ -1,99 +1,83 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Family, FamilyMember } from '../types/family';
 import { FamilyService } from '../services/familyService';
-
-interface UseFamilyState {
-  currentFamily: Family | null;
-  members: FamilyMember[];
-  invitations: any[];
-  loading: boolean;
-  error: string | null;
-}
+import { FamilyGroup, FamilyMember, FamilyInvitation } from '../types/family';
 
 export const useFamily = () => {
-  const [state, setState] = useState<UseFamilyState>({
-    currentFamily: null,
-    members: [],
-    invitations: [],
-    loading: true,
-    error: null
-  });
+  const [currentFamily, setCurrentFamily] = useState<FamilyGroup | null>(null);
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [invitations, setInvitations] = useState<FamilyInvitation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load family data
-  useEffect(() => {
-    const loadFamilyData = async () => {
-      setState(prev => ({ ...prev, loading: true, error: null }));
-      
-      try {
-        // Get user's family
-        const { family, error: familyError } = await FamilyService.getUserFamily();
-        
-        if (familyError) {
-          setState(prev => ({
-            ...prev,
-            loading: false,
-            error: familyError
-          }));
-          return;
-        }
-        
-        // Get pending invitations
-        const { invitations, error: invitationsError } = await FamilyService.getPendingInvitations();
-        
-        if (invitationsError) {
-          console.warn('Error fetching invitations:', invitationsError);
-        }
-        
-        setState({
-          currentFamily: family,
-          members: family?.members || [],
-          invitations: invitations || [],
-          loading: false,
-          error: null
-        });
-      } catch (error) {
-        setState(prev => ({ 
-          ...prev, 
-          loading: false, 
-          error: error instanceof Error ? error.message : 'Failed to load family data' 
-        }));
-      }
-    };
+  const loadFamilyData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-    loadFamilyData();
-  }, []);
-
-  const createFamily = useCallback(async (name: string, description?: string) => {
     try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      // Get user's family
+      const { family, error: familyError } = await FamilyService.getUserFamily();
       
-      const { family, error } = await FamilyService.createFamily(name);
-      
-      if (error) {
-        setState(prev => ({ ...prev, loading: false, error }));
-        return { success: false, error };
+      if (familyError) {
+        setError(familyError);
+        setLoading(false);
+        return;
       }
+
+      setCurrentFamily(family);
+
+      if (family) {
+        // Get family members
+        const { members: memberData, error: membersError } = await FamilyService.getFamilyMembers(family.id);
+        
+        if (membersError) {
+          console.error('Error loading members:', membersError);
+          setError(membersError);
+        } else {
+          setMembers(memberData);
+        }
+      }
+
+      // Get pending invitations
+      const { invitations: invitationData, error: invitationsError } = await FamilyService.getPendingInvitations();
       
-      // Reload family data
-      const { family: newFamily } = await FamilyService.getUserFamily();
-      
-      setState(prev => ({
-        ...prev,
-        currentFamily: newFamily,
-        members: newFamily?.members || [],
-        loading: false
-      }));
-      
-      return { success: true, family: newFamily };
-    } catch (error) {
-      setState(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to create family' 
-      }));
-      return { success: false, error: 'Failed to create family' };
+      if (invitationsError) {
+        console.error('Error loading invitations:', invitationsError);
+      } else {
+        setInvitations(invitationData);
+      }
+    } catch (err) {
+      console.error('Error loading family data:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error loading family data');
+    } finally {
+      setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    loadFamilyData();
+  }, [loadFamilyData]);
+
+  const createFamily = useCallback(async (name: string, description?: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { success, family, error: createError } = await FamilyService.createFamily(name, description);
+      
+      if (!success) {
+        throw new Error(createError);
+      }
+
+      await loadFamilyData();
+      return { success: true, family };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create family';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [loadFamilyData]);
 
   const inviteMember = useCallback(async (
     email: string, 
@@ -101,125 +85,125 @@ export const useFamily = () => {
     message?: string,
     relationship?: string
   ) => {
+    if (!currentFamily) {
+      return { success: false, error: 'No family selected' };
+    }
+
     try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
-      
-      if (!state.currentFamily) {
-        setState(prev => ({ ...prev, loading: false, error: 'No family selected' }));
-        return { success: false, error: 'No family selected' };
-      }
-      
-      const { success, error } = await FamilyService.inviteToFamily(
-        state.currentFamily.family_id,
+      return await FamilyService.inviteToFamily(
+        currentFamily.id,
         email,
         role,
         message,
         relationship
       );
-      
-      if (!success) {
-        setState(prev => ({ ...prev, loading: false, error }));
-        return { success: false, error };
-      }
-      
-      setState(prev => ({ ...prev, loading: false }));
-      return { success: true };
-    } catch (error) {
-      setState(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to invite member' 
-      }));
-      return { success: false, error: 'Failed to invite member' };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to invite member';
+      console.error('Error inviting member:', err);
+      return { success: false, error: errorMessage };
     }
-  }, [state.currentFamily]);
+  }, [currentFamily]);
 
-  const updateMemberRole = useCallback(async (memberId: string, newRole: 'admin' | 'member') => {
+  const updateMemberRole = useCallback(async (
+    memberId: string,
+    newRole: 'admin' | 'member'
+  ) => {
+    if (!currentFamily) {
+      throw new Error('No family selected');
+    }
+
     try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
-      
-      if (!state.currentFamily) {
-        setState(prev => ({ ...prev, loading: false, error: 'No family selected' }));
-        return { success: false, error: 'No family selected' };
-      }
-      
-      const { success, error } = await FamilyService.updateFamilyMember(
-        state.currentFamily.family_id,
+      const { success, error: updateError } = await FamilyService.updateFamilyMember(
+        currentFamily.id,
         memberId,
         { isAdmin: newRole === 'admin' }
       );
-      
+
       if (!success) {
-        setState(prev => ({ ...prev, loading: false, error }));
-        return { success: false, error };
+        throw new Error(updateError);
       }
-      
-      // Update the member in state
-      setState(prev => {
-        const updatedMembers = prev.members.map(member =>
-          member.member_id === memberId ? { ...member, is_admin: newRole === 'admin' } : member
-        );
-        
-        return {
-          ...prev,
-          members: updatedMembers,
-          loading: false
-        };
-      });
-      
-      return { success: true };
-    } catch (error) {
-      setState(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to update member role' 
-      }));
-      return { success: false, error: 'Failed to update member role' };
+
+      // Update local state
+      setMembers(prev => prev.map(member => 
+        member.id === memberId 
+          ? { ...member, role: newRole } 
+          : member
+      ));
+    } catch (err) {
+      console.error('Error updating member role:', err);
+      throw err;
     }
-  }, [state.currentFamily]);
+  }, [currentFamily]);
 
   const removeMember = useCallback(async (memberId: string) => {
+    if (!currentFamily) {
+      throw new Error('No family selected');
+    }
+
     try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
-      
-      if (!state.currentFamily) {
-        setState(prev => ({ ...prev, loading: false, error: 'No family selected' }));
-        return { success: false, error: 'No family selected' };
-      }
-      
-      const { success, error } = await FamilyService.removeFamilyMember(
-        state.currentFamily.family_id,
+      const { success, error: removeError } = await FamilyService.removeFamilyMember(
+        currentFamily.id,
         memberId
       );
-      
+
       if (!success) {
-        setState(prev => ({ ...prev, loading: false, error }));
-        return { success: false, error };
+        throw new Error(removeError);
+      }
+
+      // Update local state
+      setMembers(prev => prev.filter(member => member.id !== memberId));
+    } catch (err) {
+      console.error('Error removing member:', err);
+      throw err;
+    }
+  }, [currentFamily]);
+
+  const acceptInvitation = useCallback(async (invitationId: string) => {
+    try {
+      const result = await FamilyService.acceptInvitation(invitationId);
+      
+      if (result.success) {
+        // Refresh data
+        await loadFamilyData();
       }
       
-      // Remove the member from state
-      setState(prev => ({
-        ...prev,
-        members: prev.members.filter(member => member.member_id !== memberId),
-        loading: false
-      }));
-      
-      return { success: true };
-    } catch (error) {
-      setState(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to remove member' 
-      }));
-      return { success: false, error: 'Failed to remove member' };
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to accept invitation';
+      console.error('Error accepting invitation:', err);
+      return { success: false, error: errorMessage };
     }
-  }, [state.currentFamily]);
+  }, [loadFamilyData]);
+
+  const declineInvitation = useCallback(async (invitationId: string) => {
+    try {
+      const result = await FamilyService.declineInvitation(invitationId);
+      
+      if (result.success) {
+        // Update local state
+        setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+      }
+      
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to decline invitation';
+      console.error('Error declining invitation:', err);
+      return { success: false, error: errorMessage };
+    }
+  }, []);
 
   return {
-    ...state,
+    currentFamily,
+    members,
+    invitations,
+    loading,
+    error,
     createFamily,
     inviteMember,
     updateMemberRole,
-    removeMember
+    removeMember,
+    acceptInvitation,
+    declineInvitation,
+    refreshData: loadFamilyData
   };
 };

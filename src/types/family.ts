@@ -1,41 +1,53 @@
-export interface FamilyMember {
-  member_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  profile_image_url: string | null;
-  role: 'parent' | 'child' | 'guardian' | 'spouse' | 'sibling' | 'other';
-  is_admin: boolean;
-  status: 'active' | 'pending' | 'inactive';
-  date_of_birth?: string;
-}
-
-export interface Family {
-  family_id: string;
-  family_name: string;
+export interface FamilyGroup {
+  id: string;
+  name: string;
+  description?: string;
+  created_by: string;
   created_at: string;
   updated_at: string;
   members?: FamilyMember[];
 }
 
-export interface FamilyRelationship {
-  relationship_id: string;
-  family_id: string;
-  member_id: string;
-  role: 'parent' | 'child' | 'guardian' | 'spouse' | 'sibling' | 'other';
-  is_admin: boolean;
+export interface FamilyMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'member';
+  relationship?: string;
+  avatar?: string;
+  joinedDate: string;
   status: 'active' | 'pending' | 'inactive';
-  created_at: string;
-  updated_at: string;
+  lastActive?: string;
+  permissions: {
+    viewLists: boolean;
+    editLists: boolean;
+    createLists: boolean;
+    viewBudget: boolean;
+    editBudget: boolean;
+    inviteMembers: boolean;
+    manageMembers: boolean;
+  };
 }
 
 export interface FamilyInvitation {
-  invitation_id: string;
-  family_id: string;
+  id: string;
+  familyId: string;
+  familyName: string;
+  invitedByName: string;
   email: string;
+  role: 'admin' | 'member';
+  status: 'pending' | 'accepted' | 'declined';
+  expiresAt: string;
+  message?: string;
+}
+
+export interface FamilyRelationship {
+  id: string;
+  familyId: string;
+  memberId: string;
   role: 'parent' | 'child' | 'guardian' | 'spouse' | 'sibling' | 'other';
-  is_admin: boolean;
-  expires_at: string;
-  created_at: string;
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  isAdmin: boolean;
+  status: 'active' | 'pending' | 'inactive';
+  createdAt: string;
+  updatedAt: string;
 }

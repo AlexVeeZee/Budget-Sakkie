@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import { X, Trash2, AlertTriangle } from 'lucide-react';
-import { FamilyMember } from '../../types/family';
+
+interface FamilyMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'member';
+  avatar?: string;
+  status: 'active' | 'pending' | 'inactive';
+}
 
 interface DeleteMemberModalProps {
   isOpen: boolean;
@@ -57,7 +65,7 @@ export const DeleteMemberModal: React.FC<DeleteMemberModalProps> = ({
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <h4 className="font-semibold text-red-800 mb-2">⚠️ This action cannot be undone</h4>
             <p className="text-red-700 text-sm">
-              You are about to remove <strong>{member.first_name} {member.last_name}</strong> ({member.email}) from your family.
+              You are about to remove <strong>{member.name}</strong> ({member.email}) from your family.
             </p>
           </div>
 
