@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, MapPin, Home, Navigation, Search, Save, Trash2, Clock } from 'lucide-react';
+import { X, MapPin, Home, Navigation, Search, Save, Trash2, Clock, AlertCircle, Info } from 'lucide-react';
 import { useLocation } from '../../hooks/useLocation';
 import { useAuthStore } from '../../store/authStore';
 import { ProfileService } from '../../services/profileService';
@@ -31,6 +31,8 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
   const [searchQuery, setSearchQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   const provinces = [
     'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
@@ -45,6 +47,8 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
         city: homeLocation.address.split(',')[1]?.trim() || '',
         province: homeLocation.address.split(',')[2]?.trim() || 'Gauteng'
       });
+      // Clear any previous location errors when modal opens
+      setLocationError(null);
     }
   }, [isOpen, homeLocation]);
 
@@ -85,8 +89,29 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
     }
   };
 
+  const getLocationErrorMessage = (error: GeolocationPositionError) => {
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        return "Location access was denied. To use your current location, please enable location permissions for this site in your browser settings.";
+      case error.POSITION_UNAVAILABLE:
+        return "Your location information is unavailable. Please check your device's location settings.";
+      case error.TIMEOUT:
+        return "Location request timed out. Please try again.";
+      default:
+        return "An unknown error occurred while getting your location. Please try again.";
+    }
+  };
+
   const handleUseCurrentLocation = () => {
-    navigator.geolocation?.getCurrentPosition(
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    setIsGettingLocation(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
       (position) => {
         const newLocation = {
           id: 'current-' + Date.now(),
@@ -96,16 +121,28 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
           coordinates: [position.coords.latitude, position.coords.longitude] as [number, number]
         };
         setCurrentLocation(newLocation);
+        setIsGettingLocation(false);
+        setLocationError(null);
       },
       (error) => {
         console.error('Error getting location:', error);
-        alert('Unable to get your current location. Please check your browser permissions.');
+        setLocationError(getLocationErrorMessage(error));
+        setIsGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
       }
     );
   };
 
   const handleSelectRecentLocation = (location: any) => {
     setCurrentLocation(location);
+  };
+
+  const dismissLocationError = () => {
+    setLocationError(null);
   };
 
   if (!isOpen) return null;
@@ -137,6 +174,34 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[calc(100vh-140px)]">
+          {/* Location Error Alert */}
+          {locationError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-red-800 mb-1">Location Access Issue</h4>
+                  <p className="text-sm text-red-700 mb-3">{locationError}</p>
+                  {locationError.includes("denied") && (
+                    <div className="text-xs text-red-600 bg-red-100 p-2 rounded border">
+                      <strong>How to enable location access:</strong>
+                      <br />• Click the padlock icon in your browser's address bar
+                      <br />• Select "Site settings" or "Permissions"
+                      <br />• Set "Location" to "Allow"
+                      <br />• Refresh the page and try again
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={dismissLocationError}
+                  className="text-red-400 hover:text-red-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Current Session Location */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Shopping Session</h3>
@@ -162,10 +227,20 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose })
             <div className="mt-4 flex space-x-3">
               <button
                 onClick={handleUseCurrentLocation}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                disabled={isGettingLocation}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
               >
-                <Navigation className="h-4 w-4" />
-                <span>Use Current Location</span>
+                {isGettingLocation ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Getting Location...</span>
+                  </>
+                ) : (
+                  <>
+                    <Navigation className="h-4 w-4" />
+                    <span>Use Current Location</span>
+                  </>
+                )}
               </button>
               
               <button
