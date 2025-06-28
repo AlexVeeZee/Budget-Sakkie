@@ -331,6 +331,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               }))}
               onProductSelect={onProductSelect}
               onAddToList={(product) => {
+                // Find the source product and add it to the list
                 const sourceProduct = filteredProducts.find(p => p.id === product.id);
                 if (sourceProduct) {
                   handleAddToList(sourceProduct);
