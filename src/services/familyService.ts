@@ -25,6 +25,36 @@ export class FamilyService {
   }
   
   /**
+   * Get user's primary family
+   */
+  static async getUserFamily(): Promise<{ family: Family | null; error?: string }> {
+    try {
+      const { families, error } = await this.getUserFamilies();
+      
+      if (error) {
+        throw new Error(error);
+      }
+      
+      // Return the first family or null if none exists
+      const family = families.length > 0 ? families[0] : null;
+      
+      if (family) {
+        // Get family members
+        const { members } = await this.getFamilyMembers(family.family_id);
+        family.members = members;
+      }
+      
+      return { family };
+    } catch (error) {
+      console.error('Error fetching user family:', error);
+      return { 
+        family: null, 
+        error: error instanceof Error ? error.message : 'Failed to fetch family' 
+      };
+    }
+  }
+  
+  /**
    * Create a new family
    */
   static async createFamily(familyName: string): Promise<{ family: Family | null; error?: string }> {
@@ -335,6 +365,77 @@ export class FamilyService {
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to update member profile' 
+      };
+    }
+  }
+  
+  /**
+   * Get pending invitations for the current user
+   */
+  static async getPendingInvitations(): Promise<{ invitations: any[]; error?: string }> {
+    try {
+      // This is a placeholder - in a real implementation, we would fetch invitations from the database
+      // For now, we'll return an empty array
+      return { invitations: [] };
+    } catch (error) {
+      console.error('Error fetching invitations:', error);
+      return { 
+        invitations: [], 
+        error: error instanceof Error ? error.message : 'Failed to fetch invitations' 
+      };
+    }
+  }
+  
+  /**
+   * Accept an invitation
+   */
+  static async acceptInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // This is a placeholder - in a real implementation, we would accept the invitation in the database
+      return { success: true };
+    } catch (error) {
+      console.error('Error accepting invitation:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to accept invitation' 
+      };
+    }
+  }
+  
+  /**
+   * Decline an invitation
+   */
+  static async declineInvitation(invitationId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // This is a placeholder - in a real implementation, we would decline the invitation in the database
+      return { success: true };
+    } catch (error) {
+      console.error('Error declining invitation:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to decline invitation' 
+      };
+    }
+  }
+  
+  /**
+   * Invite to family by email
+   */
+  static async inviteToFamily(
+    familyId: string,
+    email: string,
+    role: 'admin' | 'member',
+    message?: string,
+    relationship?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // This is a placeholder - in a real implementation, we would send an invitation
+      return { success: true };
+    } catch (error) {
+      console.error('Error inviting to family:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to send invitation' 
       };
     }
   }
