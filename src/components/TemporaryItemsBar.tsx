@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ShoppingCart, X, ChevronUp, ChevronDown, Plus, Minus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ShoppingCart, X, ChevronUp, ChevronDown, Plus, Minus, Trash2, MoreVertical, List, ListPlus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useCurrency } from '../hooks/useCurrency';
 import { AddToExistingListModal } from './modals/AddToExistingListModal';
@@ -14,6 +14,8 @@ export const TemporaryItemsBar: React.FC = () => {
   const [showCreateListModal, setShowCreateListModal] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState<string | null>(null);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const optionsMenuRef = useRef<HTMLDivElement>(null);
 
   // Calculate total price
   const totalPrice = items.reduce(
@@ -34,6 +36,20 @@ export const TemporaryItemsBar: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [itemCount]);
+
+  // Close options menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (optionsMenuRef.current && !optionsMenuRef.current.contains(event.target as Node)) {
+        setShowOptionsMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Handle creating a new list with selected items
   const handleCreateList = (list: Omit<ShoppingList, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -60,6 +76,7 @@ export const TemporaryItemsBar: React.FC = () => {
     // Clear items
     clearItems();
     setShowCreateListModal(false);
+    setShowOptionsMenu(false);
   };
 
   // Handle adding to existing list
@@ -73,7 +90,11 @@ export const TemporaryItemsBar: React.FC = () => {
     // Clear items
     clearItems();
     setShowAddToExistingModal(false);
+    setShowOptionsMenu(false);
   };
+
+  // Determine if we should show mobile view
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
 
   if (!isVisible) return null;
 
@@ -104,7 +125,8 @@ export const TemporaryItemsBar: React.FC = () => {
                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
               </button>
               
-              <div className="flex items-center space-x-2">
+              {/* Desktop buttons */}
+              <div className="hidden sm:flex items-center space-x-2">
                 <button
                   onClick={() => setShowCreateListModal(true)}
                   className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
@@ -124,6 +146,54 @@ export const TemporaryItemsBar: React.FC = () => {
                 >
                   <X className="h-5 w-5" />
                 </button>
+              </div>
+              
+              {/* Mobile more options button */}
+              <div className="sm:hidden relative" ref={optionsMenuRef}>
+                <button
+                  onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </button>
+                
+                {/* Options dropdown menu */}
+                {showOptionsMenu && (
+                  <div className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setShowCreateListModal(true);
+                          setShowOptionsMenu(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-100"
+                      >
+                        <ListPlus className="h-4 w-4 text-green-600" />
+                        <span>Create New List</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowAddToExistingModal(true);
+                          setShowOptionsMenu(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-100"
+                      >
+                        <List className="h-4 w-4 text-blue-600" />
+                        <span>Add to Existing List</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          clearItems();
+                          setShowOptionsMenu(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Clear All Items</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
