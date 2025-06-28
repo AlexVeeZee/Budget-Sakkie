@@ -16,6 +16,7 @@ export interface FamilyMember {
     inviteMembers: boolean;
     manageMembers: boolean;
   };
+  relationship?: string;
 }
 
 export interface FamilyGroup {
@@ -62,4 +63,12 @@ export interface FamilyActivity {
   description: string;
   metadata?: Record<string, any>;
   timestamp: string;
+}
+
+export interface FamilyRelationship {
+  id: string;
+  userId: string;
+  relatedUserId: string;
+  relationship: 'spouse' | 'parent' | 'child' | 'sibling' | 'grandparent' | 'other' | 'friend';
+  createdAt: string;
 }
