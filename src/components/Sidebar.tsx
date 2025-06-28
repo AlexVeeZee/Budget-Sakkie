@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Settings, HelpCircle, Star, Gift, Users, MapPin, LogIn, UserPlus } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../store/authStore';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSignInClick
 }) => {
   const { t } = useLanguage();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isGuest, user } = useAuthStore();
 
   const authenticatedMenuItems = [
     { 
@@ -80,7 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
-  const menuItems = isAuthenticated ? authenticatedMenuItems : unauthenticatedMenuItems;
+  const menuItems = isAuthenticated || isGuest ? authenticatedMenuItems : unauthenticatedMenuItems;
 
   if (!isOpen) return null;
 
@@ -114,11 +114,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="p-6"
           style={{ backgroundColor: '#ffffff' }}
         >
-          {isAuthenticated && user && (
+          {(isAuthenticated || isGuest) && user && (
             <div className="bg-gradient-to-r from-green-500 to-blue-500 rounded-lg p-4 text-white mb-6">
-              <h3 className="font-semibold mb-1">Welcome, {user.displayName}</h3>
-              <p className="text-sm opacity-90">Monthly Savings: R247.50</p>
-              <p className="text-sm opacity-90">15% saved this month</p>
+              <h3 className="font-semibold mb-1">Welcome, {user.displayName || user.username}</h3>
+              {isGuest ? (
+                <p className="text-sm opacity-90">Guest Account</p>
+              ) : (
+                <>
+                  <p className="text-sm opacity-90">Monthly Savings: R247.50</p>
+                  <p className="text-sm opacity-90">15% saved this month</p>
+                </>
+              )}
             </div>
           )}
 

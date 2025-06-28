@@ -1,13 +1,19 @@
 import React from 'react';
 import { ShoppingCart, Search, Menu, Globe, MapPin } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { UserProfileDropdown } from './auth/UserProfileDropdown';
 
 interface HeaderProps {
   onMenuClick: () => void;
   onSearchClick: () => void;
+  onSettingsClick?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  onMenuClick, 
+  onSearchClick,
+  onSettingsClick
+}) => {
   const { language, toggleLanguage, t } = useLanguage();
 
   return (
@@ -40,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
 
           <div className="flex items-center space-x-2">
             {/* Current Location Display */}
-            <div className="flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium">
+            <div className="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-md text-sm font-medium">
               <MapPin className="h-4 w-4" />
               <span className="hidden sm:inline">Centurion</span>
             </div>
@@ -55,12 +61,15 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onSearchClick }) =>
             
             <button
               onClick={toggleLanguage}
-              className="flex items-center space-x-1 px-3 py-1 rounded-md hover:bg-black/10 transition-colors text-sm font-medium"
+              className="hidden sm:flex items-center space-x-1 px-3 py-1 rounded-md hover:bg-black/10 transition-colors text-sm font-medium"
               style={{ backgroundColor: 'transparent' }}
             >
               <Globe className="h-4 w-4" />
               <span>{language.toUpperCase()}</span>
             </button>
+            
+            {/* User Profile Dropdown */}
+            <UserProfileDropdown onSettingsClick={onSettingsClick} />
           </div>
         </div>
       </div>

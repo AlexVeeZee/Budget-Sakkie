@@ -7,9 +7,10 @@ import { ListsTab } from './components/tabs/ListsTab';
 import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
-import { AuthProvider } from './hooks/useAuth.tsx';
+import { AuthProvider } from './components/auth/AuthProvider';
 import { AuthModal } from './components/auth/AuthModal';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { useAuthStore } from './store/authStore';
 
 // Lazy load heavy modals
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
@@ -22,6 +23,7 @@ const HelpSupportModal = lazy(() => import('./components/modals/HelpSupportModal
 type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile';
 
 function AppContent() {
+  const { isAuthenticated, isGuest } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabType>('search');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -191,6 +193,7 @@ function AppContent() {
       <Header 
         onMenuClick={() => setSidebarOpen(true)}
         onSearchClick={handleSearchClick}
+        onSettingsClick={handleSettingsClick}
       />
       
       <Sidebar 
@@ -206,34 +209,37 @@ function AppContent() {
       />
       
       <main className={`pb-20 pt-4 transition-all duration-300 ${sidebarOpen ? 'ml-80' : ''}`}>
-        <ProtectedRoute fallback={
-          <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-xl shadow-md">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Budget Sakkie</h2>
-            <p className="text-gray-600 mb-6">
-              Sign in to access all features and start saving on your grocery shopping.
-            </p>
-            <div className="space-y-4">
-              <button
-                onClick={handleSignInClick}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-              >
-                Sign In
-              </button>
-              <button
-                onClick={handleSignUpClick}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-              >
-                Create Account
-              </button>
-              <button
-                onClick={() => setActiveTab('search')}
-                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
-              >
-                Continue as Guest
-              </button>
+        <ProtectedRoute 
+          allowGuest={activeTab !== 'lists' && activeTab !== 'profile'}
+          fallback={
+            <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-xl shadow-md">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Budget Sakkie</h2>
+              <p className="text-gray-600 mb-6">
+                Sign in to access all features and start saving on your grocery shopping.
+              </p>
+              <div className="space-y-4">
+                <button
+                  onClick={handleSignInClick}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={handleSignUpClick}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                >
+                  Create Account
+                </button>
+                <button
+                  onClick={() => setActiveTab('search')}
+                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
+                >
+                  Continue as Guest
+                </button>
+              </div>
             </div>
-          </div>
-        }>
+          }
+        >
           {renderActiveTab()}
         </ProtectedRoute>
       </main>
