@@ -1,8 +1,9 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useEffect } from 'react';
 import { X, User, MapPin, Lock, Bell, Globe, Shield, Save, Edit2, Eye, EyeOff, Mail, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useCurrency, Currency } from '../../hooks/useCurrency';
 import { useLocation } from '../../hooks/useLocation';
+import { supabase } from '../../lib/supabase';
 
 // Lazy load heavy modal sections
 const SecuritySection = lazy(() => import('./settings/SecuritySection'));
@@ -35,12 +36,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [emailSent, setEmailSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [isVerified, setIsVerified] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [profile, setProfile] = useState<UserProfile>({
-    firstName: 'Sarah',
-    lastName: 'Van Der Merwe',
-    email: 'sarah.vandermerwe@email.com',
-    phone: '+27 82 123 4567',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
     address: homeLocation.address.split(',')[0] || '123 Main Street',
     city: homeLocation.address.split(',')[1]?.trim() || 'Centurion',
     province: 'Gauteng',
@@ -81,6 +84,103 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
     'Limpopo', 'Mpumalanga', 'Northern Cape', 'North West', 'Western Cape'
   ];
+
+  // Fetch user profile data from Supabase
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Get the current user
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          throw new Error('No authenticated user found');
+        }
+        
+        // Fetch user profile from user_profiles table
+        const { data: userProfile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (profileError) {
+          throw profileError;
+        }
+        
+        if (userProfile) {
+          // Split display_name into first and last name (if available)
+          let firstName = '';
+          let lastName = '';
+          
+          if (userProfile.display_name) {
+            const nameParts = userProfile.display_name.split(' ');
+            firstName = nameParts[0] || '';
+            lastName = nameParts.slice(1).join(' ') || '';
+          }
+          
+          // Get user preferences
+          const { data: userPreferences, error: preferencesError } = await supabase
+            .from('user_preferences')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+            
+          if (preferencesError && preferencesError.code !== 'PGRST116') {
+            console.error('Error fetching user preferences:', preferencesError);
+          }
+          
+          // Update profile state with fetched data
+          setProfile({
+            firstName,
+            lastName,
+            email: user.email || '',
+            phone: userPreferences?.phone || '',
+            address: homeLocation.address.split(',')[0] || '123 Main Street',
+            city: homeLocation.address.split(',')[1]?.trim() || 'Centurion',
+            province: 'Gauteng',
+            postalCode: '0157'
+          });
+          
+          // Update notification preferences if available
+          if (userPreferences?.notification_preferences) {
+            try {
+              const notificationPrefs = JSON.parse(userPreferences.notification_preferences);
+              setNotifications(prev => ({
+                ...prev,
+                ...(notificationPrefs || {})
+              }));
+            } catch (e) {
+              console.error('Error parsing notification preferences:', e);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load user profile');
+        
+        // Set fallback data
+        setProfile({
+          firstName: 'Sarah',
+          lastName: 'Van Der Merwe',
+          email: 'sarah.vandermerwe@email.com',
+          phone: '+27 82 123 4567',
+          address: homeLocation.address.split(',')[0] || '123 Main Street',
+          city: homeLocation.address.split(',')[1]?.trim() || 'Centurion',
+          province: 'Gauteng',
+          postalCode: '0157'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      fetchUserProfile();
+    }
+  }, [isOpen, homeLocation.address]);
 
   const handleProfileUpdate = (field: keyof UserProfile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
@@ -155,9 +255,58 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     updateCurrency(newCurrency);
   };
 
-  const handleSave = () => {
-    console.log('Saving settings...', { profile, notifications, privacy, currency });
-    onClose();
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('No authenticated user found');
+      }
+      
+      // Combine first and last name for display_name
+      const displayName = `${profile.firstName} ${profile.lastName}`.trim();
+      
+      // Update user profile
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({
+          display_name: displayName,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
+      // Update user preferences
+      const { error: preferencesError } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: user.id,
+          language: language,
+          currency: currency,
+          notification_preferences: JSON.stringify(notifications),
+          updated_at: new Date().toISOString()
+        });
+      
+      if (preferencesError) {
+        throw preferencesError;
+      }
+      
+      alert('Settings saved successfully!');
+      onClose();
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save settings');
+      alert('Failed to save settings. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -225,6 +374,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">Personal Information</h3>
+                    
+                    {loading && (
+                      <div className="flex items-center justify-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mr-3"></div>
+                        <span className="text-gray-600">Loading profile data...</span>
+                      </div>
+                    )}
+                    
+                    {error && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <div className="flex items-start">
+                          <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 mr-3" />
+                          <div>
+                            <h4 className="text-sm font-medium text-red-800">Error loading profile</h4>
+                            <p className="text-sm text-red-700 mt-1">{error}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
@@ -497,10 +666,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           </button>
           <button
             onClick={handleSave}
-            className="flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors min-h-[44px]"
+            disabled={loading}
+            className="flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors min-h-[44px] disabled:bg-green-400 disabled:cursor-not-allowed"
           >
-            <Save className="h-4 w-4" />
-            <span>Save Changes</span>
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                <span>Save Changes</span>
+              </>
+            )}
           </button>
         </div>
       </div>

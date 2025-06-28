@@ -23,6 +23,12 @@ const HelpSupportModal = lazy(() => import('./components/modals/HelpSupportModal
 
 type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile';
 
+// Interface for product selection in compare tab
+interface SelectedProductInfo {
+  id: string;
+  name: string;
+}
+
 function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>('search');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,6 +41,7 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+  const [selectedProduct, setSelectedProduct] = useState<SelectedProductInfo | null>(null);
 
   // Close all modals helper function
   const closeAllModals = () => {
@@ -99,6 +106,12 @@ function AppContent() {
     setShowAuthModal(true);
   };
 
+  // Function to handle product selection for comparison
+  const handleProductSelect = (productInfo: SelectedProductInfo) => {
+    setSelectedProduct(productInfo);
+    setActiveTab('compare');
+  };
+
   // Simple tab change handler with explicit logging
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
@@ -121,9 +134,13 @@ function AppContent() {
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'search':
-        return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
+        return <SearchTab 
+                searchQuery={searchQuery} 
+                onSearchChange={setSearchQuery} 
+                onProductSelect={handleProductSelect} 
+              />;
       case 'compare':
-        return <CompareTab />;
+        return <CompareTab selectedProductId={selectedProduct?.id} />;
       case 'lists':
         return <ListsTab />;
       case 'deals':

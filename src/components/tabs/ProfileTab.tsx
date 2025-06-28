@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Settings, CreditCard, MapPin, Bell, Shield, HelpCircle, LogOut, Edit2, TrendingUp, LogIn, UserPlus } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 
 interface ProfileTabProps {
   onSettingsClick?: () => void;
@@ -27,6 +28,9 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   const [editingBudget, setEditingBudget] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState(1500);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const profileStats = [
     { label: 'Total Saved', value: 'R1,247.50', icon: TrendingUp, color: 'text-green-600' },
@@ -34,8 +38,68 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     { label: 'Products Compared', value: '156', icon: Settings, color: 'text-purple-600' },
   ];
 
+  // Fetch user profile data from Supabase
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Get the current user
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        
+        if (!currentUser) {
+          throw new Error('No authenticated user found');
+        }
+        
+        // Fetch user profile from user_profiles table
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', currentUser.id)
+          .single();
+        
+        if (profileError) {
+          throw profileError;
+        }
+        
+        setUserProfile(profile);
+        
+        // Fetch user preferences to get budget
+        const { data: preferences, error: preferencesError } = await supabase
+          .from('user_preferences')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .single();
+        
+        if (preferencesError && preferencesError.code !== 'PGRST116') {
+          console.error('Error fetching user preferences:', preferencesError);
+        }
+        
+        if (preferences) {
+          // Set budget if available
+          setMonthlyBudget(preferences.monthly_budget || 1500);
+        }
+        
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load user profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated]);
+
   // Use actual user data or fallback to Sarah's data
-  const displayUser = user || {
+  const displayUser = userProfile ? {
+    displayName: userProfile.display_name || 'Guest User',
+    email: user?.email || 'guest@example.com',
+    profileImageUrl: userProfile.profile_image_url
+  } : user || {
     displayName: 'Guest User',
     email: 'guest@example.com',
     profileImageUrl: undefined
@@ -182,48 +246,94 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     }, 50);
   };
 
-  const handleBudgetSave = () => {
-    setEditingBudget(false);
-    alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
+  const handleBudgetSave = async () => {
+    if (!isAuthenticated) {
+      setEditingBudget(false);
+      alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Get the current user
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (!currentUser) {
+        throw new Error('No authenticated user found');
+      }
+      
+      // Update user preferences with new budget
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: currentUser.id,
+          monthly_budget: monthlyBudget,
+          updated_at: new Date().toISOString()
+        });
+      
+      if (error) {
+        throw error;
+      }
+      
+      setEditingBudget(false);
+      alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
+      
+    } catch (err) {
+      console.error('Error updating budget:', err);
+      alert('Failed to update budget. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Profile Header */}
       <div className="bg-gradient-to-r from-green-600 via-orange-500 to-blue-600 rounded-xl p-6 text-white mb-6">
-        <div className="flex items-center space-x-4">
-          <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
-            {isAuthenticated && displayUser.profileImageUrl ? (
-              <img 
-                src={displayUser.profileImageUrl} 
-                alt={displayUser.displayName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <User className="h-10 w-10" />
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mr-3"></div>
+            <span>Loading profile...</span>
+          </div>
+        ) : (
+          <div className="flex items-center space-x-4">
+            <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center overflow-hidden">
+              {isAuthenticated && displayUser.profileImageUrl ? (
+                <img 
+                  src={displayUser.profileImageUrl} 
+                  alt={displayUser.displayName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="h-10 w-10" />
+              )}
+            </div>
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold">{displayUser.displayName}</h2>
+              {isAuthenticated ? (
+                <>
+                  <p className="text-white text-opacity-90">{displayUser.email}</p>
+                  <p className="text-white text-opacity-90">Member since {userProfile ? new Date(userProfile.created_at).toLocaleDateString() : 'January 2024'}</p>
+                  <p className="text-white text-opacity-90">
+                    {userProfile?.family_id ? 'Family Member' : 'Individual Account'}
+                    {userProfile?.premium_member ? ' • Premium Member' : ''}
+                  </p>
+                </>
+              ) : (
+                <p className="text-white text-opacity-90">Sign in to access all features</p>
+              )}
+            </div>
+            {isAuthenticated && (
+              <button 
+                onClick={() => handlePersonalInfo()}
+                className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
+              >
+                <Edit2 className="h-5 w-5" />
+              </button>
             )}
           </div>
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold">{displayUser.displayName}</h2>
-            {isAuthenticated ? (
-              <>
-                <p className="text-white text-opacity-90">{displayUser.email}</p>
-                <p className="text-white text-opacity-90">Member since January 2024</p>
-                <p className="text-white text-opacity-90">Family of 4 • Premium Member</p>
-              </>
-            ) : (
-              <p className="text-white text-opacity-90">Sign in to access all features</p>
-            )}
-          </div>
-          {isAuthenticated && (
-            <button 
-              onClick={() => handlePersonalInfo()}
-              className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
-            >
-              <Edit2 className="h-5 w-5" />
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Statistics - Only show for authenticated users */}
@@ -248,9 +358,10 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             <h3 className="text-lg font-semibold text-gray-900">{t('profile.budget')}</h3>
             <button
               onClick={() => editingBudget ? handleBudgetSave() : setEditingBudget(true)}
-              className="text-blue-600 hover:text-blue-700 font-medium text-sm px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+              disabled={loading}
+              className="text-blue-600 hover:text-blue-700 font-medium text-sm px-3 py-1 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {editingBudget ? 'Save' : 'Edit'}
+              {loading ? 'Saving...' : editingBudget ? 'Save' : 'Edit'}
             </button>
           </div>
           
