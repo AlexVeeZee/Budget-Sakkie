@@ -90,9 +90,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
+      {/* Overlay - only visible on mobile/tablet */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        onClick={onClose}
+      ></div>
+      
       {/* Sidebar */}
       <div 
-        className="fixed left-0 top-0 h-full w-80 z-50 transform transition-transform duration-300 shadow-xl border-r border-gray-200"
+        className="fixed inset-y-0 left-0 w-80 z-50 shadow-xl border-r border-gray-200 overflow-y-auto"
         style={{ backgroundColor: '#ffffff' }}
       >
         {/* Header */}

@@ -134,37 +134,6 @@ function AppContent() {
     };
   }, []);
 
-  const renderActiveTab = () => {
-    switch (activeTab) {
-      case 'search':
-        return <SearchTab 
-                searchQuery={searchQuery} 
-                onSearchChange={setSearchQuery} 
-                onProductSelect={handleProductSelect} 
-              />;
-      case 'compare':
-        return <CompareTab selectedProductId={selectedProduct?.id} />;
-      case 'lists':
-        return <ListsTab />;
-      case 'deals':
-        return <DealsTab />;
-      case 'profile':
-        return (
-          <ProfileTab 
-            onSettingsClick={handleSettingsClick}
-            onLocationClick={handleLocationClick}
-            onLoyaltyCardsClick={handleLoyaltyCardsClick}
-            onRewardsClick={handleRewardsClick}
-            onFamilySharingClick={handleFamilySharingClick}
-            onHelpSupportClick={handleHelpSupportClick}
-            onSignInClick={handleSignInClick}
-          />
-        );
-      default:
-        return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Bolt.new Badge */}
@@ -232,7 +201,7 @@ function AppContent() {
         onSignInClick={handleSignInClick}
       />
       
-      <main className={`pb-20 pt-4 transition-all duration-300 ${sidebarOpen ? 'ml-80' : ''}`}>
+      <main className="pt-4">
         <ProtectedRoute 
           allowGuest={activeTab !== 'lists' && activeTab !== 'profile'}
           fallback={
@@ -332,6 +301,37 @@ function AppContent() {
       />
     </div>
   );
+
+  function renderActiveTab() {
+    switch (activeTab) {
+      case 'search':
+        return <SearchTab 
+                searchQuery={searchQuery} 
+                onSearchChange={setSearchQuery} 
+                onProductSelect={handleProductSelect} 
+              />;
+      case 'compare':
+        return <CompareTab selectedProductId={selectedProduct?.id} />;
+      case 'lists':
+        return <ListsTab />;
+      case 'deals':
+        return <DealsTab />;
+      case 'profile':
+        return (
+          <ProfileTab 
+            onSettingsClick={handleSettingsClick}
+            onLocationClick={handleLocationClick}
+            onLoyaltyCardsClick={handleLoyaltyCardsClick}
+            onRewardsClick={handleRewardsClick}
+            onFamilySharingClick={handleFamilySharingClick}
+            onHelpSupportClick={handleHelpSupportClick}
+            onSignInClick={handleSignInClick}
+          />
+        );
+      default:
+        return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
+    }
+  }
 }
 
 function App() {
