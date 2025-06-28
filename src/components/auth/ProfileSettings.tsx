@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Save, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Mail, Save, Loader2, AlertCircle, CheckCircle, MapPin, Phone, Home, Building, Map } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 interface ProfileSettingsProps {
@@ -10,39 +10,66 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => 
   const { user, updateProfile, isLoading } = useAuthStore();
   
   const [formData, setFormData] = useState({
-    displayName: user?.displayName || user?.username || '',
-    avatarUrl: user?.avatarUrl || ''
+    displayName: '',
+    avatarUrl: '',
+    phone: '',
+    address: '',
+    city: '',
+    province: '',
+    postalCode: ''
   });
   
   const [errors, setErrors] = useState<{
     displayName?: string;
     avatarUrl?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
     general?: string;
   }>({});
   
   const [success, setSuccess] = useState(false);
   
-  // Update form data when user changes
+  // Update form data when user changes, but only if values exist
   useEffect(() => {
     if (user) {
-      setFormData({
-        displayName: user.displayName || user.username || '',
-        avatarUrl: user.avatarUrl || ''
-      });
+      setFormData(prev => ({
+        ...prev,
+        displayName: user.displayName || '',
+        avatarUrl: user.avatarUrl || '',
+        // Other fields would come from user preferences in a real implementation
+        phone: '',
+        address: '',
+        city: '',
+        province: '',
+        postalCode: ''
+      }));
     }
   }, [user]);
   
   const validateForm = () => {
     const newErrors: typeof errors = {};
     
-    // Display name validation
-    if (!formData.displayName.trim()) {
-      newErrors.displayName = 'Display name is required';
+    // Display name validation (only if provided)
+    if (formData.displayName && formData.displayName.trim().length < 2) {
+      newErrors.displayName = 'Display name must be at least 2 characters';
     }
     
-    // Avatar URL validation (optional)
+    // Avatar URL validation (only if provided)
     if (formData.avatarUrl && !isValidUrl(formData.avatarUrl)) {
       newErrors.avatarUrl = 'Please enter a valid URL';
+    }
+    
+    // Phone validation (only if provided)
+    if (formData.phone && !isValidPhone(formData.phone)) {
+      newErrors.phone = 'Please enter a valid phone number';
+    }
+    
+    // Postal code validation (only if provided)
+    if (formData.postalCode && !isValidPostalCode(formData.postalCode)) {
+      newErrors.postalCode = 'Please enter a valid postal code';
     }
     
     setErrors(newErrors);
@@ -58,7 +85,17 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => 
     }
   };
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const isValidPhone = (phone: string) => {
+    // Simple validation for South African phone numbers
+    return /^(\+27|0)[0-9]{9}$/.test(phone.replace(/\s/g, ''));
+  };
+  
+  const isValidPostalCode = (code: string) => {
+    // South African postal codes are 4 digits
+    return /^\d{4}$/.test(code);
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
     setFormData(prev => ({
@@ -83,8 +120,10 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => 
     }
     
     try {
+      // In a real implementation, we would save all form fields
+      // For now, we'll just save the profile fields that are supported
       const { success, error } = await updateProfile({
-        displayName: formData.displayName.trim(),
+        displayName: formData.displayName.trim() || undefined,
         avatarUrl: formData.avatarUrl.trim() || undefined
       });
       
@@ -105,6 +144,11 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => 
   };
   
   if (!user) return null;
+  
+  const provinces = [
+    'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
+    'Limpopo', 'Mpumalanga', 'Northern Cape', 'North West', 'Western Cape'
+  ];
   
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-sm">
@@ -174,9 +218,9 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => 
           </div>
         </div>
         
-        {/* Profile Settings */}
+        {/* Personal Information */}
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Profile Settings</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Personal Information</h3>
           
           <div className="space-y-4">
             {/* Display Name */}
@@ -206,7 +250,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => 
             {/* Avatar URL */}
             <div>
               <label htmlFor="avatarUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                Profile Picture URL (Optional)
+                Profile Picture URL
               </label>
               <input
                 id="avatarUrl"
@@ -227,22 +271,132 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => 
               </p>
             </div>
             
-            {/* Avatar Preview */}
-            {formData.avatarUrl && (
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100">
-                  <img 
-                    src={formData.avatarUrl} 
-                    alt="Avatar Preview" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
-                    }}
+            {/* Phone Number */}
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Phone className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className={`block w-full pl-10 pr-3 py-2 border ${
+                    errors.phone ? 'border-red-300' : 'border-gray-300'
+                  } rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500`}
+                  placeholder="+27 82 123 4567"
+                />
+              </div>
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Location Information */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Location Information</h3>
+          
+          <div className="space-y-4">
+            {/* Street Address */}
+            <div>
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                Street Address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Home className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="address"
+                  name="address"
+                  type="text"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                  placeholder="123 Main Street"
+                />
+              </div>
+            </div>
+            
+            {/* City */}
+            <div>
+              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                City
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Building className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="city"
+                  name="city"
+                  type="text"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                  placeholder="Centurion"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Province */}
+              <div>
+                <label htmlFor="province" className="block text-sm font-medium text-gray-700 mb-1">
+                  Province
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Map className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <select
+                    id="province"
+                    name="province"
+                    value={formData.province}
+                    onChange={handleInputChange}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="">Select Province</option>
+                    {provinces.map(province => (
+                      <option key={province} value={province}>{province}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {/* Postal Code */}
+              <div>
+                <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
+                  Postal Code
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="postalCode"
+                    name="postalCode"
+                    type="text"
+                    value={formData.postalCode}
+                    onChange={handleInputChange}
+                    className={`block w-full pl-10 pr-3 py-2 border ${
+                      errors.postalCode ? 'border-red-300' : 'border-gray-300'
+                    } rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500`}
+                    placeholder="0157"
                   />
                 </div>
-                <p className="text-sm text-gray-600">Avatar Preview</p>
+                {errors.postalCode && (
+                  <p className="mt-1 text-sm text-red-600">{errors.postalCode}</p>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
         

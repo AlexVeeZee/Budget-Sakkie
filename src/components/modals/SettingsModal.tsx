@@ -1,8 +1,10 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useEffect } from 'react';
 import { X, User, MapPin, Lock, Bell, Globe, Shield, Save, Edit2, Eye, EyeOff, Mail, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useCurrency, Currency } from '../../hooks/useCurrency';
 import { useLocation } from '../../hooks/useLocation';
+import { useAuthStore } from '../../store/authStore';
+import { ProfileSettings } from '../auth/ProfileSettings';
 
 // Lazy load heavy modal sections
 const SecuritySection = lazy(() => import('./settings/SecuritySection'));
@@ -14,21 +16,12 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-interface UserProfile {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  province: string;
-  postalCode: string;
-}
-
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { t, language, toggleLanguage } = useLanguage();
   const { currency, updateCurrency, availableCurrencies } = useCurrency();
   const { homeLocation, recentLocations, updateHomeLocation, removeRecentLocation, clearRecentLocations } = useLocation();
+  const { user } = useAuthStore();
+  
   const [activeTab, setActiveTab] = useState('profile');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -36,16 +29,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [verificationCode, setVerificationCode] = useState('');
   const [isVerified, setIsVerified] = useState(false);
 
-  const [profile, setProfile] = useState<UserProfile>({
-    firstName: 'Sarah',
-    lastName: 'Van Der Merwe',
-    email: 'sarah.vandermerwe@email.com',
-    phone: '+27 82 123 4567',
-    address: homeLocation.address.split(',')[0] || '123 Main Street',
-    city: homeLocation.address.split(',')[1]?.trim() || 'Centurion',
+  const [profile, setProfile] = useState({
+    firstName: '',
+    lastName: '',
+    email: user?.email || '',
+    phone: '',
+    address: homeLocation.address.split(',')[0] || '',
+    city: homeLocation.address.split(',')[1]?.trim() || '',
     province: 'Gauteng',
-    postalCode: '0157'
+    postalCode: ''
   });
+
+  // Reset profile data when user changes
+  useEffect(() => {
+    if (user) {
+      setProfile(prev => ({
+        ...prev,
+        email: user.email || '',
+        // Other fields remain blank for new users
+      }));
+    }
+  }, [user]);
 
   const [passwordReset, setPasswordReset] = useState({
     newPassword: '',
@@ -82,11 +86,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     'Limpopo', 'Mpumalanga', 'Northern Cape', 'North West', 'Western Cape'
   ];
 
-  const handleProfileUpdate = (field: keyof UserProfile, value: string) => {
+  const handleProfileUpdate = (field: keyof typeof profile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleLocationUpdate = (field: keyof UserProfile, value: string) => {
+  const handleLocationUpdate = (field: keyof typeof profile, value: string) => {
     handleProfileUpdate(field, value);
     
     // Update the home location when address fields change
@@ -222,113 +226,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           >
             <Suspense fallback={<div className="flex items-center justify-center h-32"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div></div>}>
               {activeTab === 'profile' && (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Personal Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                        <input
-                          type="text"
-                          value={profile.firstName}
-                          onChange={(e) => handleProfileUpdate('firstName', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
-                          style={{ backgroundColor: '#ffffff' }}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                        <input
-                          type="text"
-                          value={profile.lastName}
-                          onChange={(e) => handleProfileUpdate('lastName', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
-                          style={{ backgroundColor: '#ffffff' }}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                        <input
-                          type="email"
-                          value={profile.email}
-                          onChange={(e) => handleProfileUpdate('email', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
-                          style={{ backgroundColor: '#ffffff' }}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                        <input
-                          type="tel"
-                          value={profile.phone}
-                          onChange={(e) => handleProfileUpdate('phone', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
-                          style={{ backgroundColor: '#ffffff' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'language' && (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Language & Currency Settings</h3>
-                    <div className="space-y-4">
-                      <div 
-                        className="p-4 rounded-lg border border-gray-200"
-                        style={{ backgroundColor: '#f9fafb' }}
-                      >
-                        <h4 className="font-medium text-gray-900 mb-2">App Language</h4>
-                        <div className="space-y-2">
-                          <label className="flex items-center space-x-3">
-                            <input
-                              type="radio"
-                              name="language"
-                              checked={language === 'en'}
-                              onChange={() => language !== 'en' && toggleLanguage()}
-                              className="h-4 w-4 text-green-600 focus:ring-green-500"
-                            />
-                            <span className="text-gray-900">English</span>
-                          </label>
-                          <label className="flex items-center space-x-3">
-                            <input
-                              type="radio"
-                              name="language"
-                              checked={language === 'af'}
-                              onChange={() => language !== 'af' && toggleLanguage()}
-                              className="h-4 w-4 text-green-600 focus:ring-green-500"
-                            />
-                            <span className="text-gray-900">Afrikaans</span>
-                          </label>
-                        </div>
-                      </div>
-                      
-                      <div 
-                        className="p-4 rounded-lg border border-gray-200"
-                        style={{ backgroundColor: '#f9fafb' }}
-                      >
-                        <h4 className="font-medium text-gray-900 mb-2">Currency</h4>
-                        <select 
-                          value={currency}
-                          onChange={(e) => handleCurrencyChange(e.target.value as Currency)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
-                          style={{ backgroundColor: '#ffffff' }}
-                        >
-                          {availableCurrencies.map((curr) => (
-                            <option key={curr.code} value={curr.code}>
-                              {curr.name} ({curr.symbol})
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-sm text-gray-600 mt-2">
-                          This will update all price displays throughout the app.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ProfileSettings />
               )}
 
               {activeTab === 'location' && (
@@ -362,6 +260,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                           onChange={(e) => handleLocationUpdate('address', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
                           style={{ backgroundColor: '#ffffff' }}
+                          placeholder="Enter your street address"
                         />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -373,6 +272,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             onChange={(e) => handleLocationUpdate('city', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
                             style={{ backgroundColor: '#ffffff' }}
+                            placeholder="Enter your city"
                           />
                         </div>
                         <div>
@@ -383,6 +283,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
                             style={{ backgroundColor: '#ffffff' }}
                           >
+                            <option value="">Select Province</option>
                             {provinces.map((province) => (
                               <option key={province} value={province}>{province}</option>
                             ))}
@@ -396,6 +297,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             onChange={(e) => handleLocationUpdate('postalCode', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
                             style={{ backgroundColor: '#ffffff' }}
+                            placeholder="Enter postal code"
                           />
                         </div>
                       </div>
@@ -478,6 +380,66 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   privacy={privacy}
                   onToggle={handlePrivacyToggle}
                 />
+              )}
+
+              {activeTab === 'language' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Language & Currency Settings</h3>
+                    <div className="space-y-4">
+                      <div 
+                        className="p-4 rounded-lg border border-gray-200"
+                        style={{ backgroundColor: '#f9fafb' }}
+                      >
+                        <h4 className="font-medium text-gray-900 mb-2">App Language</h4>
+                        <div className="space-y-2">
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="radio"
+                              name="language"
+                              checked={language === 'en'}
+                              onChange={() => language !== 'en' && toggleLanguage()}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500"
+                            />
+                            <span className="text-gray-900">English</span>
+                          </label>
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="radio"
+                              name="language"
+                              checked={language === 'af'}
+                              onChange={() => language !== 'af' && toggleLanguage()}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500"
+                            />
+                            <span className="text-gray-900">Afrikaans</span>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div 
+                        className="p-4 rounded-lg border border-gray-200"
+                        style={{ backgroundColor: '#f9fafb' }}
+                      >
+                        <h4 className="font-medium text-gray-900 mb-2">Currency</h4>
+                        <select 
+                          value={currency}
+                          onChange={(e) => handleCurrencyChange(e.target.value as Currency)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 min-h-[44px]"
+                          style={{ backgroundColor: '#ffffff' }}
+                        >
+                          {availableCurrencies.map((curr) => (
+                            <option key={curr.code} value={curr.code}>
+                              {curr.name} ({curr.symbol})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-sm text-gray-600 mt-2">
+                          This will update all price displays throughout the app.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </Suspense>
           </div>

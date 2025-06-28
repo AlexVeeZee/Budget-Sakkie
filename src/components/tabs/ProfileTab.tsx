@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { User, Settings, CreditCard, MapPin, Bell, Shield, HelpCircle, LogOut, Edit2, TrendingUp, LogIn, UserPlus } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthStore } from '../../store/authStore';
+import { ProfileSettings } from '../auth/ProfileSettings';
 
 interface ProfileTabProps {
   onSettingsClick?: () => void;
@@ -23,18 +24,19 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   onSignInClick
 }) => {
   const { t, language, toggleLanguage } = useLanguage();
-  const { user, isAuthenticated, signOut } = useAuth();
+  const { user, isAuthenticated, isGuest, signOut } = useAuthStore();
   const [editingBudget, setEditingBudget] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState(1500);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
 
   const profileStats = [
-    { label: 'Total Saved', value: 'R1,247.50', icon: TrendingUp, color: 'text-green-600' },
-    { label: 'Lists Created', value: '12', icon: User, color: 'text-blue-600' },
-    { label: 'Products Compared', value: '156', icon: Settings, color: 'text-purple-600' },
+    { label: 'Total Saved', value: 'R0.00', icon: TrendingUp, color: 'text-green-600' },
+    { label: 'Lists Created', value: '0', icon: User, color: 'text-blue-600' },
+    { label: 'Products Compared', value: '0', icon: Settings, color: 'text-purple-600' },
   ];
 
-  // Use actual user data or fallback to Sarah's data
+  // Use actual user data or fallback to Guest data
   const displayUser = user || {
     displayName: 'Guest User',
     email: 'guest@example.com',
@@ -43,11 +45,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
 
   // Use sidebar functionality if available, otherwise fallback to alerts
   const handlePersonalInfo = () => {
-    if (onSettingsClick) {
-      onSettingsClick();
-    } else {
-      alert('Personal Information feature coming soon!');
-    }
+    setShowProfileSettings(true);
   };
 
   const handleLocation = () => {
@@ -110,8 +108,8 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       title: 'Account',
       items: [
         { icon: User, label: 'Personal Information', action: handlePersonalInfo },
-        { icon: MapPin, label: t('profile.location'), value: 'Centurion, GP', action: handleLocation },
-        { icon: CreditCard, label: t('profile.loyalty_cards'), value: '3 cards', action: handleLoyaltyCards },
+        { icon: MapPin, label: t('profile.location'), value: '', action: handleLocation },
+        { icon: CreditCard, label: t('profile.loyalty_cards'), value: '0 cards', action: handleLoyaltyCards },
       ]
     },
     {
@@ -123,7 +121,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
           value: language === 'en' ? 'English' : 'Afrikaans', 
           action: handleLanguageToggle
         },
-        { icon: Bell, label: 'Notifications', value: 'Enabled', action: handleNotifications },
+        { icon: Bell, label: 'Notifications', value: 'Disabled', action: handleNotifications },
         { icon: Shield, label: 'Privacy & Security', action: handlePrivacy },
       ]
     },
@@ -151,7 +149,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     }
   ];
 
-  const menuSections = isAuthenticated ? authenticatedMenuSections : unauthenticatedMenuSections;
+  const menuSections = isAuthenticated || isGuest ? authenticatedMenuSections : unauthenticatedMenuSections;
 
   const handleSignOut = async () => {
     if (isSigningOut) return;
@@ -187,6 +185,24 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
   };
 
+  if (showProfileSettings) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center mb-6">
+          <button
+            onClick={() => setShowProfileSettings(false)}
+            className="mr-4 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <span className="text-lg">←</span>
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900">Profile Settings</h2>
+        </div>
+        
+        <ProfileSettings />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Profile Header */}
@@ -204,30 +220,29 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             )}
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold">{displayUser.displayName}</h2>
+            <h2 className="text-2xl font-bold">{displayUser.displayName || user?.username || "New User"}</h2>
             {isAuthenticated ? (
               <>
                 <p className="text-white text-opacity-90">{displayUser.email}</p>
-                <p className="text-white text-opacity-90">Member since January 2024</p>
-                <p className="text-white text-opacity-90">Family of 4 • Premium Member</p>
+                <p className="text-white text-opacity-90">Member since {new Date().toLocaleDateString()}</p>
               </>
+            ) : isGuest ? (
+              <p className="text-white text-opacity-90">Guest User</p>
             ) : (
               <p className="text-white text-opacity-90">Sign in to access all features</p>
             )}
           </div>
-          {isAuthenticated && (
-            <button 
-              onClick={() => handlePersonalInfo()}
-              className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
-            >
-              <Edit2 className="h-5 w-5" />
-            </button>
-          )}
+          <button 
+            onClick={() => handlePersonalInfo()}
+            className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
+          >
+            <Edit2 className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
       {/* Statistics - Only show for authenticated users */}
-      {isAuthenticated && (
+      {(isAuthenticated || isGuest) && (
         <div className="grid grid-cols-3 gap-4 mb-6">
           {profileStats.map((stat, index) => (
             <div key={index} className="bg-white rounded-xl p-4 text-center shadow-sm">
@@ -242,7 +257,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       )}
 
       {/* Monthly Budget - Only show for authenticated users */}
-      {isAuthenticated && (
+      {(isAuthenticated || isGuest) && (
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">{t('profile.budget')}</h3>
@@ -276,18 +291,18 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Spent This Month</span>
-              <span className="text-lg font-semibold text-orange-600">R847.30</span>
+              <span className="text-lg font-semibold text-orange-600">R0.00</span>
             </div>
             
             <div className="flex items-center justify-between">
               <span className="text-gray-600">Remaining</span>
-              <span className="text-lg font-semibold text-green-600">R{(monthlyBudget - 847.30).toFixed(2)}</span>
+              <span className="text-lg font-semibold text-green-600">R{monthlyBudget.toFixed(2)}</span>
             </div>
             
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${Math.min((847.30 / monthlyBudget) * 100, 100)}%` }}
+                style={{ width: '0%' }}
               />
             </div>
           </div>
@@ -322,7 +337,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       ))}
 
       {/* Sign Out Section - Only show for authenticated users */}
-      {isAuthenticated && (
+      {(isAuthenticated || isGuest) && (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
           <div className="divide-y divide-gray-200">
             <button
@@ -338,7 +353,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               <div className="flex items-center space-x-3">
                 <LogOut className="h-5 w-5 text-red-600" />
                 <span className="font-medium text-red-600">
-                  {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+                  {isSigningOut ? 'Signing Out...' : isGuest ? 'Exit Guest Mode' : 'Sign Out'}
                 </span>
               </div>
               {isSigningOut && (
