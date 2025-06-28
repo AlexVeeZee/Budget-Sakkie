@@ -1,49 +1,24 @@
 import React, { memo } from 'react';
-import { ShoppingCart, TrendingDown, TrendingUp, MapPin, Clock, HelpCircle, Check, Plus } from 'lucide-react';
-import { Product, Price } from '../types';
-import { useLanguage } from '../hooks/useLanguage';
+import { ShoppingCart, Plus, Check } from 'lucide-react';
+import { Product } from '../types';
 import { useCurrency } from '../hooks/useCurrency';
 import { useCart } from '../context/CartContext';
 
 interface ProductCardProps {
   product: Product;
-  prices: Price[];
   onCompare?: () => void;
   onAddToList?: () => void;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = memo(({ 
   product, 
-  prices, 
   onCompare, 
   onAddToList 
 }) => {
-  const { t } = useLanguage();
   const { formatCurrency } = useCurrency();
   const { addItem, isInCart } = useCart();
   
-  const sortedPrices = [...prices].sort((a, b) => a.price - b.price);
-  const bestPrice = sortedPrices[0];
-  const worstPrice = sortedPrices[sortedPrices.length - 1];
-  const savings = worstPrice ? worstPrice.price - bestPrice.price : 0;
-
-  const getStockColor = (availability: string) => {
-    switch (availability) {
-      case 'in-stock': return 'text-green-600';
-      case 'low-stock': return 'text-orange-600';
-      case 'out-of-stock': return 'text-red-600';
-      default: return 'text-gray-600';
-    }
-  };
-
-  const getStockText = (availability: string) => {
-    switch (availability) {
-      case 'in-stock': return 'In Stock';
-      case 'low-stock': return 'Low Stock';
-      case 'out-of-stock': return t('product.out_of_stock');
-      default: return 'Unknown';
-    }
-  };
+  const productInCart = isInCart(product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -56,136 +31,55 @@ export const ProductCard: React.FC<ProductCardProps> = memo(({
     }
   };
 
-  const productInCart = isInCart(product.id);
-
   return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
-      <div 
-        className="relative cursor-pointer"
-        onClick={onCompare}
-      >
+    <div 
+      className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden cursor-pointer"
+      onClick={onCompare}
+    >
+      {/* Product Image */}
+      <div className="relative overflow-hidden">
         <img 
           src={product.image} 
           alt={product.name}
           loading="lazy"
-          className="w-full h-48 object-cover"
+          className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        {bestPrice?.onSale && (
-          <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-            {t('product.on_sale')}
-          </div>
-        )}
-        {savings > 0 && (
-          <div className="absolute top-3 right-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-            {t('product.save_amount')} {formatCurrency(savings)}
-          </div>
-        )}
+        
+        {/* Category Badge */}
+        <div className="absolute top-3 left-3">
+          <span className="inline-block px-2 py-1 text-xs font-medium bg-white/80 backdrop-blur-sm text-gray-700 rounded-full">
+            {product.category}
+          </span>
+        </div>
       </div>
       
+      {/* Product Info */}
       <div className="p-4">
-        <div className="mb-3 cursor-pointer" onClick={onCompare}>
-          <h3 className="font-semibold text-gray-900 text-lg leading-tight">{product.name}</h3>
-          <p className="text-gray-600 text-sm">{product.brand} • {product.unitSize}</p>
-        </div>
-
-        <div className="mb-4 cursor-pointer" onClick={onCompare}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">{t('product.best_price')}</span>
-            <div className="flex items-center space-x-1 group relative">
-              <TrendingDown className="h-4 w-4 text-green-600" />
-              <span className="text-green-600 text-sm font-medium">{formatCurrency(savings)} saved</span>
-              <HelpCircle className="h-3 w-3 text-gray-400 ml-1" />
-              
-              {/* Savings Calculation Tooltip */}
-              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                Difference between highest ({formatCurrency(worstPrice?.price || 0)}) and lowest price
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-              </div>
-            </div>
-          </div>
-          
-          {bestPrice && (
-            <div className="flex items-center justify-between bg-green-50 rounded-lg p-3">
-              <div className="flex items-center space-x-3">
-                <img 
-                  src={bestPrice.retailer.logo}
-                  alt={bestPrice.retailer.name}
-                  loading="lazy"
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    {formatCurrency(bestPrice.price)}
-                    {bestPrice.originalPrice && (
-                      <span className="ml-2 text-sm text-gray-500 line-through">
-                        {formatCurrency(bestPrice.originalPrice)}
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-sm text-gray-600">{bestPrice.retailer.name}</p>
-                </div>
-              </div>
-              <span className={`text-xs font-medium ${getStockColor(bestPrice.availability)}`}>
-                {getStockText(bestPrice.availability)}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Mobile-optimized buttons with minimum 44px touch targets */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button
-            onClick={onCompare}
-            className="flex items-center justify-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
-          >
-            <TrendingUp className="h-4 w-4" />
-            <span className="text-sm">{t('product.compare_prices')}</span>
-          </button>
+        <h3 className="font-medium text-gray-900 text-base mb-1 line-clamp-2 group-hover:text-green-600 transition-colors">
+          {product.name}
+        </h3>
+        
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-lg font-bold text-green-600">
+            {formatCurrency(product.price || 0)}
+          </span>
           
           <button
             onClick={handleAddToCart}
-            className={`flex items-center justify-center space-x-2 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px] ${
+            className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
               productInCart 
                 ? 'bg-green-600 text-white hover:bg-green-700' 
-                : 'bg-green-50 text-green-700 hover:bg-green-100'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
+            aria-label={productInCart ? 'Added to list' : 'Add to list'}
           >
             {productInCart ? (
-              <>
-                <Check className="h-4 w-4" />
-                <span className="text-sm">Added to List</span>
-              </>
+              <Check className="h-5 w-5" />
             ) : (
-              <>
-                <Plus className="h-4 w-4" />
-                <span className="text-sm">{t('product.add_to_list')}</span>
-              </>
+              <Plus className="h-5 w-5" />
             )}
           </button>
         </div>
-
-        {prices.length > 1 && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <p className="text-xs text-gray-500 mb-2">
-              Price range: {formatCurrency(bestPrice.price)} - {formatCurrency(worstPrice.price)} across {prices.length} stores
-            </p>
-            <div className="flex space-x-1">
-              {prices.slice(0, 5).map((price, index) => (
-                <div 
-                  key={price.id}
-                  className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
-                  style={{ backgroundColor: price.retailer.color }}
-                  title={`${price.retailer.name}: ${formatCurrency(price.price)}`}
-                />
-              ))}
-              {prices.length > 5 && (
-                <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs text-gray-600">
-                  +{prices.length - 5}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
