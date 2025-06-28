@@ -16,14 +16,10 @@ import { CartProvider } from './context/CartContext';
 import { TemporaryItemsBar } from './components/TemporaryItemsBar';
 
 // Lazy load heavy modals
-const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
-const LocationModal = lazy(() => import('./components/modals/LocationModal').then(module => ({ default: module.LocationModal })));
-const LoyaltyCardsModal = lazy(() => import('./components/modals/LoyaltyCardsModal').then(module => ({ default: module.LoyaltyCardsModal })));
-const RewardsModal = lazy(() => import('./components/modals/RewardsModal').then(module => ({ default: module.RewardsModal })));
-const FamilySharingModal = lazy(() => import('./components/modals/FamilySharingModal').then(module => ({ default: module.FamilySharingModal })));
-const HelpSupportModal = lazy(() => import('./components/modals/HelpSupportModal').then(module => ({ default: module.HelpSupportModal })));
+const UnifiedSidebarModal = lazy(() => import('./components/modals/UnifiedSidebarModal').then(module => ({ default: module.UnifiedSidebarModal })));
 
 type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile';
+type ModalType = 'settings' | 'location' | 'loyalty' | 'rewards' | 'family' | 'help' | null;
 
 // Interface for product selection in compare tab
 interface SelectedProductInfo {
@@ -35,12 +31,7 @@ function AppContent() {
   const { isAuthenticated, isGuest } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabType>('search');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [locationOpen, setLocationOpen] = useState(false);
-  const [loyaltyCardsOpen, setLoyaltyCardsOpen] = useState(false);
-  const [rewardsOpen, setRewardsOpen] = useState(false);
-  const [familySharingOpen, setFamilySharingOpen] = useState(false);
-  const [helpSupportOpen, setHelpSupportOpen] = useState(false);
+  const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
@@ -48,12 +39,7 @@ function AppContent() {
 
   // Close all modals helper function
   const closeAllModals = () => {
-    setSettingsOpen(false);
-    setLocationOpen(false);
-    setLoyaltyCardsOpen(false);
-    setRewardsOpen(false);
-    setFamilySharingOpen(false);
-    setHelpSupportOpen(false);
+    setActiveModal(null);
     setShowAuthModal(false);
   };
 
@@ -63,37 +49,37 @@ function AppContent() {
 
   const handleSettingsClick = () => {
     closeAllModals();
-    setSettingsOpen(true);
+    setActiveModal('settings');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleLocationClick = () => {
     closeAllModals();
-    setLocationOpen(true);
+    setActiveModal('location');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleLoyaltyCardsClick = () => {
     closeAllModals();
-    setLoyaltyCardsOpen(true);
+    setActiveModal('loyalty');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleRewardsClick = () => {
     closeAllModals();
-    setRewardsOpen(true);
+    setActiveModal('rewards');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleFamilySharingClick = () => {
     closeAllModals();
-    setFamilySharingOpen(true);
+    setActiveModal('family');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleHelpSupportClick = () => {
     closeAllModals();
-    setHelpSupportOpen(true);
+    setActiveModal('help');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
@@ -248,47 +234,13 @@ function AppContent() {
         onTabChange={handleTabChange}
       />
 
-      {/* Lazy loaded modals with loading fallback */}
+      {/* Unified Sidebar Modal */}
       <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>}>
-        {settingsOpen && (
-          <SettingsModal 
-            isOpen={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
-          />
-        )}
-
-        {locationOpen && (
-          <LocationModal 
-            isOpen={locationOpen}
-            onClose={() => setLocationOpen(false)}
-          />
-        )}
-
-        {loyaltyCardsOpen && (
-          <LoyaltyCardsModal 
-            isOpen={loyaltyCardsOpen}
-            onClose={() => setLoyaltyCardsOpen(false)}
-          />
-        )}
-
-        {rewardsOpen && (
-          <RewardsModal 
-            isOpen={rewardsOpen}
-            onClose={() => setRewardsOpen(false)}
-          />
-        )}
-
-        {familySharingOpen && (
-          <FamilySharingModal 
-            isOpen={familySharingOpen}
-            onClose={() => setFamilySharingOpen(false)}
-          />
-        )}
-
-        {helpSupportOpen && (
-          <HelpSupportModal 
-            isOpen={helpSupportOpen}
-            onClose={() => setHelpSupportOpen(false)}
+        {activeModal && (
+          <UnifiedSidebarModal
+            activeSection={activeModal}
+            isOpen={activeModal !== null}
+            onClose={() => setActiveModal(null)}
           />
         )}
       </Suspense>

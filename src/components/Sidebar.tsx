@@ -91,10 +91,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Overlay - only visible on mobile/tablet */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-        onClick={onClose}
-      ></div>
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={onClose}
+        ></div>
+      )}
       
       {/* Sidebar */}
       <div 
