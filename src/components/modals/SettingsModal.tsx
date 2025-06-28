@@ -176,14 +176,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               // Check if notification_preferences is already an object or a string
               const notificationPrefs = typeof userPreferences.notification_preferences === 'string' 
                 ? JSON.parse(userPreferences.notification_preferences)
-                : userPreferences.notification_preferences;
-              
+                : userPreferences.notification_preferences;            
               setNotifications(prev => ({
                 ...prev,
                 ...(notificationPrefs || {})
               }));
             } catch (e) {
-              console.error('Error parsing notification preferences:', e);
+              console.error('Error processing notification preferences:', e);
             }
           }
         } else {
@@ -328,7 +327,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         throw updateError;
       }
       
-      // Update user preferences
+      // Update user preferences - notification_preferences should be stored as JSONB object
       const { error: preferencesError } = await supabase
         .from('user_preferences')
         .upsert({
@@ -336,7 +335,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           language: language,
           currency: currency,
           phone: profile.phone,
-          notification_preferences: JSON.stringify(notifications),
+          notification_preferences: notifications, // Store as object, not JSON string
           updated_at: new Date().toISOString()
         });
       

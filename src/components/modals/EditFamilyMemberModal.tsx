@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
 import { X, Save, User, Mail, Crown, Shield } from 'lucide-react';
-
-interface FamilyMember {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'member';
-}
+import { FamilyMember } from '../../types/family';
+import { FamilyService } from '../../services/familyService';
 
 interface EditFamilyMemberModalProps {
   isOpen: boolean;
@@ -24,11 +19,22 @@ export const EditFamilyMemberModal: React.FC<EditFamilyMemberModalProps> = ({
   const [name, setName] = useState(member.name);
   const [email, setEmail] = useState(member.email);
   const [role, setRole] = useState(member.role);
+  const [relationship, setRelationship] = useState(member.relationship || '');
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string; relationship?: string }>({});
+
+  const relationships = [
+    { value: 'spouse', label: 'Spouse' },
+    { value: 'parent', label: 'Parent' },
+    { value: 'child', label: 'Child' },
+    { value: 'sibling', label: 'Sibling' },
+    { value: 'grandparent', label: 'Grandparent' },
+    { value: 'other', label: 'Other Family Member' },
+    { value: 'friend', label: 'Friend' },
+  ];
 
   const validateForm = () => {
-    const newErrors: { name?: string; email?: string } = {};
+    const newErrors: { name?: string; email?: string; relationship?: string } = {};
     
     if (!name.trim()) {
       newErrors.name = 'Name is required';
@@ -53,20 +59,23 @@ export const EditFamilyMemberModal: React.FC<EditFamilyMemberModalProps> = ({
     setIsLoading(true);
     
     try {
-      // Simulate API call
+      // In a real implementation, we would update the member in the database
+      // For now, we'll just simulate a delay and update the local state
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const updatedMember: FamilyMember = {
         ...member,
         name: name.trim(),
         email: email.trim(),
-        role
+        role,
+        relationship
       };
       
       onSave(updatedMember);
       onClose();
     } catch (error) {
       console.error('Error updating family member:', error);
+      setErrors({ name: 'Failed to update member. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -76,6 +85,7 @@ export const EditFamilyMemberModal: React.FC<EditFamilyMemberModalProps> = ({
     setName(member.name);
     setEmail(member.email);
     setRole(member.role);
+    setRelationship(member.relationship || '');
     setErrors({});
     onClose();
   };
@@ -133,6 +143,28 @@ export const EditFamilyMemberModal: React.FC<EditFamilyMemberModalProps> = ({
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+            )}
+          </div>
+
+          {/* Relationship Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Relationship
+            </label>
+            <select
+              value={relationship}
+              onChange={(e) => setRelationship(e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                errors.relationship ? 'border-red-300' : 'border-gray-300'
+              }`}
+            >
+              <option value="">Select relationship</option>
+              {relationships.map(rel => (
+                <option key={rel.value} value={rel.value}>{rel.label}</option>
+              ))}
+            </select>
+            {errors.relationship && (
+              <p className="mt-1 text-sm text-red-600">{errors.relationship}</p>
             )}
           </div>
 

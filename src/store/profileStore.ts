@@ -94,11 +94,11 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       const profile: UserProfileData = {
         displayName: profileData?.display_name || '',
         avatarUrl: profileData?.profile_image_url || '',
-        phone: '',  // Not stored in database yet
-        address: '', // Not stored in database yet
-        city: '',    // Not stored in database yet
-        province: '', // Not stored in database yet
-        postalCode: '', // Not stored in database yet
+        phone: profileData?.phone_number || '',
+        address: profileData?.address || '',
+        city: profileData?.city || '',
+        province: profileData?.province || '',
+        postalCode: profileData?.postal_code || '',
         language: preferencesData?.language || 'en',
         currency: preferencesData?.currency || 'ZAR',
         distanceUnit: preferencesData?.distance_unit || 'km',
@@ -145,6 +145,11 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         .update({
           display_name: updates.displayName,
           profile_image_url: updates.avatarUrl,
+          phone_number: updates.phone,
+          address: updates.address,
+          city: updates.city,
+          province: updates.province,
+          postal_code: updates.postalCode,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);

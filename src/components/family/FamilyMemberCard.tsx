@@ -4,61 +4,185 @@ import { FamilyMember } from '../../types/family';
 
 interface FamilyMemberCardProps {
   member: FamilyMember;
+  currentUserId: string;
+  onEdit?: (member: FamilyMember) => void;
+  onRemove?: (memberId: string) => void;
   onUpdateRole?: (memberId: string, newRole: 'admin' | 'member') => void;
-  onRemoveMember?: (memberId: string) => void;
 }
 
 export const FamilyMemberCard: React.FC<FamilyMemberCardProps> = ({
   member,
-  onUpdateRole,
-  onRemoveMember
+  currentUserId,
+  onEdit,
+  onRemove,
+  onUpdateRole
 }) => {
   const [showActions, setShowActions] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'text-green-600 bg-green-100';
-      case 'pending': return 'text-yellow-600 bg-yellow
+      case 'pending': return 'text-yellow-600 bg-yellow-100';
+      case 'inactive': return 'text-gray-600 bg-gray-100';
+      default: return 'text-gray-600 bg-gray-100';
     }
-  }
-}
+  };
 
-I understand! I'll create beautiful, production-worthy designs that stand out from typical templates. I\'ll focus on:
+  const getRoleIcon = (role: string) => {
+    return role === 'admin' ? <Crown className="h-4 w-4 text-yellow-600" /> : <Shield className="h-4 w-4 text-blue-600" />;
+  };
 
-- **Unique, polished aesthetics** with thoughtful design details
-- **Premium user experiences** with smooth interactions and micro-animations
-- **Professional layouts** that feel custom-built, not template-based
-- **Cohesive design systems** with intentional color palettes, typography, and spacing
-- **Modern UI patterns** that enhance usability while looking sophisticated
+  const handleRoleChange = async (newRole: 'admin' | 'member') => {
+    if (!onUpdateRole) return;
+    
+    setProcessing(true);
+    setError(null);
+    
+    try {
+      await onUpdateRole(member.id, newRole);
+      setShowActions(false);
+    } catch (error) {
+      setError('Failed to update role');
+      console.error('Error updating role:', error);
+    } finally {
+      setProcessing(false);
+    }
+  };
 
-I'll leverage the existing tech stack:
-- **Tailwind CSS** for styling with custom design approaches
-- **Lucide React** for clean, consistent iconography
-- **React hooks** for smooth state management and interactions
-- **Responsive design** that works beautifully across all devices
+  const handleRemove = () => {
+    if (!onRemove) return;
+    
+    if (window.confirm(`Are you sure you want to remove ${member.name} from the family?`)) {
+      onRemove(member.id);
+    }
+  };
 
-I'll avoid generic templates and instead create interfaces that feel premium and purpose-built. Each component will have attention to detail in hover states, transitions, visual hierarchy, and overall polish.
+  // Don't show actions for current user
+  const canShowActions = member.id !== currentUserId && (onEdit || onRemove || onUpdateRole);
 
-What would you like me to design or improve first? I'm ready to create something exceptional!
-
-Previous Message #2:
-
-I need to add a family sharing feature to the app. This should allow users to create family groups, invite family members, and share shopping lists with specific family members. The feature should include:
-
-1. Family group management (create, edit, delete family groups)
-2. Member invitation system (send invites via email)
-3. Role-based permissions (admin vs member)
-4. Shared shopping list management
-5. Family member profiles and activity tracking
-
-Please implement this as a comprehensive family sharing system with a beautiful, intuitive interface.
-
-I understand you'll need to create database migrations for this feature. Please create the necessary Supabase migrations to support family sharing functionality.
-
-Looking at the current database schema, I can see there are already some family-related tables (`families`, `family_members`, `user_profiles`). Please build upon this existing structure and enhance it as needed for the full family sharing feature.
-
-(Assistant response below)
-
-I'll create a comprehensive family sharing system that builds upon your existing database structure. Let me implement this with beautiful, intuitive interfaces and the necessary database enhancements.
-
-<boltArtifact id="family-sharing-system" title="Comprehensive Family Sharing System">
+  return (
+    <div className="p-4 rounded-xl border border-gray-200 hover:shadow-sm transition-shadow bg-white">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center space-x-4">
+          <img 
+            src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random`}
+            alt={member.name}
+            className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+          />
+          
+          <div>
+            <div className="flex items-center space-x-3 mb-1">
+              <h4 className="text-lg font-bold text-gray-900">{member.name}</h4>
+              <div className="flex items-center space-x-1">
+                {getRoleIcon(member.role)}
+                <span className="text-sm font-medium text-gray-600 capitalize">{member.role}</span>
+              </div>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(member.status)}`}>
+                {member.status}
+              </span>
+            </div>
+            
+            <p className="text-gray-600 mb-1">{member.email}</p>
+            <p className="text-sm text-gray-500">
+              Joined: {new Date(member.joinedDate).toLocaleDateString()}
+            </p>
+            {member.relationship && (
+              <p className="text-sm text-blue-600 mt-1">
+                Relationship: {member.relationship}
+              </p>
+            )}
+          </div>
+        </div>
+        
+        {canShowActions && (
+          <div className="relative">
+            <button 
+              onClick={() => setShowActions(!showActions)}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              disabled={processing}
+            >
+              {processing ? (
+                <div className="h-5 w-5 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <MoreVertical className="h-5 w-5" />
+              )}
+            </button>
+            
+            {showActions && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
+                {onEdit && (
+                  <button
+                    onClick={() => {
+                      setShowActions(false);
+                      onEdit(member);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    <span>Edit Member</span>
+                  </button>
+                )}
+                
+                {onUpdateRole && member.role === 'admin' && (
+                  <button
+                    onClick={() => handleRoleChange('member')}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <Shield className="h-4 w-4 text-blue-600" />
+                    <span>Change to Member</span>
+                  </button>
+                )}
+                
+                {onUpdateRole && member.role === 'member' && (
+                  <button
+                    onClick={() => handleRoleChange('admin')}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <Crown className="h-4 w-4 text-yellow-600" />
+                    <span>Make Admin</span>
+                  </button>
+                )}
+                
+                {onRemove && (
+                  <button
+                    onClick={handleRemove}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Remove Member</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {error && (
+        <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+      
+      {/* Permissions */}
+      <div className="mt-4 pt-4 border-t border-gray-100">
+        <h5 className="text-sm font-medium text-gray-700 mb-2">Permissions</h5>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {Object.entries(member.permissions).map(([permission, allowed]) => (
+            <div 
+              key={permission}
+              className={`px-2 py-1 rounded text-xs font-medium ${
+                allowed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {permission.replace(/([A-Z])/g, ' $1').toLowerCase()}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};

@@ -1,12 +1,23 @@
+export interface FamilyGroup {
+  id: string;
+  name: string;
+  description?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  members?: FamilyMember[];
+}
+
 export interface FamilyMember {
   id: string;
   name: string;
   email: string;
   role: 'admin' | 'member';
-  avatar: string;
+  relationship?: string;
+  avatar?: string;
   joinedDate: string;
   status: 'active' | 'pending' | 'inactive';
-  lastActive: string;
+  lastActive?: string;
   permissions: {
     viewLists: boolean;
     editLists: boolean;
@@ -18,48 +29,25 @@ export interface FamilyMember {
   };
 }
 
-export interface FamilyGroup {
-  id: string;
-  name: string;
-  description?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-  members: FamilyMember[];
-  settings: {
-    allowMemberInvites: boolean;
-    requireApprovalForNewMembers: boolean;
-    defaultMemberPermissions: Partial<FamilyMember['permissions']>;
-  };
-  stats: {
-    totalLists: number;
-    totalSavings: number;
-    activeMembers: number;
-  };
-}
-
 export interface FamilyInvitation {
   id: string;
   familyId: string;
   familyName: string;
-  invitedBy: string;
   invitedByName: string;
   email: string;
   role: 'admin' | 'member';
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
-  createdAt: string;
+  status: 'pending' | 'accepted' | 'declined';
   expiresAt: string;
   message?: string;
 }
 
-export interface FamilyActivity {
+export interface FamilyRelationship {
   id: string;
   familyId: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  type: 'list_created' | 'list_updated' | 'list_shared' | 'member_joined' | 'member_left' | 'item_added' | 'item_completed';
-  description: string;
-  metadata?: Record<string, any>;
-  timestamp: string;
+  memberId: string;
+  role: 'parent' | 'child' | 'guardian' | 'spouse' | 'sibling' | 'other';
+  isAdmin: boolean;
+  status: 'active' | 'pending' | 'inactive';
+  createdAt: string;
+  updatedAt: string;
 }
