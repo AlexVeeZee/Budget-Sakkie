@@ -190,7 +190,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             placeholder="Search products by name, description, or store..."
             className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
           />
-          <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-3">
+          {/* Icons are hidden but we keep the div for layout consistency */}
+          <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-3" style={{ display: 'none' }}>
             <button 
               className="p-2 text-gray-400 hover:text-gray-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Scan barcode"
