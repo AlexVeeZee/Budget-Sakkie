@@ -67,12 +67,13 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
   // Get unique categories to prevent duplicates
   const uniqueCategories = useMemo(() => {
-    // Create a map to deduplicate categories by ID
+    // Create a map to deduplicate categories by name (not ID)
     const categoryMap = new Map();
     
     categories.forEach(category => {
-      if (!categoryMap.has(category.id)) {
-        categoryMap.set(category.id, category);
+      // Use name as the key to prevent duplicates with the same name
+      if (!categoryMap.has(category.name)) {
+        categoryMap.set(category.name, category);
       }
     });
     
