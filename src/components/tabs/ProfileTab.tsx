@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { User, Settings, CreditCard, MapPin, Bell, Shield, HelpCircle, LogOut, Edit2, TrendingUp, LogIn, UserPlus } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useAuthStore } from '../../store/authStore';
+import { ProfileSettings } from '../auth/ProfileSettings';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 
@@ -24,10 +26,11 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   onSignInClick
 }) => {
   const { t, language, toggleLanguage } = useLanguage();
-  const { user, isAuthenticated, signOut } = useAuth();
+  const { user, isAuthenticated, isGuest, signOut } = useAuthStore();
   const [editingBudget, setEditingBudget] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState(1500);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +44,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   // Fetch user profile data from Supabase
   useEffect(() => {
     const fetchUserProfile = async () => {
-      if (!isAuthenticated) return;
+      if (!isAuthenticated || isGuest) return;
       
       try {
         setLoading(true);
@@ -51,7 +54,8 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         
         if (!currentUser) {
-          throw new Error('No authenticated user found');
+          console.log('No authenticated user found, using auth store data');
+          return;
         }
         
         // Fetch user profile from user_profiles table
@@ -61,11 +65,13 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
           .eq('id', currentUser.id)
           .single();
         
-        if (profileError) {
+        if (profileError && profileError.code !== 'PGRST116') {
           throw profileError;
         }
         
-        setUserProfile(profile);
+        if (profile) {
+          setUserProfile(profile);
+        }
         
         // Fetch user preferences to get budget
         const { data: preferences, error: preferencesError } = await supabase
@@ -92,25 +98,31 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     };
 
     fetchUserProfile();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isGuest]);
 
-  // Use actual user data or fallback to Sarah's data
+  // Use actual user data or fallback based on authentication state
   const displayUser = userProfile ? {
-    displayName: userProfile.display_name || 'Guest User',
-    email: user?.email || 'guest@example.com',
+    displayName: userProfile.display_name || user?.username || user?.email?.split('@')[0] || 'User',
+    email: user?.email || 'user@example.com',
     profileImageUrl: userProfile.profile_image_url
-  } : user || {
-    displayName: 'Guest User',
-    email: 'guest@example.com',
+  } : user ? {
+    displayName: user.username || user.email?.split('@')[0] || 'User',
+    email: user.email || 'user@example.com',
+    profileImageUrl: undefined
+  } : {
+    displayName: isGuest ? 'Guest User' : 'Sign In Required',
+    email: isGuest ? 'guest@example.com' : 'Please sign in to continue',
     profileImageUrl: undefined
   };
 
   // Use sidebar functionality if available, otherwise fallback to alerts
   const handlePersonalInfo = () => {
-    if (onSettingsClick) {
+    if (isAuthenticated && !isGuest) {
+      setShowProfileSettings(true);
+    } else if (onSettingsClick) {
       onSettingsClick();
     } else {
-      alert('Personal Information feature coming soon!');
+      alert('Please sign in to access profile settings');
     }
   };
 
@@ -174,7 +186,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       title: 'Account',
       items: [
         { icon: User, label: 'Personal Information', action: handlePersonalInfo },
-        { icon: MapPin, label: t('profile.location'), value: 'Centurion, GP', action: handleLocation },
+        { icon: MapPin, label: t('profile.location'), value: '', action: handleLocation },
         { icon: CreditCard, label: t('profile.loyalty_cards'), value: '3 cards', action: handleLoyaltyCards },
       ]
     },
@@ -215,7 +227,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     }
   ];
 
-  const menuSections = isAuthenticated ? authenticatedMenuSections : unauthenticatedMenuSections;
+  const menuSections = isAuthenticated || isGuest ? authenticatedMenuSections : unauthenticatedMenuSections;
 
   const handleSignOut = async () => {
     if (isSigningOut) return;
@@ -227,6 +239,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     
     try {
       await signOut();
+      setUserProfile(null); // Clear user profile data
       alert('You have been signed out successfully!');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -247,7 +260,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   };
 
   const handleBudgetSave = async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || isGuest) {
       setEditingBudget(false);
       alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
       return;
@@ -260,7 +273,10 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       
       if (!currentUser) {
-        throw new Error('No authenticated user found');
+        // Fallback for auth store users
+        setEditingBudget(false);
+        alert(`Budget updated to R${monthlyBudget.toFixed(2)}!`);
+        return;
       }
       
       // Update user preferences with new budget
@@ -286,6 +302,24 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       setLoading(false);
     }
   };
+
+  if (showProfileSettings) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center mb-6">
+          <button
+            onClick={() => setShowProfileSettings(false)}
+            className="mr-4 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <span className="text-lg">←</span>
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900">Profile Settings</h2>
+        </div>
+        
+        <ProfileSettings />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -315,16 +349,20 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                 <>
                   <p className="text-white text-opacity-90">{displayUser.email}</p>
                   <p className="text-white text-opacity-90">Member since {userProfile ? new Date(userProfile.created_at).toLocaleDateString() : 'January 2024'}</p>
-                  <p className="text-white text-opacity-90">
-                    {userProfile?.family_id ? 'Family Member' : 'Individual Account'}
-                    {userProfile?.premium_member ? ' • Premium Member' : ''}
-                  </p>
+                  {userProfile && (
+                    <p className="text-white text-opacity-90">
+                      {userProfile.family_id ? 'Family Member' : 'Individual Account'}
+                      {userProfile.premium_member ? ' • Premium Member' : ''}
+                    </p>
+                  )}
                 </>
+              ) : isGuest ? (
+                <p className="text-white text-opacity-90">Guest User</p>
               ) : (
                 <p className="text-white text-opacity-90">Sign in to access all features</p>
               )}
             </div>
-            {isAuthenticated && (
+            {(isAuthenticated || isGuest) && (
               <button 
                 onClick={() => handlePersonalInfo()}
                 className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-colors"
@@ -337,7 +375,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       </div>
 
       {/* Statistics - Only show for authenticated users */}
-      {isAuthenticated && (
+      {(isAuthenticated || isGuest) && (
         <div className="grid grid-cols-3 gap-4 mb-6">
           {profileStats.map((stat, index) => (
             <div key={index} className="bg-white rounded-xl p-4 text-center shadow-sm">
@@ -352,7 +390,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       )}
 
       {/* Monthly Budget - Only show for authenticated users */}
-      {isAuthenticated && (
+      {(isAuthenticated || isGuest) && (
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">{t('profile.budget')}</h3>
@@ -405,6 +443,19 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         </div>
       )}
 
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <div className="text-red-600 mr-3">⚠️</div>
+            <div>
+              <h4 className="text-sm font-medium text-red-800">Profile Error</h4>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Menu Sections */}
       {menuSections.map((section, sectionIndex) => (
         <div key={sectionIndex} className="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
@@ -433,7 +484,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       ))}
 
       {/* Sign Out Section - Only show for authenticated users */}
-      {isAuthenticated && (
+      {(isAuthenticated || isGuest) && (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-4">
           <div className="divide-y divide-gray-200">
             <button
@@ -449,7 +500,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               <div className="flex items-center space-x-3">
                 <LogOut className="h-5 w-5 text-red-600" />
                 <span className="font-medium text-red-600">
-                  {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+                  {isSigningOut ? 'Signing Out...' : isGuest ? 'Exit Guest Mode' : 'Sign Out'}
                 </span>
               </div>
               {isSigningOut && (
