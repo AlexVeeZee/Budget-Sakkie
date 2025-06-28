@@ -80,105 +80,107 @@ export const TemporaryItemsBar: React.FC = () => {
   return (
     <>
       <div 
-        className={`fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 shadow-lg transition-transform duration-300 z-30 ${
-          isExpanded ? 'translate-y-0' : 'translate-y-0'
-        }`}
+        className="fixed bottom-16 left-0 right-0 transition-transform duration-300 z-30"
         style={{ 
           transform: isVisible ? 'translateY(0)' : 'translateY(100%)',
           maxHeight: isExpanded ? '60vh' : 'auto',
           overflowY: isExpanded ? 'auto' : 'hidden'
         }}
       >
-        {/* Collapsed View */}
-        <div className="p-3 flex items-center justify-between">
-          <button 
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center space-x-2 text-gray-700"
-          >
-            <div className="relative">
-              <ShoppingCart className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                {itemCount}
-              </span>
-            </div>
-            <span className="font-medium">{itemCount} {itemCount === 1 ? 'item' : 'items'} selected</span>
-            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-          </button>
-          
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setShowCreateListModal(true)}
-              className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              Create New List
-            </button>
-            <button
-              onClick={() => setShowAddToExistingModal(true)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              Add to Existing
-            </button>
-            <button
-              onClick={clearItems}
-              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              aria-label="Clear all items"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-        
-        {/* Expanded View */}
-        {isExpanded && (
-          <div className="px-4 pb-4 divide-y divide-gray-100">
-            <div className="py-2 flex items-center justify-between text-sm text-gray-600">
-              <span>Total Estimated Price:</span>
-              <span className="font-bold text-gray-900">{formatCurrency(totalPrice)}</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white border-t border-gray-200 shadow-lg rounded-t-lg">
+            {/* Collapsed View */}
+            <div className="py-4 px-4 flex items-center justify-between">
+              <button 
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="flex items-center space-x-2 text-gray-700"
+              >
+                <div className="relative">
+                  <ShoppingCart className="h-5 w-5" />
+                  <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {itemCount}
+                  </span>
+                </div>
+                <span className="font-medium">{itemCount} {itemCount === 1 ? 'item' : 'items'} selected</span>
+                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              </button>
+              
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowCreateListModal(true)}
+                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Create New List
+                </button>
+                <button
+                  onClick={() => setShowAddToExistingModal(true)}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Add to Existing
+                </button>
+                <button
+                  onClick={clearItems}
+                  className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  aria-label="Clear all items"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
             
-            {items.map((item) => (
-              <div key={item.product.id} className="py-3 flex items-center space-x-3">
-                <img 
-                  src={item.product.image}
-                  alt={item.product.name}
-                  className="w-12 h-12 object-cover rounded-lg"
-                />
-                
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-gray-900 truncate">{item.product.name}</h4>
-                  <p className="text-sm text-gray-600 truncate">
-                    {item.product.brand} • {formatCurrency(item.product.price || 0)} each
-                  </p>
+            {/* Expanded View */}
+            {isExpanded && (
+              <div className="px-4 pb-4 divide-y divide-gray-100">
+                <div className="py-2 flex items-center justify-between text-sm text-gray-600">
+                  <span>Total Estimated Price:</span>
+                  <span className="font-bold text-gray-900">{formatCurrency(totalPrice)}</span>
                 </div>
                 
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center border border-gray-300 rounded-lg">
-                    <button
-                      onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                      className="px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </button>
-                    <span className="px-2 py-1 font-medium">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                      className="px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
+                {items.map((item) => (
+                  <div key={item.product.id} className="py-3 flex items-center space-x-3">
+                    <img 
+                      src={item.product.image}
+                      alt={item.product.name}
+                      className="w-12 h-12 object-cover rounded-lg"
+                    />
+                    
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 truncate">{item.product.name}</h4>
+                      <p className="text-sm text-gray-600 truncate">
+                        {item.product.brand} • {formatCurrency(item.product.price || 0)} each
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center border border-gray-300 rounded-lg">
+                        <button
+                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          className="px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="px-2 py-1 font-medium">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          className="px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                      
+                      <button
+                        onClick={() => removeItem(item.product.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  
-                  <button
-                    onClick={() => removeItem(item.product.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Success Message */}
