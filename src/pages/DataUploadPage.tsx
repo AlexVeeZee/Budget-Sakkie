@@ -114,7 +114,7 @@ export const DataUploadPage: React.FC = () => {
         
         <DataframeUploader 
           availableTables={availableTables}
-          onUploadComplete={handleUploadComplete}
+          onUploadComplete={handleUploadResult}
         />
       </div>
       

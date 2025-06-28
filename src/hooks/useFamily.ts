@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FamilyGroup, FamilyMember, FamilyInvitation, FamilyActivity } from '../types/family';
+import { FamilyService } from '../services/familyService';
 
 interface UseFamilyState {
   currentFamily: FamilyGroup | null;
@@ -20,156 +21,97 @@ export const useFamily = () => {
     error: null
   });
 
-  // Mock data for demonstration
-  const mockFamilyData: FamilyGroup = {
-    id: 'family-1',
-    name: 'Van Der Merwe Family',
-    description: 'Our family shopping group',
-    createdBy: 'sarah-1',
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-15T12:00:00Z',
-    members: [
-      {
-        id: 'sarah-1',
-        name: 'Sarah Van Der Merwe',
-        email: 'sarah.vandermerwe@email.com',
-        role: 'admin',
-        avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-        joinedDate: '2024-01-01T00:00:00Z',
-        status: 'active',
-        lastActive: '2024-01-15T12:00:00Z',
-        permissions: {
-          viewLists: true,
-          editLists: true,
-          createLists: true,
-          viewBudget: true,
-          editBudget: true,
-          inviteMembers: true,
-          manageMembers: true
-        }
-      },
-      {
-        id: 'johan-1',
-        name: 'Johan Van Der Merwe',
-        email: 'johan.vandermerwe@email.com',
-        role: 'member',
-        avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-        joinedDate: '2024-01-02T00:00:00Z',
-        status: 'active',
-        lastActive: '2024-01-15T10:30:00Z',
-        permissions: {
-          viewLists: true,
-          editLists: true,
-          createLists: true,
-          viewBudget: true,
-          editBudget: false,
-          inviteMembers: false,
-          manageMembers: false
-        }
-      },
-      {
-        id: 'emma-1',
-        name: 'Emma Van Der Merwe',
-        email: 'emma.vandermerwe@email.com',
-        role: 'member',
-        avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-        joinedDate: '2024-01-05T00:00:00Z',
-        status: 'pending',
-        lastActive: '2024-01-10T14:20:00Z',
-        permissions: {
-          viewLists: true,
-          editLists: false,
-          createLists: false,
-          viewBudget: false,
-          editBudget: false,
-          inviteMembers: false,
-          manageMembers: false
-        }
-      }
-    ],
-    settings: {
-      allowMemberInvites: true,
-      requireApprovalForNewMembers: false,
-      defaultMemberPermissions: {
-        viewLists: true,
-        editLists: true,
-        createLists: true,
-        viewBudget: true,
-        editBudget: false,
-        inviteMembers: false,
-        manageMembers: false
-      }
-    },
-    stats: {
-      totalLists: 12,
-      totalSavings: 1247.50,
-      activeMembers: 2
-    }
-  };
-
-  const mockInvitations: FamilyInvitation[] = [
-    {
-      id: 'invite-1',
-      familyId: 'family-1',
-      familyName: 'Van Der Merwe Family',
-      invitedBy: 'sarah-1',
-      invitedByName: 'Sarah Van Der Merwe',
-      email: 'pieter.vandermerwe@email.com',
-      role: 'member',
-      status: 'pending',
-      createdAt: '2024-01-14T10:00:00Z',
-      expiresAt: '2024-01-21T10:00:00Z',
-      message: 'Join our family shopping group to share lists and save money together!'
-    }
-  ];
-
-  const mockActivities: FamilyActivity[] = [
-    {
-      id: 'activity-1',
-      familyId: 'family-1',
-      userId: 'johan-1',
-      userName: 'Johan Van Der Merwe',
-      userAvatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-      type: 'list_created',
-      description: 'created a new shopping list "Weekend Groceries"',
-      timestamp: '2024-01-15T10:30:00Z'
-    },
-    {
-      id: 'activity-2',
-      familyId: 'family-1',
-      userId: 'sarah-1',
-      userName: 'Sarah Van Der Merwe',
-      userAvatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-      type: 'item_completed',
-      description: 'completed shopping for "Weekly Groceries" list',
-      timestamp: '2024-01-15T09:15:00Z'
-    },
-    {
-      id: 'activity-3',
-      familyId: 'family-1',
-      userId: 'emma-1',
-      userName: 'Emma Van Der Merwe',
-      userAvatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-      type: 'member_joined',
-      description: 'joined the family group',
-      timestamp: '2024-01-05T00:00:00Z'
-    }
-  ];
-
+  // Load family data
   useEffect(() => {
-    // Simulate loading family data
     const loadFamilyData = async () => {
       setState(prev => ({ ...prev, loading: true }));
       
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Get user's family
+        const { family, error } = await FamilyService.getUserFamily();
+        
+        if (error) {
+          setState(prev => ({
+            ...prev,
+            loading: false,
+            error
+          }));
+          return;
+        }
+        
+        // Get pending invitations
+        const { invitations } = await FamilyService.getPendingInvitations();
+        
+        // Convert family data to FamilyGroup format
+        let currentFamily: FamilyGroup | null = null;
+        
+        if (family) {
+          const members: FamilyMember[] = family.family_members.map(member => ({
+            id: member.user_id || '',
+            name: member.user_profiles?.display_name || 'Unknown User',
+            email: '', // Email not available from Supabase query
+            role: member.role as 'admin' | 'member',
+            avatar: member.user_profiles?.profile_image_url || '',
+            joinedDate: member.joined_at || '',
+            status: 'active', // Assuming all members in the DB are active
+            lastActive: new Date().toISOString(),
+            permissions: {
+              viewLists: true,
+              editLists: member.role === 'admin',
+              createLists: true,
+              viewBudget: true,
+              editBudget: member.role === 'admin',
+              inviteMembers: member.role === 'admin',
+              manageMembers: member.role === 'admin'
+            }
+          }));
+          
+          currentFamily = {
+            id: family.id,
+            name: family.name,
+            description: '',
+            createdBy: family.created_by || '',
+            createdAt: family.created_at || '',
+            updatedAt: family.updated_at || '',
+            members,
+            settings: {
+              allowMemberInvites: true,
+              requireApprovalForNewMembers: false,
+              defaultMemberPermissions: {
+                viewLists: true,
+                editLists: true,
+                createLists: true,
+                viewBudget: true,
+                editBudget: false,
+                inviteMembers: false,
+                manageMembers: false
+              }
+            },
+            stats: {
+              totalLists: 0, // Will be updated when we implement list fetching
+              totalSavings: 0, // Will be updated when we implement budget fetching
+              activeMembers: members.filter(m => m.status === 'active').length
+            }
+          };
+        }
         
         setState({
-          currentFamily: mockFamilyData,
-          families: [mockFamilyData],
-          invitations: mockInvitations,
-          activities: mockActivities,
+          currentFamily,
+          families: currentFamily ? [currentFamily] : [],
+          invitations: invitations.map(invitation => ({
+            id: invitation.id,
+            familyId: invitation.family_id || '',
+            familyName: invitation.families?.name || 'Unknown Family',
+            invitedBy: invitation.invited_by || '',
+            invitedByName: invitation.invited_by_profile?.display_name || 'Unknown User',
+            email: invitation.invited_email,
+            role: invitation.role as 'admin' | 'member',
+            status: invitation.status as 'pending' | 'accepted' | 'declined' | 'expired',
+            createdAt: invitation.created_at || '',
+            expiresAt: invitation.expires_at || '',
+            message: ''
+          })),
+          activities: [], // Will be implemented later
           loading: false,
           error: null
         });
@@ -177,7 +119,7 @@ export const useFamily = () => {
         setState(prev => ({
           ...prev,
           loading: false,
-          error: 'Failed to load family data'
+          error: error instanceof Error ? error.message : 'Failed to load family data'
         }));
       }
     };
@@ -189,65 +131,83 @@ export const useFamily = () => {
     try {
       setState(prev => ({ ...prev, loading: true }));
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { family, error } = await FamilyService.createFamily(name);
       
-      const newFamily: FamilyGroup = {
-        id: `family-${Date.now()}`,
-        name,
-        description,
-        createdBy: 'sarah-1',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        members: [{
-          id: 'sarah-1',
-          name: 'Sarah Van Der Merwe',
-          email: 'sarah.vandermerwe@email.com',
-          role: 'admin',
-          avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop',
-          joinedDate: new Date().toISOString(),
+      if (error) {
+        setState(prev => ({ ...prev, loading: false, error }));
+        return { success: false, error };
+      }
+      
+      // Reload family data
+      const { family: newFamily } = await FamilyService.getUserFamily();
+      
+      if (newFamily) {
+        const members: FamilyMember[] = newFamily.family_members.map(member => ({
+          id: member.user_id || '',
+          name: member.user_profiles?.display_name || 'Unknown User',
+          email: '', // Email not available from Supabase query
+          role: member.role as 'admin' | 'member',
+          avatar: member.user_profiles?.profile_image_url || '',
+          joinedDate: member.joined_at || '',
           status: 'active',
           lastActive: new Date().toISOString(),
           permissions: {
             viewLists: true,
-            editLists: true,
+            editLists: member.role === 'admin',
             createLists: true,
             viewBudget: true,
-            editBudget: true,
-            inviteMembers: true,
-            manageMembers: true
+            editBudget: member.role === 'admin',
+            inviteMembers: member.role === 'admin',
+            manageMembers: member.role === 'admin'
           }
-        }],
-        settings: {
-          allowMemberInvites: true,
-          requireApprovalForNewMembers: false,
-          defaultMemberPermissions: {
-            viewLists: true,
-            editLists: true,
-            createLists: true,
-            viewBudget: true,
-            editBudget: false,
-            inviteMembers: false,
-            manageMembers: false
+        }));
+        
+        const familyGroup: FamilyGroup = {
+          id: newFamily.id,
+          name: newFamily.name,
+          description: description || '',
+          createdBy: newFamily.created_by || '',
+          createdAt: newFamily.created_at || '',
+          updatedAt: newFamily.updated_at || '',
+          members,
+          settings: {
+            allowMemberInvites: true,
+            requireApprovalForNewMembers: false,
+            defaultMemberPermissions: {
+              viewLists: true,
+              editLists: true,
+              createLists: true,
+              viewBudget: true,
+              editBudget: false,
+              inviteMembers: false,
+              manageMembers: false
+            }
+          },
+          stats: {
+            totalLists: 0,
+            totalSavings: 0,
+            activeMembers: members.filter(m => m.status === 'active').length
           }
-        },
-        stats: {
-          totalLists: 0,
-          totalSavings: 0,
-          activeMembers: 1
-        }
-      };
-
-      setState(prev => ({
-        ...prev,
-        currentFamily: newFamily,
-        families: [...prev.families, newFamily],
-        loading: false
-      }));
-
-      return { success: true, family: newFamily };
+        };
+        
+        setState(prev => ({
+          ...prev,
+          currentFamily: familyGroup,
+          families: [familyGroup],
+          loading: false
+        }));
+        
+        return { success: true, family: familyGroup };
+      }
+      
+      setState(prev => ({ ...prev, loading: false }));
+      return { success: true, family: null };
     } catch (error) {
-      setState(prev => ({ ...prev, loading: false, error: 'Failed to create family' }));
+      setState(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: error instanceof Error ? error.message : 'Failed to create family' 
+      }));
       return { success: false, error: 'Failed to create family' };
     }
   }, []);
@@ -256,32 +216,50 @@ export const useFamily = () => {
     try {
       setState(prev => ({ ...prev, loading: true }));
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!state.currentFamily) {
+        setState(prev => ({ ...prev, loading: false, error: 'No family selected' }));
+        return { success: false, error: 'No family selected' };
+      }
       
+      const { success, error } = await FamilyService.inviteToFamily(
+        state.currentFamily.id,
+        email,
+        role
+      );
+      
+      if (!success) {
+        setState(prev => ({ ...prev, loading: false, error }));
+        return { success: false, error };
+      }
+      
+      // Create a new invitation object for the UI
       const newInvitation: FamilyInvitation = {
-        id: `invite-${Date.now()}`,
-        familyId: state.currentFamily?.id || '',
-        familyName: state.currentFamily?.name || '',
-        invitedBy: 'sarah-1',
-        invitedByName: 'Sarah Van Der Merwe',
+        id: `temp-${Date.now()}`,
+        familyId: state.currentFamily.id,
+        familyName: state.currentFamily.name,
+        invitedBy: state.currentFamily.createdBy,
+        invitedByName: state.currentFamily.members.find(m => m.id === state.currentFamily?.createdBy)?.name || 'Unknown',
         email,
         role,
         status: 'pending',
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         message
       };
-
+      
       setState(prev => ({
         ...prev,
         invitations: [...prev.invitations, newInvitation],
         loading: false
       }));
-
+      
       return { success: true, invitation: newInvitation };
     } catch (error) {
-      setState(prev => ({ ...prev, loading: false, error: 'Failed to send invitation' }));
+      setState(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: error instanceof Error ? error.message : 'Failed to send invitation' 
+      }));
       return { success: false, error: 'Failed to send invitation' };
     }
   }, [state.currentFamily]);
@@ -290,49 +268,112 @@ export const useFamily = () => {
     try {
       setState(prev => ({ ...prev, loading: true }));
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!state.currentFamily) {
+        setState(prev => ({ ...prev, loading: false, error: 'No family selected' }));
+        return { success: false, error: 'No family selected' };
+      }
       
-      setState(prev => ({
-        ...prev,
-        currentFamily: prev.currentFamily ? {
+      const { success, error } = await FamilyService.updateMemberRole(
+        state.currentFamily.id,
+        memberId,
+        newRole
+      );
+      
+      if (!success) {
+        setState(prev => ({ ...prev, loading: false, error }));
+        return { success: false, error };
+      }
+      
+      // Update the member role in the state
+      setState(prev => {
+        if (!prev.currentFamily) return prev;
+        
+        const updatedMembers = prev.currentFamily.members.map(member =>
+          member.id === memberId ? { ...member, role: newRole } : member
+        );
+        
+        const updatedFamily = {
           ...prev.currentFamily,
-          members: prev.currentFamily.members.map(member =>
-            member.id === memberId ? { ...member, role: newRole } : member
-          )
-        } : null,
-        loading: false
-      }));
-
+          members: updatedMembers
+        };
+        
+        return {
+          ...prev,
+          currentFamily: updatedFamily,
+          families: prev.families.map(f => 
+            f.id === updatedFamily.id ? updatedFamily : f
+          ),
+          loading: false
+        };
+      });
+      
       return { success: true };
     } catch (error) {
-      setState(prev => ({ ...prev, loading: false, error: 'Failed to update member role' }));
+      setState(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: error instanceof Error ? error.message : 'Failed to update member role' 
+      }));
       return { success: false, error: 'Failed to update member role' };
     }
-  }, []);
+  }, [state.currentFamily]);
 
   const removeMember = useCallback(async (memberId: string) => {
     try {
       setState(prev => ({ ...prev, loading: true }));
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!state.currentFamily) {
+        setState(prev => ({ ...prev, loading: false, error: 'No family selected' }));
+        return { success: false, error: 'No family selected' };
+      }
       
-      setState(prev => ({
-        ...prev,
-        currentFamily: prev.currentFamily ? {
+      const { success, error } = await FamilyService.removeFamilyMember(
+        state.currentFamily.id,
+        memberId
+      );
+      
+      if (!success) {
+        setState(prev => ({ ...prev, loading: false, error }));
+        return { success: false, error };
+      }
+      
+      // Remove the member from the state
+      setState(prev => {
+        if (!prev.currentFamily) return prev;
+        
+        const updatedMembers = prev.currentFamily.members.filter(member => 
+          member.id !== memberId
+        );
+        
+        const updatedFamily = {
           ...prev.currentFamily,
-          members: prev.currentFamily.members.filter(member => member.id !== memberId)
-        } : null,
-        loading: false
-      }));
-
+          members: updatedMembers,
+          stats: {
+            ...prev.currentFamily.stats,
+            activeMembers: updatedMembers.filter(m => m.status === 'active').length
+          }
+        };
+        
+        return {
+          ...prev,
+          currentFamily: updatedFamily,
+          families: prev.families.map(f => 
+            f.id === updatedFamily.id ? updatedFamily : f
+          ),
+          loading: false
+        };
+      });
+      
       return { success: true };
     } catch (error) {
-      setState(prev => ({ ...prev, loading: false, error: 'Failed to remove member' }));
+      setState(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: error instanceof Error ? error.message : 'Failed to remove member' 
+      }));
       return { success: false, error: 'Failed to remove member' };
     }
-  }, []);
+  }, [state.currentFamily]);
 
   return {
     ...state,

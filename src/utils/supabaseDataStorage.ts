@@ -647,31 +647,18 @@ export class SupabaseDataStorage {
 /**
  * Main function to store dataframes in Supabase
  * 
- * @param dataframes - Array of dataframes to store
- * @param tableNames - Array of table names corresponding to each dataframe
+ * @param dataframes - Object mapping table names to dataframes
  * @param options - Storage options
  * @returns Result of the storage operation
  */
 export async function storeDataframesInSupabase(
-  dataframes: any[][],
-  tableNames: string[],
+  dataframes: Record<string, any[]>,
   options: StoreDataframeOptions = {}
 ): Promise<{ success: boolean; message: string; details?: any }> {
   try {
     // Validate input
-    if (!dataframes || !Array.isArray(dataframes) || dataframes.length === 0) {
+    if (!dataframes || Object.keys(dataframes).length === 0) {
       return { success: false, message: 'No dataframes provided' };
-    }
-    
-    if (!tableNames || !Array.isArray(tableNames) || tableNames.length === 0) {
-      return { success: false, message: 'No table names provided' };
-    }
-    
-    if (dataframes.length !== tableNames.length) {
-      return { 
-        success: false, 
-        message: `Mismatch between dataframes (${dataframes.length}) and table names (${tableNames.length})` 
-      };
     }
     
     // Verify connection
@@ -685,9 +672,9 @@ export async function storeDataframesInSupabase(
     }
     
     // Prepare dataframe objects
-    const dataframeObjects = dataframes.map((data, index) => ({
+    const dataframeObjects = Object.entries(dataframes).map(([tableName, data]) => ({
       data,
-      tableName: tableNames[index],
+      tableName,
       options
     }));
     
