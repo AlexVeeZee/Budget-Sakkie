@@ -2,6 +2,7 @@ import React, { useState, useMemo, lazy, Suspense, useEffect } from 'react';
 import { Search, Filter, ScanLine, MapPin } from 'lucide-react';
 import { useProducts } from '../../hooks/useProducts';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useCurrency } from '../../hooks/useCurrency';
 import { useCart } from '../../context/CartContext';
 import { ProductGrid } from '../ProductGrid';
 import type { ProductWithCategory } from '../../services/productService';
@@ -21,6 +22,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   onProductSelect 
 }) => {
   const { t } = useLanguage();
+  const { formatCurrency } = useCurrency();
   const { products, categories, loading, error, searchProducts, getProductsByCategory, getProductsByStore, refreshProducts } = useProducts();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStore, setSelectedStore] = useState('all');
@@ -210,7 +212,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             <p className="text-xs text-gray-600">In Stock</p>
           </div>
           <div className="bg-white rounded-lg p-3 text-center shadow-sm">
-            <p className="text-2xl font-bold text-orange-600">{t('currency.zar')}{stats.avgPrice.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-orange-600">{formatCurrency(stats.avgPrice)}</p>
             <p className="text-xs text-gray-600">Avg Price</p>
           </div>
           <div className="bg-white rounded-lg p-3 text-center shadow-sm">
