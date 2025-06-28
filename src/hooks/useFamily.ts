@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FamilyService } from '../services/familyService';
 import { FamilyGroup, FamilyMember, FamilyInvitation } from '../types/family';
+import { useAuthStore } from '../store/authStore';
 
 export const useFamily = () => {
   const [currentFamily, setCurrentFamily] = useState<FamilyGroup | null>(null);
@@ -14,6 +15,16 @@ export const useFamily = () => {
     setError(null);
 
     try {
+      // Authentication check
+      const authState = useAuthStore.getState();
+      const { user } = authState;
+      
+      if (!user || !user.id) {
+        setError('User not authenticated');
+        setLoading(false);
+        return;
+      }
+
       // Get user's family
       const { family, error: familyError } = await FamilyService.getUserFamily();
       
@@ -25,26 +36,40 @@ export const useFamily = () => {
 
       setCurrentFamily(family);
 
-      if (family) {
+      if (family && family.id) {
         // Get family members
-        const { members: memberData, error: membersError } = await FamilyService.getFamilyMembers(family.id);
-        
-        if (membersError) {
-          console.error('Error loading members:', membersError);
-          setError(membersError);
-        } else {
-          setMembers(memberData);
+        try {
+          const { members: memberData, error: membersError } = await FamilyService.getFamilyMembers(family.id);
+          
+          if (membersError) {
+            console.error('Error loading members:', membersError);
+            setError(membersError);
+          } else {
+            setMembers(memberData || []);
+          }
+        } catch (membersErr) {
+          console.error('Error in getFamilyMembers:', membersErr);
+          setMembers([]);
         }
+      } else {
+        setMembers([]);
       }
 
       // Get pending invitations
-      const { invitations: invitationData, error: invitationsError } = await FamilyService.getPendingInvitations();
-      
-      if (invitationsError) {
-        console.error('Error loading invitations:', invitationsError);
-      } else {
-        setInvitations(invitationData);
+      try {
+        const { invitations: invitationData, error: invitationsError } = await FamilyService.getPendingInvitations();
+        
+        if (invitationsError) {
+          console.error('Error loading invitations:', invitationsError);
+          setInvitations([]);
+        } else {
+          setInvitations(invitationData || []);
+        }
+      } catch (invitationsErr) {
+        console.error('Error in getPendingInvitations:', invitationsErr);
+        setInvitations([]);
       }
+
     } catch (err) {
       console.error('Error loading family data:', err);
       setError(err instanceof Error ? err.message : 'Unknown error loading family data');
