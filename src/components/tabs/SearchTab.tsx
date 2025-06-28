@@ -76,8 +76,10 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       }
     });
     
-    // Convert map back to array
-    return Array.from(categoryMap.values());
+    // Convert map back to array and sort by name
+    return Array.from(categoryMap.values()).sort((a, b) => 
+      a.name.localeCompare(b.name)
+    );
   }, [categories]);
 
   // Filter products based on current selections
