@@ -72,6 +72,7 @@ export const UnifiedSidebarModal: React.FC<UnifiedSidebarModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-hidden">
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
       
+      {/* Position the modal on the left side */}
       <div className="absolute inset-y-0 left-0 max-w-full flex">
         <div 
           className="relative w-screen max-w-4xl"
