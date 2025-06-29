@@ -104,6 +104,28 @@ export const useFamily = () => {
     }
   }, [loadFamilyData]);
 
+  const deleteFamily = useCallback(async (familyId: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { success, error: deleteError } = await FamilyService.deleteFamily(familyId);
+      
+      if (!success) {
+        throw new Error(deleteError);
+      }
+
+      await loadFamilyData();
+      return { success: true };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete family';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [loadFamilyData]);
+
   const inviteMember = useCallback(async (
     email: string, 
     role: 'admin' | 'member', 
@@ -224,6 +246,7 @@ export const useFamily = () => {
     loading,
     error,
     createFamily,
+    deleteFamily,
     inviteMember,
     updateMemberRole,
     removeMember,

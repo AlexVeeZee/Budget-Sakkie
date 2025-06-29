@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Plus, Loader2, RefreshCw, AlertTriangle, Home, Calendar, Crown, Shield, ChevronRight } from 'lucide-react';
+import { Users, UserPlus, Plus, Loader2, RefreshCw, AlertTriangle, Home, Calendar, Crown, Shield, ChevronRight, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { CreateFamilyGroupModal } from './CreateFamilyGroupModal';
 import { FamilyMembersList } from './FamilyMembersList';
+import { DeleteFamilyModal } from './DeleteFamilyModal';
+import { FamilyService } from '../../services/familyService';
 
 interface Family {
   family_id: string;
@@ -32,6 +34,10 @@ export const FamilyGroupManager: React.FC = () => {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingFamily, setDeletingFamily] = useState<Family | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
 
   const fetchFamilies = async () => {
     if (!user) return;
@@ -128,6 +134,46 @@ export const FamilyGroupManager: React.FC = () => {
     }
   };
 
+  const handleDeleteClick = (family: Family, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent selecting the family
+    setDeletingFamily(family);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteFamily = async () => {
+    if (!deletingFamily) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      const { success, error: deleteError } = await FamilyService.deleteFamily(deletingFamily.family_id);
+      
+      if (!success) {
+        throw new Error(deleteError);
+      }
+      
+      // Show success message
+      setDeleteSuccess(`"${deletingFamily.family_name}" has been deleted successfully`);
+      setTimeout(() => setDeleteSuccess(null), 3000);
+      
+      // Refresh families list
+      await fetchFamilies();
+      
+      // If the deleted family was selected, clear selection
+      if (selectedFamily && selectedFamily.family_id === deletingFamily.family_id) {
+        setSelectedFamily(null);
+      }
+      
+      setShowDeleteModal(false);
+    } catch (err) {
+      console.error('Error deleting family:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete family');
+    } finally {
+      setIsDeleting(false);
+      setDeletingFamily(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -184,6 +230,18 @@ export const FamilyGroupManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {deleteSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 flex items-center space-x-2">
+          <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <p className="text-green-700">{deleteSuccess}</p>
+        </div>
+      )}
+
       {/* Family List Section */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -217,32 +275,45 @@ export const FamilyGroupManager: React.FC = () => {
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white">
-                  <Home className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900">{family.family_name}</h4>
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    {family.user_role === 'admin' ? (
-                      <span className="flex items-center text-yellow-600">
-                        <Crown className="h-3 w-3 mr-1" />
-                        Admin
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white">
+                    <Home className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900">{family.family_name}</h4>
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      {family.user_role === 'admin' ? (
+                        <span className="flex items-center text-yellow-600">
+                          <Crown className="h-3 w-3 mr-1" />
+                          Admin
+                        </span>
+                      ) : (
+                        <span className="flex items-center text-blue-600">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Member
+                        </span>
+                      )}
+                      <span>•</span>
+                      <span className="flex items-center">
+                        <Users className="h-3 w-3 mr-1" />
+                        {family.member_count} {family.member_count === 1 ? 'member' : 'members'}
                       </span>
-                    ) : (
-                      <span className="flex items-center text-blue-600">
-                        <Shield className="h-3 w-3 mr-1" />
-                        Member
-                      </span>
-                    )}
-                    <span>•</span>
-                    <span className="flex items-center">
-                      <Users className="h-3 w-3 mr-1" />
-                      {family.member_count} {family.member_count === 1 ? 'member' : 'members'}
-                    </span>
+                    </div>
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-400 ml-auto" />
+                <div className="flex items-center space-x-2">
+                  {family.user_role === 'admin' && (
+                    <button
+                      onClick={(e) => handleDeleteClick(family, e)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                      title="Delete family"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
               </div>
               <div className="text-xs text-gray-500 flex items-center">
                 <Calendar className="h-3 w-3 mr-1" />
@@ -289,6 +360,15 @@ export const FamilyGroupManager: React.FC = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={handleFamilyCreated}
+      />
+
+      {/* Delete Family Modal */}
+      <DeleteFamilyModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        familyName={deletingFamily?.family_name || ''}
+        memberCount={deletingFamily?.member_count || 0}
+        onConfirm={handleDeleteFamily}
       />
     </div>
   );
