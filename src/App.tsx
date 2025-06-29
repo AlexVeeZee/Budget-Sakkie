@@ -14,12 +14,11 @@ import { useAuthStore } from './store/authStore';
 import { GuestBanner } from './components/auth/GuestBanner';
 import { CartProvider } from './context/CartContext';
 import { TemporaryItemsBar } from './components/TemporaryItemsBar';
-import { FamilySharingComponent } from './components/family/FamilySharingComponent';
 
 // Lazy load heavy modals
 const UnifiedSidebarModal = lazy(() => import('./components/modals/UnifiedSidebarModal').then(module => ({ default: module.UnifiedSidebarModal })));
 
-type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile' | 'family';
+type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile';
 type ModalType = 'settings' | 'location' | 'loyalty' | 'rewards' | 'family' | 'help' | null;
 
 // Interface for product selection in compare tab
@@ -135,8 +134,6 @@ function AppContent() {
         return <ListsTab />;
       case 'deals':
         return <DealsTab />;
-      case 'family':
-        return <FamilySharingComponent />;
       case 'profile':
         return (
           <ProfileTab 
@@ -226,7 +223,7 @@ function AppContent() {
         {/* Main Content */}
         <main className="flex-1 pb-20 pt-4">
           <ProtectedRoute 
-            allowGuest={activeTab !== 'lists' && activeTab !== 'profile' && activeTab !== 'family'}
+            allowGuest={activeTab !== 'lists' && activeTab !== 'profile'}
             fallback={
               <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-xl shadow-md">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Budget Sakkie</h2>
