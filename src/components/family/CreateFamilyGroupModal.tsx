@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Users, Save, Loader2, Mail, Crown, Shield, Trash2, Plus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
@@ -38,7 +38,7 @@ export const CreateFamilyGroupModal: React.FC<CreateFamilyGroupModalProps> = ({
   } | null>(null);
 
   // Reset form when modal opens/closes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isOpen) {
       setGroupName('');
       setDescription('');
@@ -263,7 +263,7 @@ export const CreateFamilyGroupModal: React.FC<CreateFamilyGroupModalProps> = ({
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">Create Family Group</h3>
+              <h3 className="text-xl font-bold">Create a New Family Group</h3>
               <p className="text-white/80 text-sm">Connect with your family members</p>
             </div>
           </div>
@@ -463,7 +463,7 @@ export const CreateFamilyGroupModal: React.FC<CreateFamilyGroupModalProps> = ({
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  <span>Create Family</span>
+                  <span>Create Family Group</span>
                 </>
               )}
             </button>
