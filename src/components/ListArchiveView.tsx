@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, Star, SortAsc, SortDesc, CheckSquare, X, ArrowUp, Crown, Shield, ChevronDown } from 'lucide-react';
+import { Plus, Calendar, DollarSign, Users, ShoppingCart, Edit2, Trash2, Search, Filter, ToggleLeft, ToggleRight, Star, SortAsc, SortDesc, CheckSquare, X, ArrowUp, Crown, Shield, ChevronDown } from 'lucide-react';
 import { ShoppingList } from '../types';
 import { useCurrency } from '../hooks/useCurrency';
 
@@ -685,10 +685,10 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
             return (
               <div
                 key={list.id}
-                className={`bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer ${
-                  isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
-                }`}
                 onClick={() => handleCardClick(list)}
+                className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden border cursor-pointer group ${
+                  isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-green-300'
+                }`}
               >
                 {/* Card Header */}
                 <div className="p-6 border-b border-gray-100">
@@ -727,14 +727,20 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                     
                     <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => onSelectList(list)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectList(list);
+                        }}
                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Edit list"
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => setShowDeleteConfirm(list.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowDeleteConfirm(list.id);
+                        }}
                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete list"
                       >

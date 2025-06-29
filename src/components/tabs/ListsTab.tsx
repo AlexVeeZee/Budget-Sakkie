@@ -257,6 +257,8 @@ export const ListsTab: React.FC = () => {
     setLists(prev => prev.map(list => 
       list.id === activeList.id ? updatedList : list
     ));
+    
+    setShowEditListModal(false);
   };
 
   const handleDeleteList = () => {
@@ -264,6 +266,8 @@ export const ListsTab: React.FC = () => {
     
     setLists(prev => prev.filter(list => list.id !== activeList.id));
     handleBackToArchive();
+    
+    setShowDeleteListModal(false);
   };
 
   const handleDeleteListFromArchive = (listId: string) => {
