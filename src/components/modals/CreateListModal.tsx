@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Shield, Save, ShoppingCart, DollarSign, Users, UserPlus } from 'lucide-react';
+import { X, Shield, Save, ShoppingCart, DollarSign, Users, UserPlus, Trash2 } from 'lucide-react';
 import { useCurrency } from '../../hooks/useCurrency';
 import { ShoppingList } from '../../types';
 import { FamilyService } from '../../services/familyService';
