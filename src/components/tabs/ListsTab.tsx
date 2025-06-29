@@ -252,7 +252,7 @@ export const ListsTab: React.FC = () => {
   const handleCreateList = (newList: Omit<ShoppingList, 'id' | 'createdAt' | 'updatedAt'>) => {
     const list: ShoppingList = {
       ...newList,
-      id: Date.now().toString(),
+      id: crypto.randomUUID(), // Generate a proper UUID
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -265,7 +265,7 @@ export const ListsTab: React.FC = () => {
       setViewMode('detail');
     }
 
-    // If the list has a familyId, share it with the family
+    // If the list has a familyId and shared members, share it with the family
     if (list.familyId && list.sharedWith.length > 0) {
       FamilyService.shareListWithFamily(list.id, list.familyId)
         .then(({ success, error }) => {
@@ -360,64 +360,6 @@ export const ListsTab: React.FC = () => {
       list.id === activeList.id ? updatedList : list
     ));
   };
-
-  // Show loading state while products are loading
-  if (productsLoading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error state if products failed to load
-  if (productsError) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Products</h3>
-          <p className="text-red-700 mb-4">{productsError}</p>
-          <p className="text-red-600">Please try refreshing the page or check your connection.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If in archive view, show the archive component
-  if (viewMode === 'archive') {
-    return (
-      <>
-        <ListArchiveView
-          lists={lists}
-          onSelectList={handleSelectList}
-          onCreateNew={() => setShowCreateModal(true)}
-          onDeleteList={handleDeleteListFromArchive}
-          onUpdateList={handleUpdateList}
-        />
-        
-        <CreateListModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onCreate={handleCreateList}
-        />
-      </>
-    );
-  }
-
-  // Rest of the existing detail view code...
-  if (!activeList) return null;
-
-  const completedItems = activeList.items.filter(item => item.completed).length;
-  const totalItems = activeList.items.length;
-  const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
-
-  const estimatedTotal = activeList.items.reduce((total, item) => {
-    return total + (item.quantity * 20); // Simplified calculation
-  }, 0);
-
-  const optimizedSavings = estimatedTotal * 0.15; // 15% estimated savings
 
   const handleEditStart = (item: ShoppingListItem) => {
     setEditingItem({
@@ -517,10 +459,10 @@ export const ListsTab: React.FC = () => {
       const productData = 'productData' in quickItem ? quickItem.productData : null;
       
       const newItem: ShoppingListItem = {
-        id: Date.now().toString(),
-        productId: productData?.id || Date.now().toString(),
+        id: crypto.randomUUID(), // Generate a proper UUID
+        productId: productData?.id || crypto.randomUUID(),
         product: {
-          id: productData?.id || Date.now().toString(),
+          id: productData?.id || crypto.randomUUID(),
           name: quickItem.name,
           brand: 'Generic',
           category: quickItem.category,
@@ -594,6 +536,64 @@ export const ListsTab: React.FC = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Show loading state while products are loading
+  if (productsLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if products failed to load
+  if (productsError) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Products</h3>
+          <p className="text-red-700 mb-4">{productsError}</p>
+          <p className="text-red-600">Please try refreshing the page or check your connection.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If in archive view, show the archive component
+  if (viewMode === 'archive') {
+    return (
+      <>
+        <ListArchiveView
+          lists={lists}
+          onSelectList={handleSelectList}
+          onCreateNew={() => setShowCreateModal(true)}
+          onDeleteList={handleDeleteListFromArchive}
+          onUpdateList={handleUpdateList}
+        />
+        
+        <CreateListModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onCreate={handleCreateList}
+        />
+      </>
+    );
+  }
+
+  // Rest of the existing detail view code...
+  if (!activeList) return null;
+
+  const completedItems = activeList.items.filter(item => item.completed).length;
+  const totalItems = activeList.items.length;
+  const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+
+  const estimatedTotal = activeList.items.reduce((total, item) => {
+    return total + (item.quantity * 20); // Simplified calculation
+  }, 0);
+
+  const optimizedSavings = estimatedTotal * 0.15; // 15% estimated savings
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

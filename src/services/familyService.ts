@@ -920,127 +920,6 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
       };
     }
   }
-  
-  /**
-   * Get all shared shopping lists for a family
-   */
-  static async getFamilyShoppingLists(
-    familyId: string
-  ): Promise<{ lists: SharedListWithItems[]; error?: string }> {
-    try {
-      if (!familyId) {
-        return { lists: [], error: 'Family ID is required' };
-      }
-      
-      // Get all shared lists for the family
-      const { data, error } = await supabase
-        .from('shared_shopping_lists')
-        .select(`
-          *,
-          shared_list_items(*)
-        `)
-        .eq('family_id', familyId)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        throw new Error(`Failed to get shopping lists: ${error.message}`);
-      }
-      
-      return { lists: data || [] };
-    } catch (error) {
-      console.error('Error getting shopping lists:', error);
-      return { 
-        lists: [], 
-        error: error instanceof Error ? error.message : 'Failed to get shopping lists' 
-      };
-    }
-  }
-  
-  /**
-   * Create a new shared shopping list
-   */
-  static async createSharedList(
-    familyId: string,
-    name: string,
-    description?: string,
-    budget?: number
-  ): Promise<{ list?: SharedListWithItems; error?: string }> {
-    try {
-      const authState = useAuthStore.getState();
-      const { user } = authState;
-      
-      if (!user || !user.id) {
-        return { error: 'You must be logged in to create a list' };
-      }
-      
-      if (!familyId) {
-        return { error: 'Family ID is required' };
-      }
-      
-      // Create the list
-      const { data, error } = await supabase
-        .from('shared_shopping_lists')
-        .insert({
-          name,
-          description,
-          family_id: familyId,
-          created_by: user.id,
-          budget_amount: budget,
-          status: 'active'
-        })
-        .select(`
-          *,
-          shared_list_items(*)
-        `)
-        .single();
-      
-      if (error) {
-        throw new Error(`Failed to create list: ${error.message}`);
-      }
-      
-      return { list: data };
-    } catch (error) {
-      console.error('Error creating shared list:', error);
-      return { 
-        error: error instanceof Error ? error.message : 'Failed to create list' 
-      };
-    }
-  }
-  
-  /**
-   * Get all budgets for a family
-   */
-  static async getFamilyBudgets(
-    familyId: string
-  ): Promise<{ budgets: FamilyBudgetWithExpenses[]; error?: string }> {
-    try {
-      if (!familyId) {
-        return { budgets: [], error: 'Family ID is required' };
-      }
-      
-      // Get all budgets for the family
-      const { data, error } = await supabase
-        .from('family_budgets')
-        .select(`
-          *,
-          expenses:family_expenses(*)
-        `)
-        .eq('family_id', familyId)
-        .order('start_date', { ascending: false });
-      
-      if (error) {
-        throw new Error(`Failed to get budgets: ${error.message}`);
-      }
-      
-      return { budgets: data || [] };
-    } catch (error) {
-      console.error('Error getting budgets:', error);
-      return { 
-        budgets: [], 
-        error: error instanceof Error ? error.message : 'Failed to get budgets' 
-      };
-    }
-  }
 
   /**
    * Share a shopping list with family members
@@ -1059,6 +938,17 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
       
       if (!familyId) {
         return { success: false, error: 'Family ID is required' };
+      }
+
+      if (!listId) {
+        return { success: false, error: 'List ID is required' };
+      }
+
+      // Validate UUID format for listId
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(listId)) {
+        console.error('Invalid list ID format:', listId);
+        return { success: false, error: 'Invalid list ID format' };
       }
       
       // Check if user is a member of the family
