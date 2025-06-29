@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { X, Trash2, AlertTriangle, Users } from 'lucide-react';
-
-interface FamilyMember {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'member';
-}
+import { FamilyMember } from '../../types/family';
 
 interface DeleteFamilyMemberModalProps {
   isOpen: boolean;

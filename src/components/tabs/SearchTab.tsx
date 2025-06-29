@@ -1,165 +1,36 @@
 import React, { useState, useMemo, lazy, Suspense, useEffect } from 'react';
-import { Search, Filter, ScanLine, MapPin, TrendingDown, ShoppingCart } from 'lucide-react';
+import { Search, Filter, ScanLine, MapPin } from 'lucide-react';
 import { useProducts } from '../../hooks/useProducts';
-import { useCurrency } from '../../hooks/useCurrency';
 import { useLanguage } from '../../hooks/useLanguage';
+import { useCurrency } from '../../hooks/useCurrency';
+import { useCart } from '../../context/CartContext';
+import { ProductGrid } from '../ProductGrid';
 import type { ProductWithCategory } from '../../services/productService';
 
 // Lazy load heavy components
 const FilterModal = lazy(() => import('../modals/FilterModal'));
 
-// Move getStoreDisplayName to top level to avoid hoisting issues
-const getStoreDisplayName = (storeId: string) => {
-  const storeNames: { [key: string]: string } = {
-    'pick-n-pay': 'Pick n Pay',
-    'shoprite': 'Shoprite',
-    'checkers': 'Checkers',
-    'woolworths': 'Woolworths',
-    'spar': 'SPAR'
-  };
-  return storeNames[storeId] || storeId;
-};
-
 interface SearchTabProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onProductSelect?: (productInfo: { id: string; name: string }) => void;
 }
 
-interface ProductCardProps {
-  product: ProductWithCategory;
-  onCompare: () => void;
-  onAddToList: () => void;
-}
-
-const ProductCard: React.FC<ProductCardProps> = ({ product, onCompare, onAddToList }) => {
-  const { formatCurrency } = useCurrency();
-
-  const getStoreColor = (storeId: string) => {
-    const storeColors: { [key: string]: string } = {
-      'pick-n-pay': '#E31837',
-      'shoprite': '#FF6B35',
-      'checkers': '#00A651',
-      'woolworths': '#00A86B',
-      'spar': '#006B3F'
-    };
-    return storeColors[storeId] || '#6B7280';
-  };
-
-  const getStockStatus = (quantity: number | null) => {
-    if (!quantity || quantity === 0) return { text: 'Out of Stock', color: 'text-red-600' };
-    if (quantity < 10) return { text: 'Low Stock', color: 'text-orange-600' };
-    return { text: 'In Stock', color: 'text-green-600' };
-  };
-
-  const stockStatus = getStockStatus(product.stock_quantity);
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100">
-      <div className="relative">
-        <img 
-          src={product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop'}
-          alt={product.name}
-          loading="lazy"
-          className="w-full h-48 object-cover"
-        />
-        
-        {/* Store Badge */}
-        <div 
-          className="absolute top-3 left-3 text-white px-3 py-1 rounded-full text-sm font-bold"
-          style={{ backgroundColor: getStoreColor(product.store_id) }}
-        >
-          {getStoreDisplayName(product.store_id)}
-        </div>
-        
-        {/* Stock Status Badge */}
-        <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium ${
-          stockStatus.color === 'text-green-600' ? 'bg-green-100 text-green-800' :
-          stockStatus.color === 'text-orange-600' ? 'bg-orange-100 text-orange-800' :
-          'bg-red-100 text-red-800'
-        }`}>
-          {stockStatus.text}
-        </div>
-      </div>
-      
-      <div className="p-4">
-        <div className="mb-3">
-          <h3 className="font-semibold text-gray-900 text-lg leading-tight">{product.name}</h3>
-          <p className="text-gray-600 text-sm">{product.description}</p>
-          {product.category && (
-            <p className="text-blue-600 text-sm font-medium">{product.category.name}</p>
-          )}
-        </div>
-
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Price</span>
-            <span className="text-sm text-gray-500">SKU: {product.sku || 'N/A'}</span>
-          </div>
-          
-          <div className="bg-green-50 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(product.price)}
-                </p>
-                <p className="text-sm text-gray-600">{getStoreDisplayName(product.store_id)}</p>
-              </div>
-              <span className={`text-sm font-medium ${stockStatus.color}`}>
-                {stockStatus.text}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile-optimized buttons with minimum 44px touch targets */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button
-            onClick={onCompare}
-            className="flex items-center justify-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
-          >
-            <TrendingDown className="h-4 w-4" />
-            <span className="text-sm">Compare Prices</span>
-          </button>
-          
-          <button
-            onClick={onAddToList}
-            className="flex items-center justify-center space-x-2 bg-green-50 hover:bg-green-100 text-green-700 font-medium py-3 px-3 rounded-lg transition-colors min-h-[44px]"
-          >
-            <ShoppingCart className="h-4 w-4" />
-            <span className="text-sm">Add to List</span>
-          </button>
-        </div>
-
-        {/* Additional Product Info */}
-        <div className="mt-3 pt-3 border-t border-gray-100">
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>Stock: {product.stock_quantity || 0} units</span>
-            <span>Updated: {new Date(product.updated_at || '').toLocaleDateString()}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChange }) => {
+export const SearchTab: React.FC<SearchTabProps> = ({ 
+  searchQuery, 
+  onSearchChange,
+  onProductSelect 
+}) => {
   const { t } = useLanguage();
   const { formatCurrency } = useCurrency();
-  const { 
-    products, 
-    categories, 
-    loading, 
-    error, 
-    searchProducts, 
-    getProductsByCategory, 
-    getProductsByStore,
-    refreshProducts 
-  } = useProducts();
-  
+  const { products, categories, loading, error, searchProducts, getProductsByCategory, getProductsByStore, refreshProducts } = useProducts();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStore, setSelectedStore] = useState('all');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+
+  // Use the cart context
+  const { addItem } = useCart();
 
   // Debounced search effect
   useEffect(() => {
@@ -244,6 +115,49 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
     }
   };
 
+  const handleAddToList = (product: ProductWithCategory) => {
+    addItem({
+      id: product.id,
+      name: product.name,
+      brand: getStoreDisplayName(product.store_id),
+      category: product.category?.name || 'General',
+      image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+      unit: 'each',
+      unitSize: getUnitSize(product),
+      price: product.price
+    });
+  };
+
+  // Helper function to get store display name
+  function getStoreDisplayName(storeId: string) {
+    const storeNames: { [key: string]: string } = {
+      'pick-n-pay': 'Pick n Pay',
+      'shoprite': 'Shoprite',
+      'checkers': 'Checkers',
+      'woolworths': 'Woolworths',
+      'spar': 'SPAR'
+    };
+    return storeNames[storeId] || storeId;
+  }
+
+  // Helper function to determine unit size based on product data
+  function getUnitSize(product: ProductWithCategory): string {
+    if (product.sku?.includes('kg')) return 'per kg';
+    if (product.sku?.includes('g')) return product.sku.match(/\d+g/) ? product.sku.match(/\d+g/)?.[0] || 'pack' : 'pack';
+    if (product.sku?.includes('L') || product.sku?.includes('l')) return product.sku.match(/\d+[Ll]/) ? product.sku.match(/\d+[Ll]/)?.[0] || 'bottle' : 'bottle';
+    
+    // Determine by category
+    const categoryName = product.category?.name?.toLowerCase() || '';
+    
+    if (categoryName.includes('bakery')) return 'loaf';
+    if (categoryName.includes('dairy') && product.name.toLowerCase().includes('milk')) return 'bottle';
+    if (categoryName.includes('dairy') && product.name.toLowerCase().includes('egg')) return 'dozen';
+    if (categoryName.includes('produce')) return 'per kg';
+    if (categoryName.includes('meat')) return 'per kg';
+    
+    return 'each';
+  }
+
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -262,7 +176,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
       {/* Search Header */}
       <div className="mb-6">
         <div className="relative mb-4">
@@ -276,7 +190,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
             placeholder="Search products by name, description, or store..."
             className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 placeholder-gray-500"
           />
-          <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-3">
+          {/* Icons are hidden but we keep the div for layout consistency */}
+          <div className="absolute inset-y-0 right-0 flex items-center space-x-2 pr-3" style={{ display: 'none' }}>
             <button 
               className="p-2 text-gray-400 hover:text-gray-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Scan barcode"
@@ -322,7 +237,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
               <select
                 value={selectedCategory}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none"
+                style={{ 
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem'
+                }}
               >
                 <option value="all">All Categories</option>
                 {categories.map((category) => (
@@ -339,7 +261,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
               <select
                 value={selectedStore}
                 onChange={(e) => handleStoreChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none"
+                style={{ 
+                  backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem'
+                }}
               >
                 <option value="all">All Stores</option>
                 {uniqueStores.map((store) => (
@@ -389,16 +318,26 @@ export const SearchTab: React.FC<SearchTabProps> = ({ searchQuery, onSearchChang
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onCompare={() => console.log('Compare', product.name)}
-                  onAddToList={() => console.log('Add to list', product.name)}
-                />
-              ))}
-            </div>
+            <ProductGrid
+              products={filteredProducts.map(product => ({
+                id: product.id,
+                name: product.name,
+                brand: getStoreDisplayName(product.store_id),
+                category: product.category?.name || 'General',
+                image: product.image_url || 'https://images.pexels.com/photos/264547/pexels-photo-264547.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&fit=crop',
+                unit: 'each',
+                unitSize: getUnitSize(product),
+                price: product.price
+              }))}
+              onProductSelect={onProductSelect}
+              onAddToList={(product) => {
+                // Find the source product and add it to the list
+                const sourceProduct = filteredProducts.find(p => p.id === product.id);
+                if (sourceProduct) {
+                  handleAddToList(sourceProduct);
+                }
+              }}
+            />
           )}
         </>
       )}

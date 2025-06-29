@@ -7,41 +7,40 @@ import { ListsTab } from './components/tabs/ListsTab';
 import { DealsTab } from './components/tabs/DealsTab';
 import { ProfileTab } from './components/tabs/ProfileTab';
 import { Sidebar } from './components/Sidebar';
-import { AuthProvider } from './hooks/useAuth.tsx';
+import { AuthProvider } from './components/auth/AuthProvider';
 import { AuthModal } from './components/auth/AuthModal';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { useAuthStore } from './store/authStore';
+import { GuestBanner } from './components/auth/GuestBanner';
+import { CartProvider } from './context/CartContext';
+import { TemporaryItemsBar } from './components/TemporaryItemsBar';
+import { FamilyManagementPage } from './pages/FamilyManagementPage';
 
 // Lazy load heavy modals
-const SettingsModal = lazy(() => import('./components/modals/SettingsModal').then(module => ({ default: module.SettingsModal })));
-const LocationModal = lazy(() => import('./components/modals/LocationModal').then(module => ({ default: module.LocationModal })));
-const LoyaltyCardsModal = lazy(() => import('./components/modals/LoyaltyCardsModal').then(module => ({ default: module.LoyaltyCardsModal })));
-const RewardsModal = lazy(() => import('./components/modals/RewardsModal').then(module => ({ default: module.RewardsModal })));
-const FamilySharingModal = lazy(() => import('./components/modals/FamilySharingModal').then(module => ({ default: module.FamilySharingModal })));
-const HelpSupportModal = lazy(() => import('./components/modals/HelpSupportModal').then(module => ({ default: module.HelpSupportModal })));
+const UnifiedSidebarModal = lazy(() => import('./components/modals/UnifiedSidebarModal').then(module => ({ default: module.UnifiedSidebarModal })));
 
-type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile';
+type TabType = 'search' | 'compare' | 'lists' | 'deals' | 'profile' | 'family';
+type ModalType = 'settings' | 'location' | 'loyalty' | 'rewards' | 'family' | 'help' | null;
+
+// Interface for product selection in compare tab
+interface SelectedProductInfo {
+  id: string;
+  name: string;
+}
 
 function AppContent() {
+  const { isAuthenticated, isGuest } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabType>('search');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [locationOpen, setLocationOpen] = useState(false);
-  const [loyaltyCardsOpen, setLoyaltyCardsOpen] = useState(false);
-  const [rewardsOpen, setRewardsOpen] = useState(false);
-  const [familySharingOpen, setFamilySharingOpen] = useState(false);
-  const [helpSupportOpen, setHelpSupportOpen] = useState(false);
+  const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+  const [selectedProduct, setSelectedProduct] = useState<SelectedProductInfo | null>(null);
 
   // Close all modals helper function
   const closeAllModals = () => {
-    setSettingsOpen(false);
-    setLocationOpen(false);
-    setLoyaltyCardsOpen(false);
-    setRewardsOpen(false);
-    setFamilySharingOpen(false);
-    setHelpSupportOpen(false);
+    setActiveModal(null);
     setShowAuthModal(false);
   };
 
@@ -51,37 +50,37 @@ function AppContent() {
 
   const handleSettingsClick = () => {
     closeAllModals();
-    setSettingsOpen(true);
+    setActiveModal('settings');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleLocationClick = () => {
     closeAllModals();
-    setLocationOpen(true);
+    setActiveModal('location');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleLoyaltyCardsClick = () => {
     closeAllModals();
-    setLoyaltyCardsOpen(true);
+    setActiveModal('loyalty');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleRewardsClick = () => {
     closeAllModals();
-    setRewardsOpen(true);
+    setActiveModal('rewards');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleFamilySharingClick = () => {
     closeAllModals();
-    setFamilySharingOpen(true);
+    setActiveModal('family');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
   const handleHelpSupportClick = () => {
     closeAllModals();
-    setHelpSupportOpen(true);
+    setActiveModal('help');
     setSidebarOpen(false); // Close sidebar when opening modal
   };
 
@@ -95,6 +94,12 @@ function AppContent() {
     closeAllModals();
     setAuthModalMode('signup');
     setShowAuthModal(true);
+  };
+
+  // Function to handle product selection for comparison
+  const handleProductSelect = (productInfo: SelectedProductInfo) => {
+    setSelectedProduct(productInfo);
+    setActiveTab('compare');
   };
 
   // Simple tab change handler with explicit logging
@@ -119,13 +124,19 @@ function AppContent() {
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'search':
-        return <SearchTab searchQuery={searchQuery} onSearchChange={setSearchQuery} />;
+        return <SearchTab 
+                searchQuery={searchQuery} 
+                onSearchChange={setSearchQuery} 
+                onProductSelect={handleProductSelect} 
+              />;
       case 'compare':
-        return <CompareTab />;
+        return <CompareTab selectedProductId={selectedProduct?.id} />;
       case 'lists':
         return <ListsTab />;
       case 'deals':
         return <DealsTab />;
+      case 'family':
+        return <FamilyManagementPage />;
       case 'profile':
         return (
           <ProfileTab 
@@ -188,102 +199,86 @@ function AppContent() {
         </a>
       </div>
 
+      {/* Guest Banner - only show for guest users */}
+      {isGuest && <GuestBanner />}
+
       <Header 
         onMenuClick={() => setSidebarOpen(true)}
         onSearchClick={handleSearchClick}
-      />
-      
-      <Sidebar 
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
         onSettingsClick={handleSettingsClick}
         onLocationClick={handleLocationClick}
-        onLoyaltyCardsClick={handleLoyaltyCardsClick}
-        onRewardsClick={handleRewardsClick}
-        onFamilySharingClick={handleFamilySharingClick}
-        onHelpSupportClick={handleHelpSupportClick}
-        onSignInClick={handleSignInClick}
       />
       
-      <main className={`pb-20 pt-4 transition-all duration-300 ${sidebarOpen ? 'ml-80' : ''}`}>
-        <ProtectedRoute fallback={
-          <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-xl shadow-md">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Budget Sakkie</h2>
-            <p className="text-gray-600 mb-6">
-              Sign in to access all features and start saving on your grocery shopping.
-            </p>
-            <div className="space-y-4">
-              <button
-                onClick={handleSignInClick}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-              >
-                Sign In
-              </button>
-              <button
-                onClick={handleSignUpClick}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-              >
-                Create Account
-              </button>
-              <button
-                onClick={() => setActiveTab('search')}
-                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
-              >
-                Continue as Guest
-              </button>
-            </div>
-          </div>
-        }>
-          {renderActiveTab()}
-        </ProtectedRoute>
-      </main>
+      <div className="flex">
+        {/* Sidebar */}
+        <Sidebar 
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onSettingsClick={handleSettingsClick}
+          onLocationClick={handleLocationClick}
+          onLoyaltyCardsClick={handleLoyaltyCardsClick}
+          onRewardsClick={handleRewardsClick}
+          onFamilySharingClick={handleFamilySharingClick}
+          onHelpSupportClick={handleHelpSupportClick}
+          onSignInClick={handleSignInClick}
+        />
+        
+        {/* Main Content */}
+        <main className="flex-1 pb-20 pt-4">
+          <ProtectedRoute 
+            allowGuest={activeTab !== 'lists' && activeTab !== 'profile' && activeTab !== 'family'}
+            fallback={
+              <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-xl shadow-md">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Budget Sakkie</h2>
+                <p className="text-gray-600 mb-6">
+                  Sign in to access all features and start saving on your grocery shopping.
+                </p>
+                <div className="space-y-4">
+                  <button
+                    onClick={handleSignInClick}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={handleSignUpClick}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Create Account
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthModalMode('guest');
+                      setShowAuthModal(true);
+                    }}
+                    className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Continue as Guest
+                  </button>
+                </div>
+              </div>
+            }
+          >
+            {renderActiveTab()}
+          </ProtectedRoute>
+        </main>
+      </div>
+      
+      {/* Temporary Items Bar */}
+      <TemporaryItemsBar />
       
       <BottomNavigation 
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />
 
-      {/* Lazy loaded modals with loading fallback */}
+      {/* Unified Sidebar Modal */}
       <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>}>
-        {settingsOpen && (
-          <SettingsModal 
-            isOpen={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
-          />
-        )}
-
-        {locationOpen && (
-          <LocationModal 
-            isOpen={locationOpen}
-            onClose={() => setLocationOpen(false)}
-          />
-        )}
-
-        {loyaltyCardsOpen && (
-          <LoyaltyCardsModal 
-            isOpen={loyaltyCardsOpen}
-            onClose={() => setLoyaltyCardsOpen(false)}
-          />
-        )}
-
-        {rewardsOpen && (
-          <RewardsModal 
-            isOpen={rewardsOpen}
-            onClose={() => setRewardsOpen(false)}
-          />
-        )}
-
-        {familySharingOpen && (
-          <FamilySharingModal 
-            isOpen={familySharingOpen}
-            onClose={() => setFamilySharingOpen(false)}
-          />
-        )}
-
-        {helpSupportOpen && (
-          <HelpSupportModal 
-            isOpen={helpSupportOpen}
-            onClose={() => setHelpSupportOpen(false)}
+        {activeModal && (
+          <UnifiedSidebarModal
+            activeSection={activeModal}
+            isOpen={activeModal !== null}
+            onClose={() => setActiveModal(null)}
           />
         )}
       </Suspense>
@@ -301,7 +296,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <CartProvider>
+        <AppContent />
+      </CartProvider>
     </AuthProvider>
   );
 }

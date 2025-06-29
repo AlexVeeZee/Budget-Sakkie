@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, Settings, HelpCircle, Star, Gift, Users, MapPin, LogIn, UserPlus } from 'lucide-react';
+import { X, Settings, HelpCircle, Star, Gift, Users, MapPin, LogIn, UserPlus, Home, Briefcase, Map } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../store/authStore';
+import { useLocation } from '../hooks/useLocation';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -27,7 +28,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSignInClick
 }) => {
   const { t } = useLanguage();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isGuest, user } = useAuthStore();
+  
+  // Show location section if user has saved locations or is authenticated
+  const showLocationSection = isAuthenticated || isGuest;
 
   const authenticatedMenuItems = [
     { 
@@ -37,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     { 
       icon: MapPin, 
-      label: t('profile.location'), 
+      label: 'Manage Locations', 
       action: onLocationClick
     },
     { 
@@ -80,16 +84,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
-  const menuItems = isAuthenticated ? authenticatedMenuItems : unauthenticatedMenuItems;
+  const menuItems = isAuthenticated || isGuest ? authenticatedMenuItems : unauthenticatedMenuItems;
 
   if (!isOpen) return null;
 
   return (
     <>
+      {/* Overlay - only visible on mobile/tablet */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        onClick={onClose}
+      ></div>
+      
       {/* Sidebar */}
       <div 
-        className="fixed left-0 top-0 h-full w-80 z-50 transform transition-transform duration-300 shadow-xl border-r border-gray-200"
-        style={{ backgroundColor: '#ffffff' }}
+        className="fixed inset-y-0 left-0 w-80 z-50 shadow-xl border-r border-gray-200 overflow-y-auto transform transition-transform duration-300"
+        style={{ 
+          backgroundColor: '#ffffff',
+          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)'
+        }}
       >
         {/* Header */}
         <div 
@@ -114,11 +127,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="p-6"
           style={{ backgroundColor: '#ffffff' }}
         >
-          {isAuthenticated && user && (
+          {(isAuthenticated || isGuest) && user && (
             <div className="bg-gradient-to-r from-green-500 to-blue-500 rounded-lg p-4 text-white mb-6">
-              <h3 className="font-semibold mb-1">Welcome, {user.displayName}</h3>
-              <p className="text-sm opacity-90">Monthly Savings: R247.50</p>
-              <p className="text-sm opacity-90">15% saved this month</p>
+              <h3 className="font-semibold mb-1">Welcome, {user.displayName || user.username}</h3>
+              {isGuest ? (
+                <p className="text-sm opacity-90">Guest Account</p>
+              ) : (
+                <>
+                  <p className="text-sm opacity-90">Monthly Savings: R247.50</p>
+                  <p className="text-sm opacity-90">15% saved this month</p>
+                </>
+              )}
             </div>
           )}
 
