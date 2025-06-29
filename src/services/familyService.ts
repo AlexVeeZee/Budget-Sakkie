@@ -310,6 +310,155 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
   }
   
   /**
+   * Delete a family group
+   */
+  static async deleteFamily(
+    familyId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const authState = useAuthStore.getState();
+      const { user } = authState;
+      
+      if (!user || !user.id) {
+        return { success: false, error: 'You must be logged in to delete a family' };
+      }
+      
+      // Check if user is admin of the family
+      const { data: membership, error: membershipError } = await supabase
+        .from('family_members')
+        .select('role')
+        .eq('family_id', familyId)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (membershipError) {
+        throw new Error(`Failed to verify your membership: ${membershipError.message}`);
+      }
+      
+      if (!membership || membership.role !== 'admin') {
+        return { success: false, error: 'Only family admins can delete the family group' };
+      }
+      
+      // Begin transaction - delete in the following order:
+      
+      // 1. Delete family invitations
+      const { error: invitationsError } = await supabase
+        .from('family_invitations')
+        .delete()
+        .eq('family_id', familyId);
+      
+      if (invitationsError) {
+        console.warn(`Error deleting invitations: ${invitationsError.message}`);
+        // Continue anyway
+      }
+      
+      // 2. Delete shared list items
+      const { data: sharedLists, error: listsQueryError } = await supabase
+        .from('shared_shopping_lists')
+        .select('id')
+        .eq('family_id', familyId);
+      
+      if (!listsQueryError && sharedLists && sharedLists.length > 0) {
+        const listIds = sharedLists.map(list => list.id);
+        
+        // Delete items from all lists
+        const { error: itemsError } = await supabase
+          .from('shared_list_items')
+          .delete()
+          .in('list_id', listIds);
+        
+        if (itemsError) {
+          console.warn(`Error deleting list items: ${itemsError.message}`);
+          // Continue anyway
+        }
+        
+        // Delete list collaborations
+        const { error: collabsError } = await supabase
+          .from('list_collaborations')
+          .delete()
+          .in('list_id', listIds);
+        
+        if (collabsError) {
+          console.warn(`Error deleting list collaborations: ${collabsError.message}`);
+          // Continue anyway
+        }
+        
+        // Delete the lists themselves
+        const { error: listsError } = await supabase
+          .from('shared_shopping_lists')
+          .delete()
+          .eq('family_id', familyId);
+        
+        if (listsError) {
+          console.warn(`Error deleting shared lists: ${listsError.message}`);
+          // Continue anyway
+        }
+      }
+      
+      // 3. Delete family expenses
+      const { error: expensesError } = await supabase
+        .from('family_expenses')
+        .delete()
+        .eq('family_id', familyId);
+      
+      if (expensesError) {
+        console.warn(`Error deleting family expenses: ${expensesError.message}`);
+        // Continue anyway
+      }
+      
+      // 4. Delete family budgets
+      const { error: budgetsError } = await supabase
+        .from('family_budgets')
+        .delete()
+        .eq('family_id', familyId);
+      
+      if (budgetsError) {
+        console.warn(`Error deleting family budgets: ${budgetsError.message}`);
+        // Continue anyway
+      }
+      
+      // 5. Update user profiles to remove family_id
+      const { error: profilesError } = await supabase
+        .from('user_profiles')
+        .update({ family_id: null })
+        .eq('family_id', familyId);
+      
+      if (profilesError) {
+        console.warn(`Error updating user profiles: ${profilesError.message}`);
+        // Continue anyway
+      }
+      
+      // 6. Delete family members
+      const { error: membersError } = await supabase
+        .from('family_members')
+        .delete()
+        .eq('family_id', familyId);
+      
+      if (membersError) {
+        throw new Error(`Failed to delete family members: ${membersError.message}`);
+      }
+      
+      // 7. Finally, delete the family itself
+      const { error: familyError } = await supabase
+        .from('families')
+        .delete()
+        .eq('id', familyId);
+      
+      if (familyError) {
+        throw new Error(`Failed to delete family: ${familyError.message}`);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting family:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to delete family' 
+      };
+    }
+  }
+  
+  /**
    * Invite a user to join a family
    */
   static async inviteToFamily(
@@ -362,6 +511,9 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 7); // 7 days from now
       
+      // Generate a random token
+      const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
       const { data: invitation, error: inviteError } = await supabase
         .from('family_invitations')
         .insert({
@@ -369,9 +521,10 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
           invited_by: user.id,
           email: email,
           role: role,
-          token: Math.random().toString(36).substring(2, 15),
+          token: token,
           expires_at: expiryDate.toISOString(),
-          message: message
+          message: message,
+          status: 'pending'
         })
         .select()
         .single();
@@ -384,8 +537,34 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
         throw new Error('Failed to create invitation: No data returned');
       }
       
-      // In a real app, we would send an email here
-      console.log(`Invitation sent to ${email} for family ${family.name}`);
+      // Get inviter's display name
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .single();
+      
+      const inviterName = userProfile?.display_name || user.displayName || user.username || 'A family member';
+      
+      // Send invitation email
+      try {
+        await fetch('https://mglcyjyvluqqofarpobx.supabase.co/functions/v1/send-family-invitation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nbGN5anl2bHVxcW9mYXJwb2J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0NTQ3MTksImV4cCI6MjA1MTAzMDcxOX0.0T3XJdLLj9p7v-T1nU9TILQo1CgRB7WtQF2_GJzuHdE'
+          },
+          body: JSON.stringify({
+            familyId: invitation.family_id,
+            invitedEmail: invitation.email,
+            inviterName: inviterName,
+            familyName: family.name,
+            invitationToken: invitation.token
+          })
+        });
+      } catch (error) {
+        console.log('Email sending failed:', error);
+      }
       
       return { 
         success: true,
@@ -393,7 +572,7 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
           id: invitation.id,
           familyId: invitation.family_id,
           familyName: family.name,
-          invitedByName: user.displayName || user.username || 'Unknown User',
+          invitedByName: inviterName,
           email: invitation.email,
           role: invitation.role,
           status: 'pending',

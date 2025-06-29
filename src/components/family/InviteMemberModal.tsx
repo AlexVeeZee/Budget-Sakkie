@@ -22,6 +22,10 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; message?: string }>({});
+  const [emailSendingStatus, setEmailSendingStatus] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const validateForm = () => {
     const newErrors: { email?: string; message?: string } = {};
@@ -42,6 +46,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     if (!validateForm()) return;
     
     setLoading(true);
+    setEmailSendingStatus(null);
     
     try {
       const result = await onInviteMember(
@@ -51,12 +56,28 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       );
       
       if (result.success) {
-        handleClose();
+        setEmailSendingStatus({
+          success: true,
+          message: `Invitation sent to ${formData.email} successfully!`
+        });
+        
+        // Close after showing success message
+        setTimeout(() => {
+          handleClose();
+        }, 2000);
       } else {
         setErrors({ email: result.error || 'Failed to send invitation' });
+        setEmailSendingStatus({
+          success: false,
+          message: result.error || 'Failed to send invitation email'
+        });
       }
     } catch (error) {
       setErrors({ email: 'An unexpected error occurred' });
+      setEmailSendingStatus({
+        success: false,
+        message: 'An unexpected error occurred while sending the invitation'
+      });
     } finally {
       setLoading(false);
     }
@@ -65,7 +86,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   const handleClose = () => {
     setFormData({ email: '', role: 'member', message: '' });
     setErrors({});
-    setLoading(false);
+    setEmailSendingStatus(null);
     onClose();
   };
 
@@ -81,8 +102,8 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
               <Mail className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">Invite Family Member</h3>
-              <p className="text-white/80 text-sm">Add someone to {familyName}</p>
+              <h3 className="text-xl font-bold">Invite Member to {familyName}</h3>
+              <p className="text-white/80 text-sm">Send an invitation to join your family group</p>
             </div>
           </div>
           <button
@@ -95,6 +116,15 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Email Status Message */}
+          {emailSendingStatus && (
+            <div className={`p-4 ${emailSendingStatus.success ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'} rounded-lg`}>
+              <p className={emailSendingStatus.success ? 'text-green-700' : 'text-yellow-700'}>
+                {emailSendingStatus.message}
+              </p>
+            </div>
+          )}
+
           {/* Email Address */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

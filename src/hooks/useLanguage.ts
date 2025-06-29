@@ -16,6 +16,7 @@ const translations: Translations = {
   'nav.lists': { en: 'Lists', af: 'Lyste' },
   'nav.deals': { en: 'Deals', af: 'Spesiale' },
   'nav.profile': { en: 'Profile', af: 'Profiel' },
+  'nav.family': { en: 'Family', af: 'Familie' },
   
   // Common
   'common.save': { en: 'Save', af: 'Stoor' },
@@ -66,6 +67,13 @@ const translations: Translations = {
   'profile.location': { en: 'Location', af: 'Ligging' },
   'profile.budget': { en: 'Monthly Budget', af: 'Maandelikse Begroting' },
   'profile.loyalty_cards': { en: 'Loyalty Cards', af: 'Lojaliteitskaarte' },
+  
+  // Family
+  'family.title': { en: 'Family Sharing', af: 'Familie Deel' },
+  'family.members': { en: 'Family Members', af: 'Familie Lede' },
+  'family.add_member': { en: 'Add Member', af: 'Voeg Lid By' },
+  'family.create_group': { en: 'Create Family Group', af: 'Skep Familie Groep' },
+  'family.shared_lists': { en: 'Shared Lists', af: 'Gedeelde Lyste' },
   
   // Retailers
   'retailer.pick_n_pay': { en: 'Pick n Pay', af: 'Pick n Pay' },
