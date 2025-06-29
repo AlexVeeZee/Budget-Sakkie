@@ -184,6 +184,35 @@ export const ListsTab: React.FC = () => {
     loadUserFamily();
   }, []);
 
+  // Quick add items - now using real products from Supabase
+  const quickAddItems = useMemo(() => {
+    if (products.length === 0) {
+      // Fallback items if no products loaded yet
+      return [
+        { name: 'Bread', category: 'Bakery', estimatedPrice: 15.99 },
+        { name: 'Milk', category: 'Dairy', estimatedPrice: 22.99 },
+        { name: 'Eggs', category: 'Dairy', estimatedPrice: 34.99 },
+        { name: 'Rice', category: 'Pantry', estimatedPrice: 45.99 },
+        { name: 'Chicken', category: 'Meat', estimatedPrice: 89.99 },
+        { name: 'Bananas', category: 'Fresh Produce', estimatedPrice: 19.99 },
+        { name: 'Apples', category: 'Fresh Produce', estimatedPrice: 24.99 },
+        { name: 'Pasta', category: 'Pantry', estimatedPrice: 18.99 },
+        { name: 'Tomatoes', category: 'Fresh Produce', estimatedPrice: 28.99 },
+        { name: 'Cheese', category: 'Dairy', estimatedPrice: 45.99 },
+        { name: 'Onions', category: 'Fresh Produce', estimatedPrice: 16.99 },
+        { name: 'Potatoes', category: 'Fresh Produce', estimatedPrice: 12.99 }
+      ];
+    }
+
+    // Use real products from Supabase
+    return products.slice(0, 12).map(product => ({
+      name: product.name,
+      category: product.category?.name || 'General',
+      estimatedPrice: product.price,
+      productData: product // Store the full product data
+    }));
+  }, [products]);
+
   // Filter items based on search query
   const filteredItems = useMemo(() => {
     if (!activeList || !searchQuery) return activeList?.items || [];
@@ -331,35 +360,6 @@ export const ListsTab: React.FC = () => {
       list.id === activeList.id ? updatedList : list
     ));
   };
-
-  // Quick add items - now using real products from Supabase
-  const quickAddItems = useMemo(() => {
-    if (products.length === 0) {
-      // Fallback items if no products loaded yet
-      return [
-        { name: 'Bread', category: 'Bakery', estimatedPrice: 15.99 },
-        { name: 'Milk', category: 'Dairy', estimatedPrice: 22.99 },
-        { name: 'Eggs', category: 'Dairy', estimatedPrice: 34.99 },
-        { name: 'Rice', category: 'Pantry', estimatedPrice: 45.99 },
-        { name: 'Chicken', category: 'Meat', estimatedPrice: 89.99 },
-        { name: 'Bananas', category: 'Fresh Produce', estimatedPrice: 19.99 },
-        { name: 'Apples', category: 'Fresh Produce', estimatedPrice: 24.99 },
-        { name: 'Pasta', category: 'Pantry', estimatedPrice: 18.99 },
-        { name: 'Tomatoes', category: 'Fresh Produce', estimatedPrice: 28.99 },
-        { name: 'Cheese', category: 'Dairy', estimatedPrice: 45.99 },
-        { name: 'Onions', category: 'Fresh Produce', estimatedPrice: 16.99 },
-        { name: 'Potatoes', category: 'Fresh Produce', estimatedPrice: 12.99 }
-      ];
-    }
-
-    // Use real products from Supabase
-    return products.slice(0, 12).map(product => ({
-      name: product.name,
-      category: product.category?.name || 'General',
-      estimatedPrice: product.price,
-      productData: product // Store the full product data
-    }));
-  }, [products]);
 
   // Show loading state while products are loading
   if (productsLoading) {
