@@ -1,26 +1,45 @@
 import React, { useState } from 'react';
-import { Users, Mail, Clock, Plus } from 'lucide-react';
-import { FamilySharingComponent } from '../components/family/FamilySharingComponent';
+import { Users, Mail, Clock, Plus, RefreshCw } from 'lucide-react';
+import { FamilyGroupManager } from '../components/family/FamilyGroupManager';
 import { FamilyInvitationsList } from '../components/family/FamilyInvitationsList';
 import { useFamily } from '../hooks/useFamily';
 import { FamilyService } from '../services/familyService';
 
 export const FamilyManagementPage: React.FC = () => {
-  const { invitations, loading } = useFamily();
+  const { invitations, loading, refreshData } = useFamily();
   const [activeTab, setActiveTab] = useState<'members' | 'invitations'>('members');
   
   const handleAcceptInvitation = async (invitationId: string) => {
-    return await FamilyService.acceptInvitation(invitationId);
+    const result = await FamilyService.acceptInvitation(invitationId);
+    if (result.success) {
+      refreshData();
+    }
+    return result;
   };
   
   const handleDeclineInvitation = async (invitationId: string) => {
-    return await FamilyService.declineInvitation(invitationId);
+    const result = await FamilyService.declineInvitation(invitationId);
+    if (result.success) {
+      refreshData();
+    }
+    return result;
+  };
+  
+  const handleRefresh = () => {
+    refreshData();
   };
   
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Family Management</h1>
+        <button
+          onClick={handleRefresh}
+          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          title="Refresh"
+        >
+          <RefreshCw className="h-5 w-5" />
+        </button>
       </div>
       
       {/* Tabs */}
@@ -34,7 +53,7 @@ export const FamilyManagementPage: React.FC = () => {
           }`}
         >
           <Users className="h-5 w-5" />
-          <span>Family Members</span>
+          <span>Family Groups</span>
         </button>
         
         <button
@@ -57,7 +76,7 @@ export const FamilyManagementPage: React.FC = () => {
       
       {/* Content */}
       {activeTab === 'members' ? (
-        <FamilySharingComponent />
+        <FamilyGroupManager />
       ) : (
         <div className="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-sm">
           <div className="flex items-center justify-between mb-6">
