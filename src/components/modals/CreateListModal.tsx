@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, ShoppingCart, DollarSign, Users, UserPlus } from 'lucide-react';
+import { X, Shield, Save, ShoppingCart, DollarSign, Users, UserPlus } from 'lucide-react';
 import { useCurrency } from '../../hooks/useCurrency';
 import { ShoppingList } from '../../types';
 import { FamilyService } from '../../services/familyService';
 import { useAuthStore } from '../../store/authStore';
-import { Shield, Users, Plus, /* other existing imports */ } from 'lucide-react';
 
 interface FamilyMember {
   id: string;
