@@ -4,6 +4,7 @@ import { useCurrency } from '../../hooks/useCurrency';
 import { ShoppingList } from '../../types';
 import { FamilyService } from '../../services/familyService';
 import { useAuthStore } from '../../store/authStore';
+import { Shield, Users, Plus, /* other existing imports */ } from 'lucide-react';
 
 interface FamilyMember {
   id: string;
