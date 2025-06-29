@@ -58,6 +58,8 @@ export interface SharedListWithItems {
     completed: boolean;
     priority: string;
     notes?: string;
+    completed_by?: string;
+    completed_at?: string;
   }>;
 }
 
@@ -106,14 +108,14 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
     
     // Get the first family's members
     const familyData = data[0];
-    if (!familyData || !familyData.id) {
+    if (!familyData || !familyData.family_id) {
       return { family: null };
     }
     
     // Add additional safety check for familyData.id
     let members = [];
     try {
-      const membersResult = await this.getFamilyMembers(familyData.id);
+      const membersResult = await this.getFamilyMembers(familyData.family_id);
       if (membersResult && !membersResult.error) {
         members = membersResult.members || [];
       } else {
@@ -126,8 +128,8 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
     // Return the family with members
     return { 
       family: {
-        id: familyData.id,
-        name: familyData.name || 'Unnamed Family',
+        id: familyData.family_id,
+        name: familyData.family_name || 'Unnamed Family',
         description: familyData.description,
         createdBy: familyData.created_by,
         createdAt: familyData.created_at,
@@ -1036,6 +1038,113 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
       return { 
         budgets: [], 
         error: error instanceof Error ? error.message : 'Failed to get budgets' 
+      };
+    }
+  }
+
+  /**
+   * Share a shopping list with family members
+   */
+  static async shareListWithFamily(
+    listId: string,
+    familyId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const authState = useAuthStore.getState();
+      const { user } = authState;
+      
+      if (!user || !user.id) {
+        return { success: false, error: 'You must be logged in to share lists' };
+      }
+      
+      if (!familyId) {
+        return { success: false, error: 'Family ID is required' };
+      }
+      
+      // Check if user is a member of the family
+      const { data: membership, error: membershipError } = await supabase
+        .from('family_members')
+        .select('*')
+        .eq('family_id', familyId)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (membershipError) {
+        throw new Error(`Failed to verify your membership: ${membershipError.message}`);
+      }
+      
+      if (!membership) {
+        return { success: false, error: 'You are not a member of this family' };
+      }
+      
+      // Update the list to be shared with the family
+      const { error: updateError } = await supabase
+        .from('shared_shopping_lists')
+        .update({ family_id: familyId })
+        .eq('id', listId)
+        .eq('created_by', user.id);
+      
+      if (updateError) {
+        throw new Error(`Failed to share list: ${updateError.message}`);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error sharing list with family:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to share list with family' 
+      };
+    }
+  }
+
+  /**
+   * Get all shared shopping lists for the current user
+   */
+  static async getUserSharedLists(): Promise<{ lists: SharedListWithItems[]; error?: string }> {
+    try {
+      const authState = useAuthStore.getState();
+      const { user } = authState;
+      
+      if (!user || !user.id) {
+        return { lists: [], error: 'Not authenticated' };
+      }
+      
+      // Get user's family ID
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('family_id')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileError && profileError.code !== 'PGRST116') {
+        throw new Error(`Failed to get user profile: ${profileError.message}`);
+      }
+      
+      if (!userProfile?.family_id) {
+        return { lists: [] }; // User doesn't belong to a family
+      }
+      
+      // Get all shared lists for the family
+      const { data, error } = await supabase
+        .from('shared_shopping_lists')
+        .select(`
+          *,
+          shared_list_items(*)
+        `)
+        .eq('family_id', userProfile.family_id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        throw new Error(`Failed to get shared lists: ${error.message}`);
+      }
+      
+      return { lists: data || [] };
+    } catch (error) {
+      console.error('Error getting user shared lists:', error);
+      return { 
+        lists: [], 
+        error: error instanceof Error ? error.message : 'Failed to get shared lists' 
       };
     }
   }

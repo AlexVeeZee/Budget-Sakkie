@@ -1,7 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, ShoppingCart, DollarSign, Users, UserPlus } from 'lucide-react';
 import { useCurrency } from '../../hooks/useCurrency';
 import { ShoppingList } from '../../types';
+import { FamilyService } from '../../services/familyService';
+import { useAuthStore } from '../../store/authStore';
+
+interface FamilyMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'member';
+  avatar?: string;
+  status: 'active' | 'pending' | 'inactive';
+}
 
 interface CreateListModalProps {
   isOpen: boolean;
@@ -15,19 +26,44 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
   onCreate
 }) => {
   const { formatCurrency } = useCurrency();
+  const { user } = useAuthStore();
   const [name, setName] = useState('');
   const [budget, setBudget] = useState(0);
   const [sharedWith, setSharedWith] = useState<string[]>([]);
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; budget?: string; email?: string }>({});
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [familyId, setFamilyId] = useState<string | null>(null);
 
-  // Sample family members for sharing
-  const familyMembers = [
-    'Johan Van Der Merwe',
-    'Emma Van Der Merwe',
-    'Sarah Van Der Merwe'
-  ];
+  // Load family members when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadFamilyMembers();
+    }
+  }, [isOpen]);
+
+  const loadFamilyMembers = async () => {
+    try {
+      setLoadingMembers(true);
+      const { family, error } = await FamilyService.getUserFamily();
+      
+      if (error) {
+        console.error('Error loading family:', error);
+        return;
+      }
+
+      if (family) {
+        setFamilyId(family.id);
+        setFamilyMembers(family.members.filter(member => member.id !== user?.id));
+      }
+    } catch (error) {
+      console.error('Error loading family members:', error);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors: { name?: string; budget?: string; email?: string } = {};
@@ -61,7 +97,8 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
         name: name.trim(),
         items: [],
         sharedWith,
-        budget: budget || undefined
+        budget: budget || undefined,
+        familyId: sharedWith.length > 0 ? familyId : undefined
       };
       
       onCreate(newList);
@@ -82,9 +119,9 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
     onClose();
   };
 
-  const handleAddMember = (member: string) => {
-    if (!sharedWith.includes(member)) {
-      setSharedWith(prev => [...prev, member]);
+  const handleAddMember = (member: FamilyMember) => {
+    if (!sharedWith.includes(member.name)) {
+      setSharedWith(prev => [...prev, member.name]);
     }
   };
 
@@ -199,79 +236,153 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
               Share with Family Members
             </label>
             
-            {/* Quick Add Family Members */}
-            <div className="space-y-2 mb-4">
-              <p className="text-sm text-gray-600">Quick add:</p>
-              <div className="flex flex-wrap gap-2">
-                {familyMembers.map((member) => (
-                  <button
-                    key={member}
-                    onClick={() => handleAddMember(member)}
-                    disabled={sharedWith.includes(member)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                      sharedWith.includes(member)
-                        ? 'bg-green-100 text-green-800 cursor-not-allowed'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {sharedWith.includes(member) ? '✓ ' : '+ '}{member}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Add by Email */}
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">Or add by email:</p>
-              <div className="flex space-x-2">
-                <input
-                  type="email"
-                  value={newMemberEmail}
-                  onChange={(e) => setNewMemberEmail(e.target.value)}
-                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                    errors.email ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="family.member@email.com"
-                  style={{ 
-                    fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
-                    fontSize: '16px'
-                  }}
-                />
-                <button
-                  onClick={handleAddByEmail}
-                  className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors"
-                >
-                  <UserPlus className="h-4 w-4" />
-                </button>
-              </div>
-              {errors.email && (
-                <p className="text-sm text-red-600">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Selected Members */}
-            {sharedWith.length > 0 && (
-              <div className="mt-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  Sharing with ({sharedWith.length}):
+            {!familyId ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <h4 className="font-medium text-yellow-800 mb-2">No Family Group</h4>
+                <p className="text-sm text-yellow-700">
+                  You need to create or join a family group before you can share lists.
+                  Visit the Family tab to create or join a family.
                 </p>
-                <div className="space-y-2">
-                  {sharedWith.map((member) => (
-                    <div 
-                      key={member}
-                      className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
-                    >
-                      <span className="text-sm text-gray-900">{member}</span>
-                      <button
-                        onClick={() => handleRemoveMember(member)}
-                        className="text-red-600 hover:text-red-700 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
               </div>
+            ) : loadingMembers ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+              </div>
+            ) : (
+              <>
+                {/* Available Family Members */}
+                <div className="space-y-2 mb-4">
+                  <p className="text-sm text-gray-600">Available family members:</p>
+                  {familyMembers.length === 0 ? (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg">
+                      <p className="text-gray-500 text-sm">No family members found</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {familyMembers.map((member) => {
+                        const isSelected = sharedWith.includes(member.name);
+                        return (
+                          <div 
+                            key={member.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border ${
+                              isSelected 
+                                ? 'border-green-200 bg-green-50' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <img 
+                                src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random`}
+                                alt={member.name}
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
+                              <div>
+                                <p className="font-medium text-gray-900">{member.name}</p>
+                                <div className="flex items-center text-xs text-gray-500">
+                                  {member.role === 'admin' ? (
+                                    <span className="flex items-center">
+                                      <Crown className="h-3 w-3 text-yellow-600 mr-1" />
+                                      Admin
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center">
+                                      <Shield className="h-3 w-3 text-blue-600 mr-1" />
+                                      Member
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => isSelected ? handleRemoveMember(member.name) : handleAddMember(member)}
+                              className={`px-3 py-1 rounded text-xs font-medium ${
+                                isSelected
+                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              }`}
+                            >
+                              {isSelected ? 'Remove' : 'Add'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Add by Email */}
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">Or add by email:</p>
+                  <div className="flex space-x-2">
+                    <input
+                      type="email"
+                      value={newMemberEmail}
+                      onChange={(e) => setNewMemberEmail(e.target.value)}
+                      className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                        errors.email ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      placeholder="family.member@email.com"
+                      style={{ 
+                        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+                        fontSize: '16px'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddByEmail}
+                      className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {errors.email && (
+                    <p className="text-sm text-red-600">{errors.email}</p>
+                  )}
+                </div>
+
+                {/* Selected Members */}
+                {sharedWith.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Sharing with ({sharedWith.length}):
+                    </p>
+                    <div className="space-y-2">
+                      {sharedWith.map((member, index) => {
+                        const memberDetails = familyMembers.find(m => m.name === member);
+                        return (
+                          <div 
+                            key={index}
+                            className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border border-blue-200"
+                          >
+                            <div className="flex items-center space-x-2">
+                              {memberDetails ? (
+                                <img 
+                                  src={memberDetails.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member)}&background=random`}
+                                  alt={member}
+                                  className="w-6 h-6 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-medium text-blue-700">{member.charAt(0)}</span>
+                                </div>
+                              )}
+                              <span className="text-sm font-medium text-blue-800">{member}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMember(member)}
+                              className="text-red-600 hover:text-red-700 text-sm p-1"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -291,6 +402,7 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
         {/* Action Buttons */}
         <div className="flex space-x-3 mt-8">
           <button
+            type="button"
             onClick={handleCreate}
             disabled={isLoading || !name.trim()}
             className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
@@ -303,6 +415,7 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
             <span>{isLoading ? 'Creating...' : 'Create List'}</span>
           </button>
           <button
+            type="button"
             onClick={handleClose}
             disabled={isLoading}
             className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors"

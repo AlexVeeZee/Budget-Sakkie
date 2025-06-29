@@ -45,6 +45,8 @@ export interface ShoppingListItem {
   priority: 'high' | 'medium' | 'low';
   notes?: string;
   completed: boolean;
+  completedBy?: string;
+  completedAt?: string;
 }
 
 export interface ShoppingList {
@@ -55,6 +57,7 @@ export interface ShoppingList {
   updatedAt: string;
   sharedWith: string[];
   budget?: number;
+  familyId?: string;
 }
 
 export interface PriceHistory {

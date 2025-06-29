@@ -681,6 +681,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
             const previewItems = getListPreviewItems(list);
             const isSelected = selectedLists.has(list.id);
             const sharedMemberCount = getSharedMemberCount(list);
+            const isFamilyList = !!list.familyId;
             
             return (
               <div
@@ -712,6 +713,11 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                             }} />
                           ) : list.name}
                         </h3>
+                        {isFamilyList && (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                            Family List
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <div className="flex items-center space-x-1">
@@ -766,7 +772,7 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Enhanced Stats with corrected member count */}
+                  {/* Stats with Family Badge */}
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
                       <div className="flex items-center justify-center mb-1">
@@ -822,8 +828,13 @@ export const ListArchiveView: React.FC<ListArchiveViewProps> = ({
                             <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                           </div>
                           {item.completed && (
-                            <div className="w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
-                              <span className="text-white text-xs">✓</span>
+                            <div className="flex items-center space-x-1">
+                              <div className="w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
+                                <span className="text-white text-xs">✓</span>
+                              </div>
+                              {item.completedBy && (
+                                <span className="text-xs text-gray-500">by {item.completedBy.split(' ')[0]}</span>
+                              )}
                             </div>
                           )}
                         </div>

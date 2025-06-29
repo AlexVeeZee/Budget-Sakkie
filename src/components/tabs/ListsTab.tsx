@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, ShoppingCart, Users, DollarSign, Clock, Edit2, Trash2, Search, Check, X, Star, Package, Calendar, Share2 } from 'lucide-react';
 import { useProducts } from '../../hooks/useProducts';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -9,6 +9,7 @@ import { DeleteListModal } from '../modals/DeleteListModal';
 import { CreateListModal } from '../modals/CreateListModal';
 import { ListArchiveView } from '../ListArchiveView';
 import { BudgetSummaryCard } from '../BudgetSummaryCard';
+import { FamilyService } from '../../services/familyService';
 import type { ProductWithCategory } from '../../services/productService';
 
 interface EditingItem {
@@ -99,7 +100,8 @@ export const ListsTab: React.FC = () => {
       createdAt: '2024-01-10T10:00:00Z',
       updatedAt: '2024-01-12T15:30:00Z',
       sharedWith: ['Johan Van Der Merwe'],
-      budget: 300
+      budget: 300,
+      familyId: 'sample-family-id'
     };
 
     const bulkList: ShoppingList = {
@@ -145,7 +147,7 @@ export const ListsTab: React.FC = () => {
   const [lists, setLists] = useState<ShoppingList[]>([]);
   
   // Update lists when products change
-  React.useEffect(() => {
+  useEffect(() => {
     if (allLists.length > 0) {
       setLists(allLists);
     }
@@ -159,35 +161,28 @@ export const ListsTab: React.FC = () => {
   const [showEditListModal, setShowEditListModal] = useState(false);
   const [showDeleteListModal, setShowDeleteListModal] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const [familyId, setFamilyId] = useState<string | null>(null);
 
-  // Quick add items - now using real products from Supabase
-  const quickAddItems = useMemo(() => {
-    if (products.length === 0) {
-      // Fallback items if no products loaded yet
-      return [
-        { name: 'Bread', category: 'Bakery', estimatedPrice: 15.99 },
-        { name: 'Milk', category: 'Dairy', estimatedPrice: 22.99 },
-        { name: 'Eggs', category: 'Dairy', estimatedPrice: 34.99 },
-        { name: 'Rice', category: 'Pantry', estimatedPrice: 45.99 },
-        { name: 'Chicken', category: 'Meat', estimatedPrice: 89.99 },
-        { name: 'Bananas', category: 'Fresh Produce', estimatedPrice: 19.99 },
-        { name: 'Apples', category: 'Fresh Produce', estimatedPrice: 24.99 },
-        { name: 'Pasta', category: 'Pantry', estimatedPrice: 18.99 },
-        { name: 'Tomatoes', category: 'Fresh Produce', estimatedPrice: 28.99 },
-        { name: 'Cheese', category: 'Dairy', estimatedPrice: 45.99 },
-        { name: 'Onions', category: 'Fresh Produce', estimatedPrice: 16.99 },
-        { name: 'Potatoes', category: 'Fresh Produce', estimatedPrice: 12.99 }
-      ];
-    }
-
-    // Use real products from Supabase
-    return products.slice(0, 12).map(product => ({
-      name: product.name,
-      category: product.category?.name || 'General',
-      estimatedPrice: product.price,
-      productData: product // Store the full product data
-    }));
-  }, [products]);
+  // Load user's family
+  useEffect(() => {
+    const loadUserFamily = async () => {
+      try {
+        const { family, error } = await FamilyService.getUserFamily();
+        if (error) {
+          console.error('Error loading family:', error);
+          return;
+        }
+        
+        if (family) {
+          setFamilyId(family.id);
+        }
+      } catch (error) {
+        console.error('Error loading family:', error);
+      }
+    };
+    
+    loadUserFamily();
+  }, []);
 
   // Filter items based on search query
   const filteredItems = useMemo(() => {
@@ -240,6 +235,19 @@ export const ListsTab: React.FC = () => {
       setActiveList(list);
       setViewMode('detail');
     }
+
+    // If the list has a familyId, share it with the family
+    if (list.familyId && list.sharedWith.length > 0) {
+      FamilyService.shareListWithFamily(list.id, list.familyId)
+        .then(({ success, error }) => {
+          if (!success) {
+            console.error('Error sharing list with family:', error);
+          }
+        })
+        .catch(error => {
+          console.error('Error sharing list with family:', error);
+        });
+    }
   };
 
   const handleSaveList = (name: string, budget: number, sharedWith: string[]) => {
@@ -250,7 +258,8 @@ export const ListsTab: React.FC = () => {
       name,
       budget,
       sharedWith,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      familyId: sharedWith.length > 0 ? familyId : undefined
     };
     
     setActiveList(updatedList);
@@ -259,6 +268,19 @@ export const ListsTab: React.FC = () => {
     ));
     
     setShowEditListModal(false);
+
+    // If the list has a familyId and shared members, share it with the family
+    if (updatedList.familyId && updatedList.sharedWith.length > 0) {
+      FamilyService.shareListWithFamily(updatedList.id, updatedList.familyId)
+        .then(({ success, error }) => {
+          if (!success) {
+            console.error('Error sharing list with family:', error);
+          }
+        })
+        .catch(error => {
+          console.error('Error sharing list with family:', error);
+        });
+    }
   };
 
   const handleDeleteList = () => {
@@ -309,6 +331,35 @@ export const ListsTab: React.FC = () => {
       list.id === activeList.id ? updatedList : list
     ));
   };
+
+  // Quick add items - now using real products from Supabase
+  const quickAddItems = useMemo(() => {
+    if (products.length === 0) {
+      // Fallback items if no products loaded yet
+      return [
+        { name: 'Bread', category: 'Bakery', estimatedPrice: 15.99 },
+        { name: 'Milk', category: 'Dairy', estimatedPrice: 22.99 },
+        { name: 'Eggs', category: 'Dairy', estimatedPrice: 34.99 },
+        { name: 'Rice', category: 'Pantry', estimatedPrice: 45.99 },
+        { name: 'Chicken', category: 'Meat', estimatedPrice: 89.99 },
+        { name: 'Bananas', category: 'Fresh Produce', estimatedPrice: 19.99 },
+        { name: 'Apples', category: 'Fresh Produce', estimatedPrice: 24.99 },
+        { name: 'Pasta', category: 'Pantry', estimatedPrice: 18.99 },
+        { name: 'Tomatoes', category: 'Fresh Produce', estimatedPrice: 28.99 },
+        { name: 'Cheese', category: 'Dairy', estimatedPrice: 45.99 },
+        { name: 'Onions', category: 'Fresh Produce', estimatedPrice: 16.99 },
+        { name: 'Potatoes', category: 'Fresh Produce', estimatedPrice: 12.99 }
+      ];
+    }
+
+    // Use real products from Supabase
+    return products.slice(0, 12).map(product => ({
+      name: product.name,
+      category: product.category?.name || 'General',
+      estimatedPrice: product.price,
+      productData: product // Store the full product data
+    }));
+  }, [products]);
 
   // Show loading state while products are loading
   if (productsLoading) {
@@ -505,7 +556,12 @@ export const ListsTab: React.FC = () => {
     const updatedList = {
       ...activeList,
       items: activeList.items.map(item =>
-        item.id === itemId ? { ...item, completed: !item.completed } : item
+        item.id === itemId ? { 
+          ...item, 
+          completed: !item.completed,
+          completedBy: !item.completed ? 'You' : undefined,
+          completedAt: !item.completed ? new Date().toISOString() : undefined
+        } : item
       ),
       updatedAt: new Date().toISOString()
     };
@@ -552,6 +608,11 @@ export const ListsTab: React.FC = () => {
             <span>Back to Lists</span>
           </button>
           <h2 className="text-2xl font-bold text-gray-900">{activeList.name}</h2>
+          {activeList.familyId && (
+            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+              Family List
+            </span>
+          )}
         </div>
       </div>
 
@@ -851,6 +912,11 @@ export const ListsTab: React.FC = () => {
                       </p>
                       {item.notes && (
                         <p className="text-sm text-blue-600 mt-1">Note: {item.notes}</p>
+                      )}
+                      {item.completed && item.completedBy && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Completed by {item.completedBy} {item.completedAt && `on ${new Date(item.completedAt).toLocaleDateString()}`}
+                        </p>
                       )}
                     </div>
                     
