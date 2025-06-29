@@ -299,7 +299,7 @@ export const ListsTab: React.FC = () => {
     setShowEditListModal(false);
 
     // If the list has a familyId and shared members, share it with the family
-    if (updatedList.familyId && updatedList.sharedWith.length > 0) {
+    if (updatedList.id && typeof updatedList.id === 'string' && updatedList.id.length > 10) {
       FamilyService.shareListWithFamily(updatedList.id, updatedList.familyId)
         .then(({ success, error }) => {
           if (!success) {
@@ -309,6 +309,8 @@ export const ListsTab: React.FC = () => {
         .catch(error => {
           console.error('Error sharing list with family:', error);
         });
+    } else {
+      console.error('Invalid list ID format:', updatedList.id);
     }
   };
 
