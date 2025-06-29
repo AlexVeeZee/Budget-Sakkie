@@ -511,6 +511,9 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 7); // 7 days from now
       
+      // Generate a random token
+      const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
       const { data: invitation, error: inviteError } = await supabase
         .from('family_invitations')
         .insert({
@@ -518,9 +521,10 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
           invited_by: user.id,
           email: email,
           role: role,
-          token: Math.random().toString(36).substring(2, 15),
+          token: token,
           expires_at: expiryDate.toISOString(),
-          message: message
+          message: message,
+          status: 'pending'
         })
         .select()
         .single();
@@ -533,8 +537,41 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
         throw new Error('Failed to create invitation: No data returned');
       }
       
-      // In a real app, we would send an email here
-      console.log(`Invitation sent to ${email} for family ${family.name}`);
+      // Get inviter's display name
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .single();
+      
+      const inviterName = userProfile?.display_name || user.displayName || user.username || 'A family member';
+      
+      // Send invitation email
+      try {
+        const response = await fetch('https://mglcyjyvluqqofarpobx.supabase.co/functions/v1/send-family-invitation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabase.auth.getSession().then(res => res.data.session?.access_token)}`
+          },
+          body: JSON.stringify({
+            familyId: familyId,
+            invitedEmail: email,
+            inviterName: inviterName,
+            familyName: family.name,
+            invitationToken: token
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.warn('Error sending invitation email:', errorData);
+          // Continue even if email fails - the invitation is still created in the database
+        }
+      } catch (emailError) {
+        console.warn('Error sending invitation email:', emailError);
+        // Continue even if email fails - the invitation is still created in the database
+      }
       
       return { 
         success: true,
@@ -542,7 +579,7 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
           id: invitation.id,
           familyId: invitation.family_id,
           familyName: family.name,
-          invitedByName: user.displayName || user.username || 'Unknown User',
+          invitedByName: inviterName,
           email: invitation.email,
           role: invitation.role,
           status: 'pending',

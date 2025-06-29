@@ -32,6 +32,10 @@ export const CreateFamilyGroupModal: React.FC<CreateFamilyGroupModalProps> = ({
     inviteEmail?: string;
     general?: string;
   }>({});
+  const [emailSendingStatus, setEmailSendingStatus] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   // Reset form when modal opens/closes
   React.useEffect(() => {
@@ -42,6 +46,7 @@ export const CreateFamilyGroupModal: React.FC<CreateFamilyGroupModalProps> = ({
       setNewInviteEmail('');
       setNewInviteRole('member');
       setErrors({});
+      setEmailSendingStatus(null);
     }
   }, [isOpen]);
 
@@ -99,6 +104,7 @@ export const CreateFamilyGroupModal: React.FC<CreateFamilyGroupModalProps> = ({
 
     setIsSubmitting(true);
     setErrors({});
+    setEmailSendingStatus(null);
 
     try {
       // 1. Create the family group
@@ -132,20 +138,67 @@ export const CreateFamilyGroupModal: React.FC<CreateFamilyGroupModalProps> = ({
       }
 
       // 3. Send invitations to other members
+      let emailSuccessCount = 0;
+      let emailFailCount = 0;
+      
       for (const invite of invites) {
-        const { error: inviteError } = await supabase
+        // Generate a random token for the invitation
+        const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        
+        // Set expiry date to 7 days from now
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 7);
+        
+        // Create invitation in database
+        const { data: invitation, error: inviteError } = await supabase
           .from('family_invitations')
           .insert({
             family_id: familyId,
-            invited_email: invite.email,
+            email: invite.email,
             invited_by: user.id,
             role: invite.role,
+            token: token,
+            expires_at: expiryDate.toISOString(),
             status: 'pending'
-          });
+          })
+          .select()
+          .single();
 
         if (inviteError) {
           console.error(`Failed to invite ${invite.email}: ${inviteError.message}`);
-          // Continue with other invites even if one fails
+          emailFailCount++;
+          continue;
+        }
+        
+        // Send invitation email
+        try {
+          const inviterName = user.displayName || user.username || 'A family member';
+          
+          const response = await fetch('https://mglcyjyvluqqofarpobx.supabase.co/functions/v1/send-family-invitation', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+            },
+            body: JSON.stringify({
+              familyId: familyId,
+              invitedEmail: invite.email,
+              inviterName: inviterName,
+              familyName: groupName.trim(),
+              invitationToken: token
+            })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Error sending invitation email:', errorData);
+            emailFailCount++;
+          } else {
+            emailSuccessCount++;
+          }
+        } catch (emailError) {
+          console.error('Error sending invitation email:', emailError);
+          emailFailCount++;
         }
       }
 
@@ -160,11 +213,36 @@ export const CreateFamilyGroupModal: React.FC<CreateFamilyGroupModalProps> = ({
         // Non-critical error, continue
       }
 
+      // Set email sending status
+      if (invites.length > 0) {
+        if (emailFailCount === 0) {
+          setEmailSendingStatus({
+            success: true,
+            message: `All ${emailSuccessCount} invitation emails sent successfully!`
+          });
+        } else if (emailSuccessCount > 0) {
+          setEmailSendingStatus({
+            success: true,
+            message: `${emailSuccessCount} invitation emails sent successfully, but ${emailFailCount} failed.`
+          });
+        } else {
+          setEmailSendingStatus({
+            success: false,
+            message: `Failed to send invitation emails. The invitations were created in the system, but emails could not be sent.`
+          });
+        }
+      }
+
       // Success!
       if (onSuccess) {
         onSuccess();
       }
-      onClose();
+      
+      // Close modal after a short delay to show email status
+      setTimeout(() => {
+        onClose();
+      }, emailSendingStatus ? 2000 : 0);
+      
     } catch (error) {
       console.error('Error creating family group:', error);
       setErrors({
@@ -204,6 +282,14 @@ export const CreateFamilyGroupModal: React.FC<CreateFamilyGroupModalProps> = ({
           {errors.general && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-700">{errors.general}</p>
+            </div>
+          )}
+
+          {emailSendingStatus && (
+            <div className={`mb-6 p-4 ${emailSendingStatus.success ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'} rounded-lg`}>
+              <p className={emailSendingStatus.success ? 'text-green-700' : 'text-yellow-700'}>
+                {emailSendingStatus.message}
+              </p>
             </div>
           )}
 
