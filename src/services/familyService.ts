@@ -548,29 +548,22 @@ static async getUserFamily(): Promise<{ family: FamilyWithMembers | null; error?
       
       // Send invitation email
       try {
-        const response = await fetch('https://mglcyjyvluqqofarpobx.supabase.co/functions/v1/send-family-invitation', {
+        await fetch('https://mglcyjyvluqqofarpobx.supabase.co/functions/v1/send-family-invitation', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabase.auth.getSession().then(res => res.data.session?.access_token)}`
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nbGN5anl2bHVxcW9mYXJwb2J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0NTQ3MTksImV4cCI6MjA1MTAzMDcxOX0.0T3XJdLLj9p7v-T1nU9TILQo1CgRB7WtQF2_GJzuHdE'
           },
           body: JSON.stringify({
-            familyId: familyId,
-            invitedEmail: email,
+            familyId: invitation.family_id,
+            invitedEmail: invitation.email,
             inviterName: inviterName,
             familyName: family.name,
-            invitationToken: token
+            invitationToken: invitation.token
           })
         });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.warn('Error sending invitation email:', errorData);
-          // Continue even if email fails - the invitation is still created in the database
-        }
-      } catch (emailError) {
-        console.warn('Error sending invitation email:', emailError);
-        // Continue even if email fails - the invitation is still created in the database
+      } catch (error) {
+        console.log('Email sending failed:', error);
       }
       
       return { 

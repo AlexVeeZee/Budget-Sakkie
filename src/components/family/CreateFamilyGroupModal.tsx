@@ -174,27 +174,25 @@ export const CreateFamilyGroupModal: React.FC<CreateFamilyGroupModalProps> = ({
         try {
           const inviterName = user.displayName || user.username || 'A family member';
           
-          const response = await fetch('https://mglcyjyvluqqofarpobx.supabase.co/functions/v1/send-family-invitation', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-            },
-            body: JSON.stringify({
-              familyId: familyId,
-              invitedEmail: invite.email,
-              inviterName: inviterName,
-              familyName: groupName.trim(),
-              invitationToken: token
-            })
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Error sending invitation email:', errorData);
-            emailFailCount++;
-          } else {
+          try {
+            await fetch('https://mglcyjyvluqqofarpobx.supabase.co/functions/v1/send-family-invitation', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nbGN5anl2bHVxcW9mYXJwb2J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU0NTQ3MTksImV4cCI6MjA1MTAzMDcxOX0.0T3XJdLLj9p7v-T1nU9TILQo1CgRB7WtQF2_GJzuHdE'
+              },
+              body: JSON.stringify({
+                familyId: invitation.family_id,
+                invitedEmail: invitation.email,
+                inviterName: inviterName,
+                familyName: groupName.trim(),
+                invitationToken: invitation.token
+              })
+            });
             emailSuccessCount++;
+          } catch (error) {
+            console.log('Email sending failed:', error);
+            emailFailCount++;
           }
         } catch (emailError) {
           console.error('Error sending invitation email:', emailError);
